@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "Carecat",
+    "slug": "project-cat",
+    "scheme": "projectcat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pagechang.projectcat",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Carecat 需要使用相機拍攝貓咪照護影像以進行 AI 分析。",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.pagechang.projectcat",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Carecat 需要相機權限來拍攝照護紀錄影像。"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#166534"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "032004be-aeb3-4f91-9517-a7445fe35e91"
+      }
+    }
+  }
+}

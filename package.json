@@ -1,0 +1,28 @@
+{
+  "name": "pawawa-web",
+  "private": true,
+  "scripts": {
+    "start": "npm --prefix app run start",
+    "ios": "npm --prefix app run ios",
+    "android": "npm --prefix app run android",
+    "web": "npm --prefix app run web",
+    "build:ios:preview": "npm --prefix app run build:ios:preview",
+    "build:android:preview": "npm --prefix app run build:android:preview",
+    "build:all:preview": "npm --prefix app run build:all:preview",
+    "typecheck": "cd app && npx tsc --noEmit",
+    "mock-api": "node mock-ai-api/server.js",
+    "mock-api:gemini": "AI_PROVIDER=gemini node mock-ai-api/server.js",
+    "mock-api:dev": "nodemon --config nodemon.json mock-ai-api/server.js",
+    "test:feeding": "cd app && node ../scripts/test-feeding-relative.mjs 20",
+    "test:consumption-consistency": "cd app && node scripts/test-consumption-level-consistency.mjs 10",
+    "test:prompt-ab": "cd app && node scripts/test-prompt-ab.mjs 10",
+    "test:feeding-accuracy": "cd app && node scripts/evaluate-feeding-accuracy.mjs",
+    "test:vision-direct": "cd app && node scripts/test-vision-direct.mjs"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "dependencies": {
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,90 @@
+import { CatIdentity, FeedingLog, VitalsLog } from '../types/domain';
+
+export const mockCats: CatIdentity[] = [
+  {
+    id: 'cat_001',
+    name: 'Milo',
+    birthDate: '2022-06-12',
+    gender: 'male',
+    spayedNeutered: true,
+    baselineWeightKg: 5.5,
+    currentWeightKg: 5.1,
+    targetWeightKg: 4.8,
+    bcsScore: 7,
+    chronicConditions: ['ckd'],
+    allergyWhitelist: ['Chicken', 'Turkey'],
+    allergyBlacklist: ['Seafood Mix'],
+  },
+  {
+    id: 'cat_002',
+    name: 'Luna',
+    birthDate: '2021-03-09',
+    gender: 'female',
+    spayedNeutered: true,
+    baselineWeightKg: 4.2,
+    currentWeightKg: 4.1,
+    targetWeightKg: 4.0,
+    bcsScore: 5,
+    chronicConditions: [],
+    allergyWhitelist: ['Salmon'],
+    allergyBlacklist: ['Beef'],
+  },
+];
+
+export const mockVitalsLogs: VitalsLog[] = [
+  {
+    id: 'v_001',
+    catId: 'cat_001',
+    weightKg: 5.2,
+    temperatureC: 39.2,
+    medicineFlag: true,
+    timestamp: '2026-02-01T10:00:00Z',
+  },
+  {
+    id: 'v_002',
+    catId: 'cat_001',
+    weightKg: 5.1,
+    temperatureC: 39.8,
+    medicineFlag: false,
+    timestamp: '2026-02-08T10:00:00Z',
+  },
+  {
+    id: 'v_003',
+    catId: 'cat_002',
+    weightKg: 4.1,
+    temperatureC: 38.4,
+    medicineFlag: false,
+    timestamp: '2026-02-08T10:00:00Z',
+  },
+];
+
+export const mockFeedingLogs: FeedingLog[] = [
+  {
+    sessionId: 'f_001',
+    catId: 'cat_001',
+    baselineImg: 't0_milo_001.jpg',
+    outcomeImg: 't1_milo_001.jpg',
+    intakeGram: 45,
+    kcalPerGram: 3.4,
+    bowlRatio: 0.62,
+    wetFoodAddedWaterMl: 25,
+    waterT0Ml: 180,
+    waterT1Ml: 120,
+    envFactorMl: 8,
+    timestamp: '2026-02-08T18:30:00Z',
+  },
+  {
+    sessionId: 'f_002',
+    catId: 'cat_002',
+    baselineImg: 't0_luna_001.jpg',
+    outcomeImg: 't1_luna_001.jpg',
+    intakeGram: 38,
+    kcalPerGram: 3.2,
+    bowlRatio: 0.38,
+    wetFoodAddedWaterMl: 15,
+    waterT0Ml: 150,
+    waterT1Ml: 105,
+    envFactorMl: 8,
+    timestamp: '2026-02-08T18:30:00Z',
+  },
+];

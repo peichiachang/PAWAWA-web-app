@@ -1,0 +1,402 @@
+import { StatusBar } from 'expo-status-bar';
+import { useMemo, useState, useEffect } from 'react';
+import { Alert, SafeAreaView, ScrollView, View } from 'react-native';
+import { getAiRecognitionService } from './src/services/ai';
+import { buildClinicalSummary } from './src/services/clinicalSummary';
+import { calculateActualWaterIntakeMl, calculateDailyKcalIntake, calculateDailyKcalGoal, calculateDailyWaterGoal } from './src/utils/health';
+import { ActiveModal, BottomTab, Level } from './src/types/app';
+import { useFeeding } from './src/hooks/useFeeding';
+import { useHydration } from './src/hooks/useHydration';
+import { useElimination } from './src/hooks/useElimination';
+import { useBloodReport } from './src/hooks/useBloodReport';
+import { useMedication } from './src/hooks/useMedication';
+import { useSymptoms } from './src/hooks/useSymptoms';
+import { TopNav } from './src/components/TopNav';
+import { BottomNav } from './src/components/BottomNav';
+import { HomeContent } from './src/components/HomeContent';
+import { RecordsContent } from './src/components/RecordsContent';
+import { ProfileContent } from './src/components/ProfileContent';
+import { KnowledgeContent } from './src/components/KnowledgeContent';
+import { BloodReportModal } from './src/components/modals/BloodReportModal';
+import { BloodHistoryModal } from './src/components/modals/BloodHistoryModal';
+import { BloodReportDetailModal } from './src/components/modals/BloodReportDetailModal';
+import { BloodReportRecord } from './src/types/bloodReport';
+import { FeedingModal } from './src/components/modals/FeedingModal';
+import { HydrationModal } from './src/components/modals/HydrationModal';
+import { EliminationModal } from './src/components/modals/EliminationModal';
+import { SettingsModal } from './src/components/modals/SettingsModal';
+import { KcalAdviceModal } from './src/components/modals/KcalAdviceModal';
+import { WaterAdviceModal } from './src/components/modals/WaterAdviceModal';
+import { BackupModal } from './src/components/modals/BackupModal';
+import { IAPModal } from './src/components/modals/IAPModal';
+import { AddCatModal } from './src/components/modals/AddCatModal';
+import { MedicationModal } from './src/components/modals/MedicationModal';
+import { SymptomModal } from './src/components/modals/SymptomModal';
+import { RecordDetailModal, DetailRecord } from './src/components/modals/RecordDetailModal';
+import { GlobalCameraProvider, useGlobalCamera } from './src/components/GlobalCameraProvider';
+import { styles } from './src/styles/common';
+import { VesselCalibrationModal } from './src/components/modals/VesselCalibrationModal';
+import { WeightRecordModal } from './src/components/modals/WeightRecordModal';
+import { useVessels } from './src/hooks/useVessels';
+import { useRecordReminders } from './src/hooks/useRecordReminders';
+
+import { CATS_STORAGE_KEY, VITALS_HISTORY_KEY } from './src/constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CatIdentity, ClinicalSummary, FeedingLog, VitalsLog } from './src/types/domain';
+import { applyDevDataMode } from './src/config/devDataMode';
+
+function AppMain() {
+  const ai = useMemo(() => getAiRecognitionService(), []);
+  const { launchCamera, isCameraVisible } = useGlobalCamera();
+
+  const [level, setLevel] = useState<Level>('household');
+  const [bottomTab, setBottomTab] = useState<BottomTab>('home');
+  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+  const [selectedBloodReport, setSelectedBloodReport] = useState<BloodReportRecord | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<DetailRecord | null>(null);
+  const [vesselCalibrationVisible, setVesselCalibrationVisible] = useState(false);
+  
+  // 共享的 vessels hook（用於 VesselCalibrationModal）
+  const sharedVessels = useVessels();
+  
+  const handleOpenVesselCalibration = () => {
+    console.log('[App] handleOpenVesselCalibration called');
+    setVesselCalibrationVisible(true);
+  };
+
+  // Dynamic Data States
+  const [cats, setCats] = useState<CatIdentity[]>([]);
+  const [vitalsLogs, setVitalsLogs] = useState<VitalsLog[]>([]);
+  const [feedingLogs, setFeedingLogs] = useState<FeedingLog[]>([]);
+
+  const feeding = useFeeding(ai, launchCamera, sharedVessels, cats);
+  const hydration = useHydration(ai, launchCamera, sharedVessels, cats);
+  const elimination = useElimination(ai, launchCamera);
+  const medication = useMedication();
+  const symptoms = useSymptoms();
+  const bloodReport = useBloodReport(ai, launchCamera);
+  useRecordReminders(); // 飲食/飲水紀錄提醒（上午 8:00、傍晚 18:00）
+
+  // Load persistence data
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const storedCats = await AsyncStorage.getItem(CATS_STORAGE_KEY);
+        if (storedCats) setCats(JSON.parse(storedCats));
+
+        const storedVitals = await AsyncStorage.getItem(VITALS_HISTORY_KEY);
+        if (storedVitals) setVitalsLogs(JSON.parse(storedVitals));
+
+        // Note: feeding.ownershipLogs and hydration.ownershipLogs are already loaded in hooks.
+        // But for ClinicalSummary, we might need a more unified way if we want full history.
+        // For now, let's keep it simple.
+        bloodReport.loadSavedReports();
+      } catch (e) {
+        console.error('Failed to load data', e);
+      }
+    }
+    loadData();
+  }, []);
+
+  const summaries = useMemo(
+    () => cats.map((cat) => buildClinicalSummary(cat, vitalsLogs, feeding.ownershipLogs, hydration.ownershipLogs, medication.logs)),
+    [cats, vitalsLogs, feeding.ownershipLogs, hydration.ownershipLogs, medication.logs]
+  );
+  const summaryByCatId = useMemo(
+    () => Object.fromEntries(summaries.map((item) => [item.catId, item])),
+    [summaries]
+  );
+
+  const todayHouseholdKcal = useMemo(() => {
+    const now = new Date();
+    const isToday = (ts: number) => {
+      const d = new Date(ts);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    };
+    return feeding.ownershipLogs
+      .filter(item => item.ownershipType === 'household_only' && isToday(item.createdAt))
+      .reduce((sum, item) => sum + (item.kcal ?? calculateDailyKcalIntake(item.totalGram, 3.5)), 0);
+  }, [feeding.ownershipLogs]);
+
+  const todayHouseholdWater = useMemo(() => {
+    const now = new Date();
+    const isToday = (ts: number) => {
+      const d = new Date(ts);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    };
+    return hydration.ownershipLogs
+      .filter(item => item.ownershipType === 'household_only' && isToday(item.createdAt))
+      .reduce((sum, item) => sum + (item.totalMl || 0), 0);
+  }, [hydration.ownershipLogs]);
+
+  const currentCat = level === 'household' ? null : cats.find((cat) => cat.id === level) || null;
+  const currentSummary = currentCat ? summaryByCatId[currentCat.id] : null;
+
+  function openModal(modal: ActiveModal) {
+    if (modal === 'feeding') feeding.openReset();
+    if (modal === 'water') hydration.openReset();
+    if (modal === 'elimination') elimination.reset();
+    if (modal === 'blood') bloodReport.reset();
+    setActiveModal(modal);
+  }
+
+  function closeModal() {
+    setActiveModal(null);
+  }
+
+  function onBottomTabPress(tab: BottomTab) {
+    setBottomTab(tab);
+  }
+
+  async function handleSaveCat(data: any) {
+    if (data.id) {
+      // Edit existing cat
+      const updated = cats.map(c => c.id === data.id ? {
+        ...c,
+        name: data.name,
+        gender: data.gender,
+        currentWeightKg: data.weight,
+        spayedNeutered: data.spayedNeutered,
+        chronicConditions: data.chronicConditions || [],
+      } : c);
+      setCats(updated);
+      await AsyncStorage.setItem(CATS_STORAGE_KEY, JSON.stringify(updated));
+      Alert.alert('更新成功', `已更新 ${data.name} 的檔案。`);
+      return;
+    }
+
+    // New cat logic (existing)
+    const newCat: CatIdentity = {
+      id: `cat_${Date.now()}`,
+      name: data.name,
+      birthDate: '2020-01-01',
+      gender: data.gender,
+      spayedNeutered: data.spayedNeutered,
+      baselineWeightKg: data.weight,
+      currentWeightKg: data.weight,
+      targetWeightKg: data.weight,
+      bcsScore: 5,
+      chronicConditions: data.chronicConditions || [],
+      allergyWhitelist: [],
+      allergyBlacklist: [],
+    };
+
+    const updated = [...cats, newCat];
+    setCats(updated);
+    await AsyncStorage.setItem(CATS_STORAGE_KEY, JSON.stringify(updated));
+
+    // Create initial vitals log
+    const initialVitals: VitalsLog = {
+      id: `v_${Date.now()}`,
+      catId: newCat.id,
+      weightKg: newCat.currentWeightKg,
+      temperatureC: 38.5,
+      medicineFlag: false,
+      timestamp: new Date().toISOString(),
+    };
+    const updatedVitals = [initialVitals, ...vitalsLogs];
+    setVitalsLogs(updatedVitals);
+    await AsyncStorage.setItem(VITALS_HISTORY_KEY, JSON.stringify(updatedVitals));
+
+    Alert.alert('新增成功', `已建立 ${newCat.name} 的檔案。`);
+  }
+
+  async function handleSaveWeightRecord(catId: string, weightKg: number) {
+    const cat = cats.find((c) => c.id === catId);
+    if (!cat) return;
+    const newLog: VitalsLog = {
+      id: `v_${Date.now()}`,
+      catId,
+      weightKg,
+      temperatureC: 38.5,
+      medicineFlag: false,
+      timestamp: new Date().toISOString(),
+    };
+    const updatedVitals = [newLog, ...vitalsLogs];
+    setVitalsLogs(updatedVitals);
+    await AsyncStorage.setItem(VITALS_HISTORY_KEY, JSON.stringify(updatedVitals));
+    const updatedCats = cats.map((c) => (c.id === catId ? { ...c, currentWeightKg: weightKg } : c));
+    setCats(updatedCats);
+    await AsyncStorage.setItem(CATS_STORAGE_KEY, JSON.stringify(updatedCats));
+    Alert.alert('已儲存', `${cat.name} 本次體重 ${weightKg.toFixed(1)} kg 已記錄。`);
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.appFrame}>
+        <TopNav level={level} onLevelChange={setLevel} cats={cats} activeTab={bottomTab} />
+        <ScrollView contentContainerStyle={styles.mainContent}>
+          {bottomTab === 'home' && (
+            <HomeContent
+              level={level}
+              onLevelChange={setLevel}
+              onOpenModal={openModal}
+              cats={cats}
+              summaryByCatId={summaryByCatId}
+              todayKcal={todayHouseholdKcal}
+              todayWater={todayHouseholdWater}
+              currentCat={currentCat}
+              currentSummary={currentSummary}
+              feedingHistory={feeding.ownershipLogs}
+              hydrationHistory={hydration.ownershipLogs}
+              eliminationHistory={elimination.ownershipLogs}
+              medicationHistory={medication.logs}
+              symptomHistory={symptoms.logs}
+              vesselProfiles={sharedVessels.vesselProfiles}
+              onEditCat={() => openModal('editCat')}
+              onRecordPress={(record) => { setSelectedRecord(record); openModal('recordDetail'); }}
+            />
+          )}
+          {bottomTab === 'records' && (
+            <RecordsContent
+              onOpenModal={openModal}
+              feedingHistory={feeding.ownershipLogs}
+              hydrationHistory={hydration.ownershipLogs}
+              eliminationHistory={elimination.ownershipLogs}
+              medicationHistory={medication.logs}
+              symptomHistory={symptoms.logs}
+              cats={cats}
+              onRecordPress={(record) => { setSelectedRecord(record); openModal('recordDetail'); }}
+            />
+          )}
+          {bottomTab === 'knowledge' && <KnowledgeContent />}
+          {bottomTab === 'profile' && (
+            <ProfileContent
+              cats={cats}
+              onOpenModal={openModal}
+              onOpenVesselCalibration={handleOpenVesselCalibration}
+            />
+          )}
+        </ScrollView>
+        <BottomNav activeTab={bottomTab} onTabPress={onBottomTabPress} />
+      </View>
+      <StatusBar style="dark" />
+
+      {/* 調整：即使相機開啟也保留這些 Modal 在背景，由 GlobalCameraProvider 的相機視圖疊在最上層 */}
+      <FeedingModal 
+        visible={activeModal === 'feeding'} 
+        feeding={feeding} 
+        cats={cats} 
+        onClose={closeModal}
+      />
+      <HydrationModal 
+        visible={activeModal === 'water'} 
+        hydration={hydration} 
+        cats={cats} 
+        onClose={closeModal}
+      />
+      <EliminationModal
+        visible={activeModal === 'elimination'}
+        elimination={elimination}
+        currentCat={currentCat}
+        cats={cats}
+        onClose={closeModal}
+      />
+      <SettingsModal
+        visible={activeModal === 'settings'}
+        cats={cats}
+        onClose={closeModal}
+        onSwitchDevDataMode={async (mode) => {
+          await applyDevDataMode(mode);
+          const storedCats = await AsyncStorage.getItem(CATS_STORAGE_KEY);
+          setCats(storedCats ? JSON.parse(storedCats) : []);
+          const storedVitals = await AsyncStorage.getItem(VITALS_HISTORY_KEY);
+          setVitalsLogs(storedVitals ? JSON.parse(storedVitals) : []);
+          await feeding.reloadOwnershipLogs();
+          await hydration.reloadOwnershipLogs();
+          await elimination.reloadOwnershipLogs();
+          await medication.refresh();
+          await symptoms.refresh();
+        }}
+      />
+      <BloodReportModal
+        visible={activeModal === 'blood'}
+        bloodReport={bloodReport}
+        currentCat={currentCat}
+        onClose={closeModal}
+      />
+      <BloodHistoryModal
+        visible={activeModal === 'bloodHistory'}
+        onClose={closeModal}
+        reports={bloodReport.savedReports}
+        onSelectReport={(report) => {
+          setSelectedBloodReport(report);
+          openModal('bloodDetail');
+        }}
+      />
+      <BloodReportDetailModal
+        visible={activeModal === 'bloodDetail'}
+        report={selectedBloodReport}
+        onClose={() => openModal('bloodHistory')}
+      />
+      <KcalAdviceModal
+        visible={activeModal === 'kcalAdvice'}
+        onClose={closeModal}
+        currentKcal={todayHouseholdKcal}
+        goalKcal={cats.reduce((sum, c) => sum + calculateDailyKcalGoal(c), 0) || 625}
+      />
+      <WaterAdviceModal
+        visible={activeModal === 'waterAdvice'}
+        onClose={closeModal}
+        currentWater={todayHouseholdWater}
+        goalWater={cats.reduce((sum, c) => sum + calculateDailyWaterGoal(c), 0) || 569}
+      />
+      <BackupModal
+        visible={activeModal === 'backup'}
+        onClose={closeModal}
+        isPro={false}
+        onUpgrade={() => openModal('iap')}
+      />
+      <IAPModal
+        visible={activeModal === 'iap'}
+        onClose={closeModal}
+      />
+      <AddCatModal
+        visible={activeModal === 'addCat' || activeModal === 'editCat'}
+        onClose={closeModal}
+        onSave={handleSaveCat}
+        initialData={activeModal === 'editCat' ? currentCat : null}
+      />
+      <MedicationModal
+        visible={activeModal === 'medication'}
+        onClose={closeModal}
+        cats={cats}
+        onSave={(data) => medication.addLog(data)}
+      />
+      <SymptomModal
+        visible={activeModal === 'symptom'}
+        onClose={closeModal}
+        cats={cats}
+        onSave={(data) => symptoms.addLog(data)}
+      />
+      <RecordDetailModal
+        visible={activeModal === 'recordDetail'}
+        record={selectedRecord}
+        cats={cats}
+        onClose={closeModal}
+      />
+      <WeightRecordModal
+        visible={activeModal === 'weightRecord'}
+        cats={cats}
+        vitalsLogs={vitalsLogs}
+        onClose={closeModal}
+        onSave={handleSaveWeightRecord}
+      />
+      <VesselCalibrationModal
+        visible={vesselCalibrationVisible}
+        profiles={sharedVessels.vesselProfiles}
+        onClose={() => setVesselCalibrationVisible(false)}
+        onSave={sharedVessels.saveVesselProfiles}
+        ai={ai}
+      />
+    </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <GlobalCameraProvider>
+      <AppMain />
+    </GlobalCameraProvider>
+  );
+}

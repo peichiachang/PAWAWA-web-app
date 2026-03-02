@@ -1,0 +1,537 @@
+import { StyleSheet } from 'react-native';
+
+export const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  appFrame: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  topNav: {
+    padding: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: '#000000',
+    backgroundColor: '#ffffff',
+  },
+  appTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 16,
+    color: '#000000',
+  },
+  levelSwitcher: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  levelSwitcherScrollView: {
+    marginTop: 16,
+  },
+  levelTabs: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  levelTab: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderWidth: 2,
+    borderColor: '#000000',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  levelTabActive: {
+    backgroundColor: '#000000',
+  },
+  levelTabSingle: {
+    alignSelf: 'flex-start',
+  },
+  levelIcon: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  levelName: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  levelDesc: {
+    display: 'none',
+  },
+  levelTextActive: {
+    color: '#ffffff',
+  },
+  levelArrow: {
+    fontSize: 10,
+    marginLeft: 6,
+    color: '#000000',
+  },
+  levelDropdownWrap: {
+    position: 'relative',
+    alignSelf: 'flex-start',
+  },
+  levelDropdownBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: -16,
+    right: -16,
+    bottom: -400,
+    zIndex: 1,
+  },
+  levelDropdownMenu: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    marginTop: 4,
+    minWidth: 160,
+    borderWidth: 2,
+    borderColor: '#000000',
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    zIndex: 2,
+    overflow: 'hidden',
+  },
+  levelDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eeeeee',
+  },
+  levelDropdownItemActive: {
+    backgroundColor: '#000000',
+  },
+  levelDropdownItemLast: {
+    borderBottomWidth: 0,
+  },
+  mainContent: {
+    padding: 16,
+    paddingBottom: 88,
+  },
+  cardBlock: {
+    borderWidth: 2,
+    borderColor: '#000000',
+    padding: 20,
+    marginBottom: 16,
+    backgroundColor: '#ffffff',
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 16,
+    textTransform: 'uppercase',
+  },
+  dataGrid: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 16,
+  },
+  dataItem: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#000000',
+    padding: 16,
+    alignItems: 'center',
+  },
+  dataLabel: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    opacity: 0.6,
+  },
+  dataValue: {
+    fontSize: 32,
+    fontWeight: '700',
+    lineHeight: 36,
+  },
+  dataUnit: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  weightSection: {
+    borderWidth: 1,
+    borderColor: '#000000',
+    padding: 24,
+    marginBottom: 16,
+    alignItems: 'center',
+    textAlign: 'center',
+  },
+  weightCurrent: {
+    fontSize: 48,
+    lineHeight: 52,
+    fontWeight: '700',
+  },
+  weightUnit: {
+    fontSize: 16,
+    marginTop: 4,
+  },
+  weightRange: {
+    marginTop: 12,
+    paddingTop: 12,
+    fontSize: 11,
+    borderTopWidth: 1,
+    borderTopColor: '#000000',
+    width: '100%',
+    textAlign: 'center',
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
+  actionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  actionBtn: {
+    width: '31%', // Approximately 1/3 width
+    borderWidth: 2,
+    borderColor: '#000000',
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  actionIcon: {
+    fontSize: 28,
+    marginBottom: 8,
+  },
+  actionLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  recordItem: {
+    borderWidth: 1,
+    borderColor: '#000000',
+    padding: 16,
+    marginBottom: 8,
+    backgroundColor: '#ffffff',
+  },
+  recordHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  recordTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  recordTime: {
+    fontSize: 11,
+    opacity: 0.6,
+  },
+  recordData: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  recordDesc: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  bottomNav: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopWidth: 2,
+    borderTopColor: '#000000',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 24, // Added extra padding for the home indicator
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  navItem: {
+    alignItems: 'center',
+    padding: 8,
+  },
+  navIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  navLabel: {
+    fontSize: 10,
+    color: '#000000',
+  },
+  navActive: {
+    fontWeight: '700',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  modalCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  modalHeader: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#000000',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  closeText: {
+    fontSize: 28,
+    lineHeight: 28,
+  },
+  modalBody: {
+    flex: 1,
+    padding: 16,
+  },
+  infoBox: {
+    borderWidth: 2,
+    borderColor: '#000000',
+    padding: 12,
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  infoTitle: {
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  cameraUpload: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#000000',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  cameraIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+    opacity: 0.5,
+  },
+  cameraText: {
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  resultBox: {
+    borderWidth: 1,
+    borderColor: '#000000',
+    padding: 10,
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  aiResult: {
+    borderWidth: 2,
+    borderColor: '#000000',
+    padding: 16,
+    marginTop: 16,
+    backgroundColor: '#ffffff',
+  },
+  aiResultTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 12,
+    color: '#000000',
+  },
+  aiTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  aiTag: {
+    borderWidth: 1,
+    borderColor: '#000000',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    fontSize: 11,
+    color: '#000000',
+  },
+  aiTagHighlight: {
+    backgroundColor: '#000000',
+    color: '#ffffff',
+  },
+  resultErrorBox: {
+    borderWidth: 1,
+    borderColor: '#991b1b',
+    backgroundColor: '#fef2f2',
+    padding: 10,
+    fontSize: 12,
+    color: '#7f1d1d',
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  flowResult: {
+    marginTop: 16,
+  },
+  flowItem: {
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#000000',
+    marginBottom: 8,
+  },
+  flowItemTotal: {
+    borderWidth: 2,
+    backgroundColor: '#f0f0f0',
+  },
+  flowItemTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  flowItemData: {
+    fontSize: 11,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  formLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  formInput: {
+    width: '100%',
+    padding: 12,
+    borderWidth: 2,
+    borderColor: '#000000',
+    fontSize: 14,
+  },
+  input: {
+    width: '100%',
+    padding: 12,
+    borderWidth: 2,
+    borderColor: '#000000',
+    fontSize: 14,
+    backgroundColor: '#ffffff',
+  },
+  primaryBtn: {
+    width: '100%',
+    padding: 14,
+    borderWidth: 2,
+    borderColor: '#000000',
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  primaryBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  primaryBtnOutline: {
+    backgroundColor: '#ffffff',
+  },
+  primaryBtnOutlineText: {
+    color: '#000000',
+  },
+  hintText: {
+    fontSize: 11,
+    color: '#666666',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#dddddd',
+    textAlign: 'center',
+  },
+  // the remaining bits from previous styles that were untouched
+  ownershipCard: {
+    borderWidth: 1,
+    borderColor: '#000000',
+    padding: 10,
+    marginBottom: 10,
+    gap: 8,
+  },
+  ownershipTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  ownershipDesc: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#262626',
+  },
+  choiceRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  choiceBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#000000',
+    paddingVertical: 8,
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  choiceBtnActive: {
+    backgroundColor: '#000000',
+  },
+  choiceBtnText: {
+    fontSize: 12,
+    color: '#000000',
+    fontWeight: '600',
+  },
+  choiceBtnTextActive: {
+    color: '#ffffff',
+  },
+  tagChoiceRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tagBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#000000',
+    paddingVertical: 8,
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  tagBtnActive: {
+    backgroundColor: '#111827',
+  },
+  tagBtnText: {
+    fontSize: 12,
+    color: '#111827',
+    fontWeight: '600',
+  },
+  tagBtnTextActive: {
+    color: '#ffffff',
+  },
+  logBox: {
+    borderWidth: 1,
+    borderColor: '#000000',
+    padding: 10,
+    marginBottom: 10,
+    gap: 4,
+  },
+  logTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  logLine: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#1f2937',
+  },
+  loadingSpinner: {
+    marginBottom: 10,
+  },
+});

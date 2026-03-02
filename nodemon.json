@@ -1,0 +1,6 @@
+{
+  "watch": ["mock-ai-api"],
+  "ext": "js,json",
+  "ignore": ["app", "docs"],
+  "delay": "200"
+}

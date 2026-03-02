@@ -1,0 +1,31 @@
+import { Pressable, Text, View } from 'react-native';
+import { BottomTab } from '../types/app';
+import { BOTTOM_ITEMS } from '../constants';
+import { styles } from '../styles/common';
+import { AppIcon } from './AppIcon';
+
+interface Props {
+  activeTab: BottomTab;
+  onTabPress: (tab: BottomTab) => void;
+}
+
+export function BottomNav({ activeTab, onTabPress }: Props) {
+  return (
+    <View style={styles.bottomNav}>
+      {BOTTOM_ITEMS.map((item) => {
+        const active = item.key === activeTab;
+        return (
+          <Pressable key={item.key} style={styles.navItem} onPress={() => onTabPress(item.key)}>
+            <AppIcon
+              name={item.icon as any}
+              size={24}
+              color={active ? '#000000' : '#666666'}
+              style={{ marginBottom: 4 }}
+            />
+            <Text style={[styles.navLabel, active && styles.navActive]}>{item.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}

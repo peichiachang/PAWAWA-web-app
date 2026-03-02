@@ -1,0 +1,2 @@
+id,t0_image,t1_image,true_level,true_grams,t0_ref_grams,notes
+fixture_001,t0.JPG,t1.JPG,a_little,,90,先用你目前 fixtures 的人工標註，可自行改 true_level
