@@ -5,8 +5,11 @@ import { geminiService } from './geminiService';
 
 type ServiceMode = 'mock' | 'http' | 'gemini';
 
-// Prioritize environment variable, default to 'mock' for safety
-const AI_SERVICE_MODE: ServiceMode = (process.env.EXPO_PUBLIC_AI_SERVICE_MODE as ServiceMode) || 'mock';
+// In production, default to server-side proxy (`http`) for key safety.
+const configuredMode = process.env.EXPO_PUBLIC_AI_SERVICE_MODE as ServiceMode | undefined;
+const AI_SERVICE_MODE: ServiceMode = __DEV__
+  ? (configuredMode || 'mock')
+  : (configuredMode === 'mock' || configuredMode === 'http' ? configuredMode : 'http');
 
 function detectDevHost(): string | null {
   const scriptURL = NativeModules?.SourceCode?.scriptURL as string | undefined;
@@ -31,6 +34,11 @@ function resolveApiBaseUrl(): string {
   const configured = process.env.EXPO_PUBLIC_API_BASE_URL;
   if (configured && configured.trim().length > 0) {
     return configured.trim();
+  }
+
+  // Production web defaults to same-origin serverless API.
+  if (!__DEV__) {
+    return '/api';
   }
 
   const devHost = detectDevHost();
@@ -98,20 +106,17 @@ function createHttpAiService(baseUrl: string): AiRecognitionService {
       post('/ai/elimination', mapImage(input)),
     extractBloodReport: (input) =>
       post('/ai/blood-ocr', mapImage(input)),
+    analyzeSideProfile: (input) =>
+      post('/ai/side-profile', {
+        imageBase64: input.imageBase64,
+        mimeType: 'image/jpeg',
+        rimDiameterCm: input.rimDiameterCm,
+      }),
   };
 }
 
 export function getAiRecognitionService(): AiRecognitionService {
-  if (AI_SERVICE_MODE === 'gemini') {
-    // Web production still supports Gemini when a public key is configured at build time.
-    // If key is missing, fall back to mock to avoid startup failure.
-    const hasGeminiKey = Boolean(process.env.EXPO_PUBLIC_GEMINI_API_KEY);
-    if (!hasGeminiKey) {
-      console.warn('[AI] EXPO_PUBLIC_GEMINI_API_KEY is missing. Falling back to mock service.');
-      return mockAiService;
-    }
-    return geminiService;
-  }
+  if (AI_SERVICE_MODE === 'gemini') return geminiService;
   if (AI_SERVICE_MODE === 'http') {
     return createHttpAiService(resolveApiBaseUrl());
   }
