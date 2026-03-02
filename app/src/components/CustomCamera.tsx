@@ -4,7 +4,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LightSensor } from 'expo-sensors';
 import { CapturedImage } from '../types/app';
 import { AppIcon } from './AppIcon';
-import { pickFromCamera, pickFromLibrary } from '../utils/camera';
+import { pickFromLibrary } from '../utils/camera';
 
 /** 相機客製化選項，各 Modal 可依情境傳入 */
 export interface CameraCustomOptions {
@@ -91,60 +91,6 @@ export function CustomCamera({ title, onCapture, onCancel, customOptions }: Prop
         }
     };
 
-    const handleTakePhoto = async () => {
-        if (isProcessing) return;
-        setIsProcessing(true);
-        try {
-            const image = await pickFromCamera();
-            if (image) {
-                onCapture(image);
-            }
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    if (isWeb) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <View style={[styles.permissionContainer, { paddingHorizontal: 24 }]}>
-                    <Text style={[styles.title, { textAlign: 'center', marginBottom: 16, flex: 0, paddingRight: 0 }]}>
-                        {title || '上傳圖片'}
-                    </Text>
-                    <Text style={[styles.permissionText, { textAlign: 'center', marginBottom: 20 }]}>
-                        Web 版支援直接拍照或上傳既有圖片
-                    </Text>
-                    {opts.showGuide && (
-                        <View style={styles.webGuideWrap}>
-                            <View style={[styles.webGuideBox, opts.guideShape === 'circle' ? styles.guideCircle : styles.guideSquare]} />
-                            <Text style={styles.webGuideText}>{opts.guideText}</Text>
-                            <Text style={styles.webGuideHint}>
-                                提示：進入手機系統相機後，無法疊加本頁虛線框；請依剛才框位對準再拍攝
-                            </Text>
-                        </View>
-                    )}
-                    <Pressable style={[styles.permissionBtn, { marginBottom: 10 }]} onPress={handleTakePhoto} disabled={isProcessing}>
-                        {isProcessing ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <Text style={styles.permissionBtnText}>拍照</Text>
-                        )}
-                    </Pressable>
-                    <Pressable style={styles.permissionBtn} onPress={handlePickImage} disabled={isProcessing}>
-                        {isProcessing ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <Text style={styles.permissionBtnText}>上傳圖片</Text>
-                        )}
-                    </Pressable>
-                    <Pressable style={[styles.permissionBtn, { backgroundColor: '#666', marginTop: 12 }]} onPress={onCancel}>
-                        <Text style={styles.permissionBtnText}>取消</Text>
-                    </Pressable>
-                </View>
-            </SafeAreaView>
-        );
-    }
-
     if (!permission) {
         return (
             <View style={styles.permissionContainer}>
@@ -157,10 +103,21 @@ export function CustomCamera({ title, onCapture, onCancel, customOptions }: Prop
     if (!permission.granted) {
         return (
             <View style={styles.permissionContainer}>
-                <Text style={styles.permissionText}>需要相機權限才能拍攝</Text>
+                <Text style={styles.permissionText}>
+                    {isWeb ? '需要相機權限才能使用內嵌拍照（可改用上傳圖片）' : '需要相機權限才能拍攝'}
+                </Text>
                 <Pressable style={styles.permissionBtn} onPress={requestPermission}>
                     <Text style={styles.permissionBtnText}>賦予權限</Text>
                 </Pressable>
+                {isWeb && (
+                    <Pressable style={[styles.permissionBtn, { marginTop: 12 }]} onPress={handlePickImage} disabled={isProcessing}>
+                        {isProcessing ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.permissionBtnText}>上傳圖片</Text>
+                        )}
+                    </Pressable>
+                )}
                 <Pressable style={[styles.permissionBtn, { backgroundColor: '#666', marginTop: 12 }]} onPress={onCancel}>
                     <Text style={styles.permissionBtnText}>取消</Text>
                 </Pressable>
@@ -275,6 +232,15 @@ export function CustomCamera({ title, onCapture, onCancel, customOptions }: Prop
                         <View style={styles.captureBtnInner} />
                     )}
                 </Pressable>
+                {isWeb && (
+                    <Pressable
+                        style={[styles.uploadBtn, isProcessing && { opacity: 0.5 }]}
+                        onPress={handlePickImage}
+                        disabled={isProcessing}
+                    >
+                        <Text style={styles.uploadBtnText}>上傳圖片</Text>
+                    </Pressable>
+                )}
             </View>
         </SafeAreaView>
     );
@@ -308,32 +274,6 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '700',
-    },
-    webGuideWrap: {
-        width: '100%',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    webGuideBox: {
-        width: Math.min(Dimensions.get('window').width * 0.7, 260),
-        height: Math.min(Dimensions.get('window').width * 0.7, 260),
-        borderWidth: 2,
-        borderColor: 'rgba(255, 255, 255, 0.75)',
-        borderStyle: 'dashed',
-        backgroundColor: 'rgba(255,255,255,0.04)',
-    },
-    webGuideText: {
-        color: '#fff',
-        fontSize: 14,
-        marginTop: 12,
-        textAlign: 'center',
-    },
-    webGuideHint: {
-        color: 'rgba(255,255,255,0.75)',
-        fontSize: 12,
-        marginTop: 8,
-        textAlign: 'center',
-        lineHeight: 18,
     },
     header: {
         flexDirection: 'row',
@@ -463,5 +403,19 @@ const styles = StyleSheet.create({
         height: 56,
         borderRadius: 28,
         backgroundColor: '#fff',
+    },
+    uploadBtn: {
+        marginTop: 12,
+        paddingHorizontal: 18,
+        paddingVertical: 10,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255,255,255,0.18)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.35)',
+    },
+    uploadBtnText: {
+        color: '#fff',
+        fontWeight: '700',
+        fontSize: 14,
     },
 });
