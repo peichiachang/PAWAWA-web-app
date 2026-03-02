@@ -114,6 +114,15 @@ export function CustomCamera({ title, onCapture, onCancel, customOptions }: Prop
                     <Text style={[styles.permissionText, { textAlign: 'center', marginBottom: 20 }]}>
                         Web 版支援直接拍照或上傳既有圖片
                     </Text>
+                    {opts.showGuide && (
+                        <View style={styles.webGuideWrap}>
+                            <View style={[styles.webGuideBox, opts.guideShape === 'circle' ? styles.guideCircle : styles.guideSquare]} />
+                            <Text style={styles.webGuideText}>{opts.guideText}</Text>
+                            <Text style={styles.webGuideHint}>
+                                提示：進入手機系統相機後，無法疊加本頁虛線框；請依剛才框位對準再拍攝
+                            </Text>
+                        </View>
+                    )}
                     <Pressable style={[styles.permissionBtn, { marginBottom: 10 }]} onPress={handleTakePhoto} disabled={isProcessing}>
                         {isProcessing ? (
                             <ActivityIndicator color="#fff" />
@@ -299,6 +308,32 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '700',
+    },
+    webGuideWrap: {
+        width: '100%',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    webGuideBox: {
+        width: Math.min(Dimensions.get('window').width * 0.7, 260),
+        height: Math.min(Dimensions.get('window').width * 0.7, 260),
+        borderWidth: 2,
+        borderColor: 'rgba(255, 255, 255, 0.75)',
+        borderStyle: 'dashed',
+        backgroundColor: 'rgba(255,255,255,0.04)',
+    },
+    webGuideText: {
+        color: '#fff',
+        fontSize: 14,
+        marginTop: 12,
+        textAlign: 'center',
+    },
+    webGuideHint: {
+        color: 'rgba(255,255,255,0.75)',
+        fontSize: 12,
+        marginTop: 8,
+        textAlign: 'center',
+        lineHeight: 18,
     },
     header: {
         flexDirection: 'row',
