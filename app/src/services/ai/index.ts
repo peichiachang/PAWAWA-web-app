@@ -104,7 +104,8 @@ function createHttpAiService(baseUrl: string): AiRecognitionService {
 export function getAiRecognitionService(): AiRecognitionService {
   if (AI_SERVICE_MODE === 'gemini') {
     if (!__DEV__) {
-      throw new Error('Client-side Gemini mode is disabled in production. Please use EXPO_PUBLIC_AI_SERVICE_MODE=http.');
+      console.warn('[AI] EXPO_PUBLIC_AI_SERVICE_MODE=gemini is disabled in production. Falling back to mock service.');
+      return mockAiService;
     }
     return geminiService;
   }
