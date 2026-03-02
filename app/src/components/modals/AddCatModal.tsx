@@ -55,7 +55,8 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
             Alert.alert('錯誤', '請填寫必填欄位');
             return;
         }
-        const parsedWeight = parseFloat(weight);
+        const normalizedWeight = weight.replace(',', '.');
+        const parsedWeight = parseFloat(normalizedWeight);
         if (!Number.isFinite(parsedWeight) || parsedWeight <= 0) {
             Alert.alert('錯誤', '請輸入有效體重（例如 4.2）');
             return;
@@ -140,7 +141,8 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
                             <Text style={styles.formLabel}>當前體重 (kg) *</Text>
                             <TextInput
                                 style={styles.formInput}
-                                keyboardType="numeric"
+                                keyboardType="decimal-pad"
+                                inputMode="decimal"
                                 placeholder="4.5"
                                 value={weight}
                                 onChangeText={setWeight}
