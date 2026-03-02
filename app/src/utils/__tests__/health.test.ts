@@ -1,5 +1,5 @@
 import { CatIdentity } from '../../types/domain';
-import { calculateDailyKcalGoal, calculateDailyWaterGoal, calculateDailyWaterGoalRange } from '../health';
+import { calculateAdaptiveDailyWaterGoal, calculateDailyKcalGoal, calculateDailyWaterGoal, calculateDailyWaterGoalRange } from '../health';
 
 describe('Health Calculations', () => {
     const baseCat: CatIdentity = {
@@ -35,16 +35,42 @@ describe('Health Calculations', () => {
             expect(range).toEqual({ min: 160, max: 240 }); // 4kg * (40-60)
         });
 
-        it('should calculate 70ml/kg for a cat with diabetes', () => {
+        it('should calculate 50ml/kg default target for a cat with diabetes', () => {
             const diabeticCat = { ...baseCat, chronicConditions: ['diabetes' as any] };
             const goal = calculateDailyWaterGoal(diabeticCat);
-            expect(goal).toBe(280); // 4kg * 70
+            expect(goal).toBe(200); // 4kg * 50
         });
 
-        it('should calculate 65ml/kg for a cat with FLUTD', () => {
+        it('should calculate 50ml/kg default target for a cat with FLUTD', () => {
             const flutdCat = { ...baseCat, chronicConditions: ['flutd' as any] };
             const goal = calculateDailyWaterGoal(flutdCat);
-            expect(goal).toBe(260); // 4kg * 65
+            expect(goal).toBe(200); // 4kg * 50
+        });
+
+        it('should provide 50-70ml/kg range for diabetes', () => {
+            const diabeticCat = { ...baseCat, chronicConditions: ['diabetes' as any] };
+            const range = calculateDailyWaterGoalRange(diabeticCat);
+            expect(range).toEqual({ min: 200, max: 280 }); // 4kg * (50-70)
+        });
+
+        it('should provide 50-65ml/kg range for FLUTD', () => {
+            const flutdCat = { ...baseCat, chronicConditions: ['flutd' as any] };
+            const range = calculateDailyWaterGoalRange(flutdCat);
+            expect(range).toEqual({ min: 200, max: 260 }); // 4kg * (50-65)
+        });
+
+        it('should adapt diabetes goal by recent intake but keep within range', () => {
+            const diabeticCat = { ...baseCat, chronicConditions: ['diabetes' as any] };
+            const goal = calculateAdaptiveDailyWaterGoal(diabeticCat, [240, 250, 260, 255, 245]);
+            expect(goal).toBeGreaterThanOrEqual(200);
+            expect(goal).toBeLessThanOrEqual(280);
+            expect(goal).toBeGreaterThan(200);
+        });
+
+        it('should fallback to baseline when trend samples are insufficient', () => {
+            const diabeticCat = { ...baseCat, chronicConditions: ['diabetes' as any] };
+            const goal = calculateAdaptiveDailyWaterGoal(diabeticCat, [260, 250]);
+            expect(goal).toBe(200);
         });
     });
 

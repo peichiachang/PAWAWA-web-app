@@ -5,7 +5,7 @@ import { ActiveModal, Level, FeedingOwnershipLog, HydrationOwnershipLog, VesselC
 import { EliminationOwnershipLog } from '../hooks/useElimination';
 import { CatIdentity, ClinicalSummary, MedicationLog, SymptomLog } from '../types/domain';
 import { styles } from '../styles/common';
-import { calculateDailyKcalGoal, calculateDailyWaterGoal, calculateDailyWaterGoalRange } from '../utils/health';
+import { calculateAdaptiveDailyWaterGoal, calculateDailyKcalGoal, calculateDailyWaterGoalRange } from '../utils/health';
 import { TrendChart } from './TrendChart';
 import { DetailRecord } from './modals/RecordDetailModal';
 import { AppIcon } from './AppIcon';
@@ -74,6 +74,21 @@ export function HomeContent({
   }, [vesselProfilesFromParent]);
 
   const vesselProfiles = vesselProfilesFromParent ?? localVesselProfiles;
+
+  const getRecentDailyWaterIntakesForCat = (catId: string): number[] => {
+    const byDay = new Map<string, number>();
+    hydrationHistory
+      .filter((log) => log.selectedTagId === catId)
+      .forEach((log) => {
+        const d = new Date(log.createdAt);
+        const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+        byDay.set(key, (byDay.get(key) || 0) + (log.actualWaterMl || log.totalMl || 0));
+      });
+    return Array.from(byDay.entries())
+      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+      .map(([, total]) => total)
+      .slice(-7);
+  };
 
   // 計算動態誤差範圍的 helper function
   const calculateErrorMargin = (
@@ -316,7 +331,10 @@ export function HomeContent({
 
   if (level === 'household') {
     const householdKcalGoal = cats.reduce((sum, cat) => sum + calculateDailyKcalGoal(cat), 0) || 625;
-    const householdWaterGoal = cats.reduce((sum, cat) => sum + calculateDailyWaterGoal(cat), 0) || 569;
+    const householdWaterGoal = cats.reduce((sum, cat) => {
+      const recent = getRecentDailyWaterIntakesForCat(cat.id);
+      return sum + calculateAdaptiveDailyWaterGoal(cat, recent);
+    }, 0) || 569;
 
     return (
       <>
@@ -446,7 +464,9 @@ export function HomeContent({
   }
 
   const individualKcalGoal = currentCat ? Math.round(calculateDailyKcalGoal(currentCat)) : 250;
-  const individualWaterGoal = currentCat ? Math.round(calculateDailyWaterGoal(currentCat)) : 210;
+  const individualWaterGoal = currentCat
+    ? Math.round(calculateAdaptiveDailyWaterGoal(currentCat, getRecentDailyWaterIntakesForCat(currentCat.id)))
+    : 210;
 
   const kcalMultiplierHint = currentCat?.chronicConditions.includes('hyperthyroidism') ? 'RER × 1.6 (甲亢)' :
     currentCat?.chronicConditions.includes('obesity') ? 'RER × 0.8 (肥胖管理)' :
@@ -454,7 +474,9 @@ export function HomeContent({
 
   const waterRange = currentCat ? calculateDailyWaterGoalRange(currentCat) : { min: 0, max: 0 };
   const waterMultiplierHint = currentCat?.chronicConditions.includes('ckd') ? '40–60ml / kg (腎病建議區間)' :
-    currentCat?.chronicConditions.includes('diabetes') ? '70ml / kg (糖尿病)' : '50ml / kg (標準)';
+    currentCat?.chronicConditions.includes('diabetes') ? '50–70ml / kg（基線+趨勢）' :
+      currentCat?.chronicConditions.includes('flutd') ? '50–65ml / kg（基線+趨勢）' :
+        '50ml / kg (標準)';
   // 今日攝取（僅當日紀錄，非累積）
   const currentKcal = currentSummary?.todayKcalIntake ?? currentSummary?.totalKcalIntake ?? 0;
   const currentWater = currentSummary?.todayWaterMl ?? currentSummary?.totalActualWaterMl ?? 0;
@@ -520,7 +542,9 @@ export function HomeContent({
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                 <Text style={{ fontSize: 10 }}>目標</Text>
                 <Text style={{ fontSize: 10, fontWeight: '700' }}>
-                  {currentCat?.chronicConditions.includes('ckd')
+                  {(currentCat?.chronicConditions.includes('ckd') ||
+                    currentCat?.chronicConditions.includes('diabetes') ||
+                    currentCat?.chronicConditions.includes('flutd'))
                     ? `${Math.round(waterRange.min)}–${Math.round(waterRange.max)} ml`
                     : `${individualWaterGoal} ml`}
                 </Text>

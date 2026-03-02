@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Alert, SafeAreaView, ScrollView, View, Platform } from 'react-native';
 import { getAiRecognitionService } from './src/services/ai';
 import { buildClinicalSummary } from './src/services/clinicalSummary';
-import { calculateActualWaterIntakeMl, calculateDailyKcalIntake, calculateDailyKcalGoal, calculateDailyWaterGoal } from './src/utils/health';
+import { calculateAdaptiveDailyWaterGoal, calculateDailyKcalIntake, calculateDailyKcalGoal } from './src/utils/health';
 import { ActiveModal, BottomTab, Level } from './src/types/app';
 import { useFeeding } from './src/hooks/useFeeding';
 import { useHydration } from './src/hooks/useHydration';
@@ -166,6 +166,21 @@ function AppMain() {
 
   const currentCat = level === 'household' ? null : cats.find((cat) => cat.id === level) || null;
   const currentSummary = currentCat ? summaryByCatId[currentCat.id] : null;
+
+  const getRecentDailyWaterIntakesForCat = (catId: string): number[] => {
+    const byDay = new Map<string, number>();
+    hydration.ownershipLogs
+      .filter((log) => log.selectedTagId === catId)
+      .forEach((log) => {
+        const d = new Date(log.createdAt);
+        const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+        byDay.set(key, (byDay.get(key) || 0) + (log.actualWaterMl || log.totalMl || 0));
+      });
+    return Array.from(byDay.entries())
+      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+      .map(([, total]) => total)
+      .slice(-7);
+  };
 
   function openModal(modal: ActiveModal) {
     if (modal === 'feeding') feeding.openReset();
@@ -381,7 +396,7 @@ function AppMain() {
         visible={activeModal === 'waterAdvice'}
         onClose={closeModal}
         currentWater={todayHouseholdWater}
-        goalWater={cats.reduce((sum, c) => sum + calculateDailyWaterGoal(c), 0) || 569}
+        goalWater={cats.reduce((sum, c) => sum + calculateAdaptiveDailyWaterGoal(c, getRecentDailyWaterIntakesForCat(c.id)), 0) || 569}
       />
       <BackupModal
         visible={activeModal === 'backup'}

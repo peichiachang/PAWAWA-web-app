@@ -2,11 +2,8 @@ import { AlertSeverity, AlertType, CatIdentity, ClinicalSummary, MedicationLog, 
 import { FeedingOwnershipLog, HydrationOwnershipLog } from '../types/app';
 import { checkIntakeAlert, checkTemperatureAlert, checkWeeklyWeightAlert } from '../utils/alerts';
 import {
-  calculateActualWaterIntakeMl,
+  calculateAdaptiveDailyWaterGoal,
   calculateDailyKcalGoal,
-  calculateDailyWaterGoal,
-  calculateDailyKcalIntake,
-  calculateTotalWaterIntakeMl,
   calculateWeeklyWeightChangeRatePct,
 } from '../utils/health';
 
@@ -43,6 +40,17 @@ export function buildClinicalSummary(
   const todayKcalIntake = catFeedings.filter((item) => isToday(item.createdAt)).reduce((sum, item) => sum + (item.kcal || 0), 0);
   const todayWaterMl = catHydrations.filter((item) => isToday(item.createdAt)).reduce((sum, item) => sum + (item.actualWaterMl || item.totalMl || 0), 0);
 
+  const waterByDay = new Map<string, number>();
+  catHydrations.forEach((item) => {
+    const d = new Date(item.createdAt);
+    const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    waterByDay.set(key, (waterByDay.get(key) || 0) + (item.actualWaterMl || item.totalMl || 0));
+  });
+  const recentDailyWater = Array.from(waterByDay.entries())
+    .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+    .map(([, total]) => total)
+    .slice(-7);
+
   const sortedByTime = [...relevantVitals].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
   const weekAgoWeight = sortedByTime.length >= 2 ? sortedByTime[0].weightKg : cat.baselineWeightKg;
   const latestWeight = sortedByTime.length > 0 ? sortedByTime[sortedByTime.length - 1].weightKg : cat.currentWeightKg;
@@ -69,7 +77,7 @@ export function buildClinicalSummary(
   }
 
   // Hydration Alert
-  const waterGoal = calculateDailyWaterGoal(cat);
+  const waterGoal = calculateAdaptiveDailyWaterGoal(cat, recentDailyWater);
   if (todayWaterMl < waterGoal * 0.7) {
     alerts.push({
       alertId: `water_${Date.now()}`,

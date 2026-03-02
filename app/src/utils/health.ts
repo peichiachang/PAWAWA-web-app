@@ -24,10 +24,6 @@ export function calculateDailyWaterGoal(cat: CatIdentity): number {
   if (cat.chronicConditions.includes('ckd')) {
     // CKD cats: use a conservative default target and show range guidance in UI.
     multiplier = 50;
-  } else if (cat.chronicConditions.includes('diabetes')) {
-    multiplier = 70;
-  } else if (cat.chronicConditions.includes('flutd')) {
-    multiplier = 65;
   }
 
   return cat.currentWeightKg * multiplier;
@@ -41,8 +37,50 @@ export function calculateDailyWaterGoalRange(cat: CatIdentity): { min: number; m
     };
   }
 
+  if (cat.chronicConditions.includes('diabetes')) {
+    return {
+      min: cat.currentWeightKg * 50,
+      max: cat.currentWeightKg * 70,
+    };
+  }
+
+  if (cat.chronicConditions.includes('flutd')) {
+    return {
+      min: cat.currentWeightKg * 50,
+      max: cat.currentWeightKg * 65,
+    };
+  }
+
   const goal = calculateDailyWaterGoal(cat);
   return { min: goal, max: goal };
+}
+
+function median(values: number[]): number {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+export function calculateAdaptiveDailyWaterGoal(cat: CatIdentity, recentDailyIntakesMl: number[]): number {
+  const range = calculateDailyWaterGoalRange(cat);
+  const baseline = calculateDailyWaterGoal(cat);
+
+  const cleaned = recentDailyIntakesMl
+    .filter((v) => Number.isFinite(v) && v > 0)
+    .slice(-7);
+
+  // No enough trend data -> use baseline.
+  if (cleaned.length < 3) return baseline;
+
+  // Blend baseline with observed central tendency.
+  const observed = median(cleaned);
+  const blended = baseline * 0.6 + observed * 0.4;
+  return Math.round(clamp(blended, range.min, range.max));
 }
 
 export function calculateDailyKcalIntake(intakeGram: number, kcalPerGram: number): number {
