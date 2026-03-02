@@ -76,6 +76,10 @@ export function HydrationModal({ visible, hydration, cats, onClose }: Props) {
               setCapturePhase(null);
             }}
             onCancel={() => setCapturePhase(null)}
+            customOptions={{
+              guideShape: 'square',
+              guideText: capturePhase === 't0' ? '請將水碗完整置於方框內' : '請將同一個水碗完整置於方框內',
+            }}
           />
         ) : (
           <SafeAreaView style={styles.modalBackdrop}>
