@@ -28,6 +28,11 @@ export function KcalAdviceModal({ visible, onClose, currentKcal, goalKcal }: Pro
                             <Text style={{ fontSize: 14, marginTop: 4 }}>kcal / {goalKcal} kcal</Text>
                             <Text style={{ fontSize: 32, fontWeight: '700', marginTop: 12, color: '#666' }}>{percent}%</Text>
                         </View>
+                        <View style={{ borderWidth: 1, borderColor: '#000', backgroundColor: '#f8fafc', padding: 10, marginBottom: 16 }}>
+                            <Text style={{ fontSize: 12, lineHeight: 18, color: '#334155' }}>
+                                此熱量目標為起始建議，需依體況與主治獸醫評估調整。若處於疾病管理（例如甲亢/減重期），請定期依體重與肌肉狀態回調。
+                            </Text>
+                        </View>
 
                         {percent < 100 && (
                             <View style={{ backgroundColor: '#fff3cd', borderWidth: 2, borderColor: '#856404', padding: 16, marginBottom: 16 }}>

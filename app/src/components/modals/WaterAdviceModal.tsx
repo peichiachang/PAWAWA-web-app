@@ -28,6 +28,11 @@ export function WaterAdviceModal({ visible, onClose, currentWater, goalWater }: 
                             <Text style={{ fontSize: 14, marginTop: 4 }}>ml / {goalWater} ml</Text>
                             <Text style={{ fontSize: 32, fontWeight: '700', marginTop: 12, color: '#666' }}>{percent}%</Text>
                         </View>
+                        <View style={{ borderWidth: 1, borderColor: '#000', backgroundColor: '#f8fafc', padding: 10, marginBottom: 16 }}>
+                            <Text style={{ fontSize: 12, lineHeight: 18, color: '#334155' }}>
+                                飲水數值為起始參考，慢性病（特別是 CKD、糖尿病、FLUTD）請依主治獸醫建議調整。濕食與皮下輸液也應納入總水分評估。
+                            </Text>
+                        </View>
 
                         {percent < 100 && (
                             <View style={{ backgroundColor: '#fff3cd', borderWidth: 2, borderColor: '#856404', padding: 16, marginBottom: 16 }}>

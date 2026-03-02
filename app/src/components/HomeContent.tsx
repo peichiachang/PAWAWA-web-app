@@ -469,17 +469,23 @@ export function HomeContent({
     : 210;
 
   const kcalMultiplierHint = currentCat?.chronicConditions.includes('hyperthyroidism') ? 'RER × 1.6 (甲亢)' :
-    currentCat?.chronicConditions.includes('obesity') ? 'RER × 0.8 (肥胖管理)' :
+    currentCat?.chronicConditions.includes('obesity') ? 'RER × 0.8 (減重期)' :
       currentCat?.spayedNeutered ? 'RER × 1.2 (已結紮)' : 'RER × 1.4 (未結紮)';
 
   const waterRange = currentCat ? calculateDailyWaterGoalRange(currentCat) : { min: 0, max: 0 };
+  const hasCkd = Boolean(currentCat?.chronicConditions.includes('ckd'));
+  const hasDiabetes = Boolean(currentCat?.chronicConditions.includes('diabetes'));
+  const hasFlutd = Boolean(currentCat?.chronicConditions.includes('flutd'));
+  const isWaterObservationMode = hasDiabetes || hasFlutd;
   const waterMultiplierHint = currentCat?.chronicConditions.includes('ckd') ? '40–60ml / kg (腎病建議區間)' :
-    currentCat?.chronicConditions.includes('diabetes') ? '50–70ml / kg（基線+趨勢）' :
-      currentCat?.chronicConditions.includes('flutd') ? '50–65ml / kg（基線+趨勢）' :
+    currentCat?.chronicConditions.includes('diabetes') ? '50–70ml / kg（觀察區間）' :
+      currentCat?.chronicConditions.includes('flutd') ? '50–65ml / kg（觀察區間）' :
         '50ml / kg (標準)';
   // 今日攝取（僅當日紀錄，非累積）
   const currentKcal = currentSummary?.todayKcalIntake ?? currentSummary?.totalKcalIntake ?? 0;
   const currentWater = currentSummary?.todayWaterMl ?? currentSummary?.totalActualWaterMl ?? 0;
+  const waterProgressBase = isWaterObservationMode ? Math.max(waterRange.max, 1) : Math.max(individualWaterGoal, 1);
+  const waterProgressPct = Math.round((currentWater / waterProgressBase) * 100);
 
   return (
     <>
@@ -540,21 +546,31 @@ export function HomeContent({
             <Text style={{ fontSize: 11, textAlign: 'center' }}>ml</Text>
             <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#000' }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                <Text style={{ fontSize: 10 }}>目標</Text>
+                <Text style={{ fontSize: 10 }}>{isWaterObservationMode ? '觀察區間' : '目標'}</Text>
                 <Text style={{ fontSize: 10, fontWeight: '700' }}>
-                  {(currentCat?.chronicConditions.includes('ckd') ||
-                    currentCat?.chronicConditions.includes('diabetes') ||
-                    currentCat?.chronicConditions.includes('flutd'))
+                  {(hasCkd || hasDiabetes || hasFlutd)
                     ? `${Math.round(waterRange.min)}–${Math.round(waterRange.max)} ml`
                     : `${individualWaterGoal} ml`}
                 </Text>
               </View>
               <View style={{ height: 6, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', marginBottom: 2 }}>
-                <View style={{ width: `${Math.min(100, Math.round((currentWater / individualWaterGoal) * 100))}%`, height: '100%', backgroundColor: '#000' }} />
+                <View style={{ width: `${Math.min(100, waterProgressPct)}%`, height: '100%', backgroundColor: '#000' }} />
               </View>
-              <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>{Math.round((currentWater / individualWaterGoal) * 100)}% 達成</Text>
+              {isWaterObservationMode ? (
+                <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>
+                  觀察：若連續多日 {'>'} {Math.round(waterRange.max)} ml，建議回診檢查控制狀態
+                </Text>
+              ) : (
+                <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>{waterProgressPct}% 達成</Text>
+              )}
             </View>
           </View>
+        </View>
+        <View style={{ borderWidth: 1, borderColor: '#000', backgroundColor: '#f8fafc', padding: 10 }}>
+          <Text style={{ fontSize: 11, lineHeight: 18, color: '#334155' }}>
+            熱量與水分係數為起始建議，需依體況與獸醫評估調整。疾患係數僅供示意；甲亢請依體重/肌肉回升動態調整。
+            {hasCkd ? ' CKD 目標請依主治獸醫調整，濕食與皮下輸液也應計入總水分。' : ''}
+          </Text>
         </View>
       </View>
 
