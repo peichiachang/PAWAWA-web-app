@@ -13,15 +13,7 @@ import {
 } from '../../types/ai';
 import { validateImageQuality } from '../../utils/imageQuality';
 
-// Note: In a real app, the API key should be handled securely.
-// For Expo, we recommend using EXPO_PUBLIC_ prefix for environment variables.
 const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
-
-console.log('[GeminiService] Initializing with:', {
-  hasKey: !!API_KEY,
-  keyPrefix: API_KEY.substring(0, 6) + '...',
-  model: 'gemini-2.5-flash'
-});
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({
@@ -31,6 +23,10 @@ const model = genAI.getGenerativeModel({
     temperature: 0.1, // 略降隨機性，但避免過度保守導致誤判為 almost_none
   }
 });
+
+function ensureGeminiKey() {
+  if (!API_KEY) throw new Error('Gemini API key is not configured on client');
+}
 
 async function fileToGenerativePart(base64: string, mimeType: string): Promise<Part> {
   return {
@@ -145,6 +141,7 @@ function mean(values: number[]): number {
 
 export const geminiService: AiRecognitionService = {
   async analyzeFeedingImages(input): Promise<FeedingVisionResult> {
+    ensureGeminiKey();
     if (!input.t0.imageBase64 || !input.t1.imageBase64) {
       throw new Error('Image Base64 data missing for feeding analysis');
     }
@@ -297,6 +294,7 @@ Return JSON:
     t1: AiImageInput;
     vessel?: import('../../types/app').VesselCalibration;
   }): Promise<FeedingMajorityVoteResult> {
+    ensureGeminiKey();
     const [run1, run2, run3] = await Promise.all([
       this.analyzeFeedingImages(input),
       this.analyzeFeedingImages(input),
@@ -345,6 +343,7 @@ Return JSON:
   },
 
   async extractNutritionLabel(input): Promise<NutritionOCRResult> {
+    ensureGeminiKey();
     if (!input.imageBase64) {
       throw new Error('Image Base64 data missing for nutrition extraction');
     }
@@ -367,14 +366,11 @@ JSON schema:
 }
 `;
 
-    console.log('[GeminiService] extractNutritionLabel: Base64 length:', input.imageBase64.length);
     try {
       const imagePart = await fileToGenerativePart(input.imageBase64, input.mimeType || 'image/jpeg');
-      console.log('[GeminiService] Sending request to Gemini...');
       const result = await model.generateContent([prompt, imagePart]);
       const response = await result.response;
       const text = response.text();
-      console.log('[GeminiService] Raw text response:', text);
       const parsed = safeJsonParse<NutritionOCRResult>(text);
       return {
         kcalPerGram: clamp(Number(parsed.kcalPerGram ?? 0), 0, 10),
@@ -383,12 +379,12 @@ JSON schema:
         rawText: String(parsed.rawText || ''),
       };
     } catch (error) {
-      console.error('[GeminiService] Error in extractNutritionLabel:', error);
       throw error;
     }
   },
 
   async analyzeHydrationImages(input): Promise<HydrationVisionResult> {
+    ensureGeminiKey();
     if (!input.t0.imageBase64 || !input.t1.imageBase64) {
       throw new Error('Image Base64 data missing for hydration analysis');
     }
@@ -576,6 +572,7 @@ If vessel appears different between T0 and T1, set isBowlMatch=false and explain
   },
 
   async analyzeEliminationImage(input): Promise<EliminationVisionResult> {
+    ensureGeminiKey();
     if (!input.imageBase64) {
       throw new Error('Image Base64 data missing for elimination analysis');
     }
@@ -613,6 +610,7 @@ JSON schema:
   },
 
   async extractBloodReport(input): Promise<BloodReportOCRResult> {
+    ensureGeminiKey();
     if (!input.imageBase64) {
       throw new Error('Image Base64 data missing for blood report extraction');
     }
@@ -657,6 +655,7 @@ JSON schema:
   },
 
   async analyzeSideProfile(input): Promise<SideProfileAnalysisResult> {
+    ensureGeminiKey();
     if (!input.imageBase64) {
       throw new Error('Image Base64 data missing for side profile analysis');
     }
