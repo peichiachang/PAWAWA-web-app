@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Carecat",
+    "name": "PAWAWA",
     "slug": "project-cat",
     "scheme": "projectcat",
     "version": "1.0.0",
@@ -17,7 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.pagechang.projectcat",
       "infoPlist": {
-        "NSCameraUsageDescription": "Carecat 需要使用相機拍攝貓咪照護影像以進行 AI 分析。",
+        "NSCameraUsageDescription": "PAWAWA 需要使用相機拍攝貓咪照護影像以進行 AI 分析。",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -43,7 +43,7 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Carecat 需要相機權限來拍攝照護紀錄影像。"
+          "cameraPermission": "PAWAWA 需要相機權限來拍攝照護紀錄影像。"
         }
       ],
       [

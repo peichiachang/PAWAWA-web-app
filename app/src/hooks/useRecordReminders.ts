@@ -61,7 +61,7 @@ async function scheduleReminders(): Promise<void> {
   await Notifications.scheduleNotificationAsync({
     identifier: MORNING_ID,
     content: {
-      title: 'Carecat 提醒',
+      title: 'PAWAWA 提醒',
       body: '記得記錄上午的飲食與飲水喔～',
       data: { type: 'record_reminder', period: 'morning' },
     },
@@ -77,7 +77,7 @@ async function scheduleReminders(): Promise<void> {
   await Notifications.scheduleNotificationAsync({
     identifier: EVENING_ID,
     content: {
-      title: 'Carecat 提醒',
+      title: 'PAWAWA 提醒',
       body: '記得記錄傍晚的飲食與飲水喔～',
       data: { type: 'record_reminder', period: 'evening' },
     },
