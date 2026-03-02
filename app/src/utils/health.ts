@@ -22,7 +22,8 @@ export function calculateDailyWaterGoal(cat: CatIdentity): number {
   let multiplier = 50; // Standard 50ml/kg
 
   if (cat.chronicConditions.includes('ckd')) {
-    multiplier = 80;
+    // CKD cats: use a conservative default target and show range guidance in UI.
+    multiplier = 50;
   } else if (cat.chronicConditions.includes('diabetes')) {
     multiplier = 70;
   } else if (cat.chronicConditions.includes('flutd')) {
@@ -30,6 +31,18 @@ export function calculateDailyWaterGoal(cat: CatIdentity): number {
   }
 
   return cat.currentWeightKg * multiplier;
+}
+
+export function calculateDailyWaterGoalRange(cat: CatIdentity): { min: number; max: number } {
+  if (cat.chronicConditions.includes('ckd')) {
+    return {
+      min: cat.currentWeightKg * 40,
+      max: cat.currentWeightKg * 60,
+    };
+  }
+
+  const goal = calculateDailyWaterGoal(cat);
+  return { min: goal, max: goal };
 }
 
 export function calculateDailyKcalIntake(intakeGram: number, kcalPerGram: number): number {

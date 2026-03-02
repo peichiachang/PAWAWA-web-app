@@ -5,7 +5,7 @@ import { ActiveModal, Level, FeedingOwnershipLog, HydrationOwnershipLog, VesselC
 import { EliminationOwnershipLog } from '../hooks/useElimination';
 import { CatIdentity, ClinicalSummary, MedicationLog, SymptomLog } from '../types/domain';
 import { styles } from '../styles/common';
-import { calculateDailyKcalGoal, calculateDailyWaterGoal } from '../utils/health';
+import { calculateDailyKcalGoal, calculateDailyWaterGoal, calculateDailyWaterGoalRange } from '../utils/health';
 import { TrendChart } from './TrendChart';
 import { DetailRecord } from './modals/RecordDetailModal';
 import { AppIcon } from './AppIcon';
@@ -452,7 +452,8 @@ export function HomeContent({
     currentCat?.chronicConditions.includes('obesity') ? 'RER × 0.8 (肥胖管理)' :
       currentCat?.spayedNeutered ? 'RER × 1.2 (已結紮)' : 'RER × 1.4 (未結紮)';
 
-  const waterMultiplierHint = currentCat?.chronicConditions.includes('ckd') ? '80ml / kg (腎病)' :
+  const waterRange = currentCat ? calculateDailyWaterGoalRange(currentCat) : { min: 0, max: 0 };
+  const waterMultiplierHint = currentCat?.chronicConditions.includes('ckd') ? '40–60ml / kg (腎病建議區間)' :
     currentCat?.chronicConditions.includes('diabetes') ? '70ml / kg (糖尿病)' : '50ml / kg (標準)';
   // 今日攝取（僅當日紀錄，非累積）
   const currentKcal = currentSummary?.todayKcalIntake ?? currentSummary?.totalKcalIntake ?? 0;
@@ -518,7 +519,11 @@ export function HomeContent({
             <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#000' }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                 <Text style={{ fontSize: 10 }}>目標</Text>
-                <Text style={{ fontSize: 10, fontWeight: '700' }}>{individualWaterGoal} ml</Text>
+                <Text style={{ fontSize: 10, fontWeight: '700' }}>
+                  {currentCat?.chronicConditions.includes('ckd')
+                    ? `${Math.round(waterRange.min)}–${Math.round(waterRange.max)} ml`
+                    : `${individualWaterGoal} ml`}
+                </Text>
               </View>
               <View style={{ height: 6, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', marginBottom: 2 }}>
                 <View style={{ width: `${Math.min(100, Math.round((currentWater / individualWaterGoal) * 100))}%`, height: '100%', backgroundColor: '#000' }} />

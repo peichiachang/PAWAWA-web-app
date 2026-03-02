@@ -1,5 +1,5 @@
 import { CatIdentity } from '../../types/domain';
-import { calculateDailyKcalGoal, calculateDailyWaterGoal } from '../health';
+import { calculateDailyKcalGoal, calculateDailyWaterGoal, calculateDailyWaterGoalRange } from '../health';
 
 describe('Health Calculations', () => {
     const baseCat: CatIdentity = {
@@ -23,10 +23,16 @@ describe('Health Calculations', () => {
             expect(goal).toBe(200); // 4kg * 50
         });
 
-        it('should calculate 80ml/kg for a cat with CKD', () => {
+        it('should calculate 50ml/kg as default target for a cat with CKD', () => {
             const ckdCat = { ...baseCat, chronicConditions: ['ckd' as any] };
             const goal = calculateDailyWaterGoal(ckdCat);
-            expect(goal).toBe(320); // 4kg * 80
+            expect(goal).toBe(200); // 4kg * 50
+        });
+
+        it('should provide 40-60ml/kg range guidance for a cat with CKD', () => {
+            const ckdCat = { ...baseCat, chronicConditions: ['ckd' as any] };
+            const range = calculateDailyWaterGoalRange(ckdCat);
+            expect(range).toEqual({ min: 160, max: 240 }); // 4kg * (40-60)
         });
 
         it('should calculate 70ml/kg for a cat with diabetes', () => {
