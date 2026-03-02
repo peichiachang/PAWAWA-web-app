@@ -149,56 +149,63 @@ function AppMain() {
   }
 
   async function handleSaveCat(data: any) {
-    if (data.id) {
-      // Edit existing cat
-      const updated = cats.map(c => c.id === data.id ? {
-        ...c,
+    try {
+      if (data.id) {
+        // Edit existing cat
+        const updated = cats.map(c => c.id === data.id ? {
+          ...c,
+          name: data.name,
+          gender: data.gender,
+          currentWeightKg: data.weight,
+          spayedNeutered: data.spayedNeutered,
+          chronicConditions: data.chronicConditions || [],
+        } : c);
+        setCats(updated);
+        await AsyncStorage.setItem(CATS_STORAGE_KEY, JSON.stringify(updated));
+        Alert.alert('更新成功', `已更新 ${data.name} 的檔案。`);
+        return;
+      }
+
+      // New cat logic (existing)
+      const newCat: CatIdentity = {
+        id: `cat_${Date.now()}`,
         name: data.name,
+        birthDate: '2020-01-01',
         gender: data.gender,
-        currentWeightKg: data.weight,
         spayedNeutered: data.spayedNeutered,
+        baselineWeightKg: data.weight,
+        currentWeightKg: data.weight,
+        targetWeightKg: data.weight,
+        bcsScore: 5,
         chronicConditions: data.chronicConditions || [],
-      } : c);
+        allergyWhitelist: [],
+        allergyBlacklist: [],
+      };
+
+      const updated = [...cats, newCat];
       setCats(updated);
       await AsyncStorage.setItem(CATS_STORAGE_KEY, JSON.stringify(updated));
-      Alert.alert('更新成功', `已更新 ${data.name} 的檔案。`);
-      return;
+
+      // Create initial vitals log
+      const initialVitals: VitalsLog = {
+        id: `v_${Date.now()}`,
+        catId: newCat.id,
+        weightKg: newCat.currentWeightKg,
+        temperatureC: 38.5,
+        medicineFlag: false,
+        timestamp: new Date().toISOString(),
+      };
+      const updatedVitals = [initialVitals, ...vitalsLogs];
+      setVitalsLogs(updatedVitals);
+      await AsyncStorage.setItem(VITALS_HISTORY_KEY, JSON.stringify(updatedVitals));
+
+      Alert.alert('新增成功', `已建立 ${newCat.name} 的檔案。`);
+    } catch (error) {
+      console.error('[App] handleSaveCat failed:', error);
+      const message = error instanceof Error ? error.message : '無法儲存資料，請稍後再試';
+      Alert.alert('建立失敗', message);
+      throw error;
     }
-
-    // New cat logic (existing)
-    const newCat: CatIdentity = {
-      id: `cat_${Date.now()}`,
-      name: data.name,
-      birthDate: '2020-01-01',
-      gender: data.gender,
-      spayedNeutered: data.spayedNeutered,
-      baselineWeightKg: data.weight,
-      currentWeightKg: data.weight,
-      targetWeightKg: data.weight,
-      bcsScore: 5,
-      chronicConditions: data.chronicConditions || [],
-      allergyWhitelist: [],
-      allergyBlacklist: [],
-    };
-
-    const updated = [...cats, newCat];
-    setCats(updated);
-    await AsyncStorage.setItem(CATS_STORAGE_KEY, JSON.stringify(updated));
-
-    // Create initial vitals log
-    const initialVitals: VitalsLog = {
-      id: `v_${Date.now()}`,
-      catId: newCat.id,
-      weightKg: newCat.currentWeightKg,
-      temperatureC: 38.5,
-      medicineFlag: false,
-      timestamp: new Date().toISOString(),
-    };
-    const updatedVitals = [initialVitals, ...vitalsLogs];
-    setVitalsLogs(updatedVitals);
-    await AsyncStorage.setItem(VITALS_HISTORY_KEY, JSON.stringify(updatedVitals));
-
-    Alert.alert('新增成功', `已建立 ${newCat.name} 的檔案。`);
   }
 
   async function handleSaveWeightRecord(catId: string, weightKg: number) {

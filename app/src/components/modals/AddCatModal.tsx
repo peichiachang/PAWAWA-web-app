@@ -7,7 +7,7 @@ import { ChronicCondition, CatIdentity } from '../../types/domain';
 interface Props {
     visible: boolean;
     onClose: () => void;
-    onSave: (catData: any) => void;
+    onSave: (catData: any) => Promise<void> | void;
     initialData?: CatIdentity | null;
 }
 
@@ -50,23 +50,33 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
         );
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!name || !gender || !weight) {
             Alert.alert('錯誤', '請填寫必填欄位');
             return;
         }
-        onSave({
-            ...(initialData ? { id: initialData.id } : {}),
-            name,
-            gender,
-            weight: parseFloat(weight),
-            age: parseInt(age) || undefined,
-            spayedNeutered,
-            activity,
-            bodyCondition,
-            chronicConditions,
-        });
-        onClose();
+        const parsedWeight = parseFloat(weight);
+        if (!Number.isFinite(parsedWeight) || parsedWeight <= 0) {
+            Alert.alert('錯誤', '請輸入有效體重（例如 4.2）');
+            return;
+        }
+        try {
+            await onSave({
+                ...(initialData ? { id: initialData.id } : {}),
+                name,
+                gender,
+                weight: parsedWeight,
+                age: parseInt(age) || undefined,
+                spayedNeutered,
+                activity,
+                bodyCondition,
+                chronicConditions,
+            });
+            onClose();
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : '未知錯誤';
+            Alert.alert('儲存失敗', msg);
+        }
     };
 
     return (
