@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState, useEffect } from 'react';
-import { Alert, SafeAreaView, ScrollView, View } from 'react-native';
+import { Alert, SafeAreaView, ScrollView, View, Platform } from 'react-native';
 import { getAiRecognitionService } from './src/services/ai';
 import { buildClinicalSummary } from './src/services/clinicalSummary';
 import { calculateActualWaterIntakeMl, calculateDailyKcalIntake, calculateDailyKcalGoal, calculateDailyWaterGoal } from './src/utils/health';
@@ -76,6 +76,41 @@ function AppMain() {
   const symptoms = useSymptoms();
   const bloodReport = useBloodReport(ai, launchCamera);
   useRecordReminders(); // 飲食/飲水紀錄提醒（上午 8:00、傍晚 18:00）
+
+  // Web: lock zoom level (disable pinch / double-tap zoom)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+
+    const viewport = document.querySelector('meta[name="viewport"]') || document.createElement('meta');
+    viewport.setAttribute('name', 'viewport');
+    viewport.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
+    if (!viewport.parentNode) document.head.appendChild(viewport);
+
+    const preventGesture = (event: Event) => event.preventDefault();
+    const preventMultiTouch = (event: TouchEvent) => {
+      if (event.touches.length > 1) event.preventDefault();
+    };
+    let lastTouchEnd = 0;
+    const preventDoubleTap = (event: TouchEvent) => {
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) event.preventDefault();
+      lastTouchEnd = now;
+    };
+
+    document.addEventListener('gesturestart', preventGesture, { passive: false });
+    document.addEventListener('gesturechange', preventGesture, { passive: false });
+    document.addEventListener('gestureend', preventGesture, { passive: false });
+    document.addEventListener('touchmove', preventMultiTouch, { passive: false });
+    document.addEventListener('touchend', preventDoubleTap, { passive: false });
+
+    return () => {
+      document.removeEventListener('gesturestart', preventGesture);
+      document.removeEventListener('gesturechange', preventGesture);
+      document.removeEventListener('gestureend', preventGesture);
+      document.removeEventListener('touchmove', preventMultiTouch);
+      document.removeEventListener('touchend', preventDoubleTap);
+    };
+  }, []);
 
   // Load persistence data
   useEffect(() => {
