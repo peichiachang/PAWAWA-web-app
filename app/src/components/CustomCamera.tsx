@@ -12,6 +12,8 @@ export interface CameraCustomOptions {
     quality?: number;
     /** 是否顯示對焦框與引導文字，預設 true */
     showGuide?: boolean;
+    /** 對焦框形狀，預設 circle */
+    guideShape?: 'circle' | 'square';
     /** 引導文字，預設「請將目標物放置於框內中心」 */
     guideText?: string;
     /** 是否顯示縮放控制，預設 true */
@@ -37,6 +39,7 @@ const MIN_LUX_REQUIRED = 50; // Threshold for low light warning
 const DEFAULT_OPTIONS: Required<CameraCustomOptions> = {
     quality: 0.3,
     showGuide: true,
+    guideShape: 'circle',
     guideText: '請將目標物放置於框內中心',
     showZoom: true,
     showFlipButton: false,
@@ -217,7 +220,7 @@ export function CustomCamera({ title, onCapture, onCancel, customOptions }: Prop
                     {/* Centering Guide */}
                     {opts.showGuide && (
                         <View style={styles.guideOverlay}>
-                            <View style={styles.guideBox} />
+                            <View style={[styles.guideBox, opts.guideShape === 'circle' ? styles.guideCircle : styles.guideSquare]} />
                             <Text style={styles.guideText}>{opts.guideText}</Text>
                             {opts.showLightWarning && isDark && (
                                 <View style={[styles.warningBox, { flexDirection: 'row', alignItems: 'center' }]}>
@@ -341,6 +344,11 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: 'rgba(255, 255, 255, 0.6)',
         borderStyle: 'dashed',
+    },
+    guideCircle: {
+        borderRadius: 999,
+    },
+    guideSquare: {
         borderRadius: 20,
     },
     guideText: {
