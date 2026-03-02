@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ActivityIndicator, Alert, Linking, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
-import { VesselCalibration, VesselShape, VesselType, FoodType, CapturedImage } from '../../types/app';
+import { VesselCalibration, VesselShape, VesselType, CapturedImage } from '../../types/app';
 import { styles } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
 import {
@@ -29,8 +29,6 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
     // Form states
     const [name, setName] = useState('');
     const [vesselType, setVesselType] = useState<VesselType>('feeding');
-    const [foodType, setFoodType] = useState<FoodType>('dry');
-    const [defaultPortionGrams, setDefaultPortionGrams] = useState('');
     const [shape, setShape] = useState<VesselShape>('cylinder');
     const [length, setLength] = useState('');
     const [width, setWidth] = useState('');
@@ -124,8 +122,6 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
         setEditingProfile(profile);
         setName(profile?.name || '');
         setVesselType(profile?.vesselType || 'feeding');
-        setFoodType(profile?.foodType || 'dry');
-        setDefaultPortionGrams(profile?.defaultPortionGrams?.toString() || '');
         setShape(profile?.shape || 'cylinder');
         setHeight(profile?.dimensions.height?.toString() || '');
         setLength(profile?.dimensions.length?.toString() || '');
@@ -389,17 +385,6 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
             cal.topViewImageBase64 = topViewImage.imageBase64;
         }
 
-        // 食物類型與預設份量（僅食碗）
-        if (vesselType === 'feeding') {
-            cal.foodType = foodType;
-            if (foodType === 'dry') {
-                const grams = parseFloat(defaultPortionGrams);
-                cal.defaultPortionGrams = grams > 0 ? grams : undefined;
-            } else {
-                cal.defaultPortionGrams = undefined;
-            }
-        }
-
         let nextProfiles: VesselCalibration[];
         if (editingProfile) {
             nextProfiles = profiles.map(p => p.id === editingProfile.id ? cal : p);
@@ -485,42 +470,6 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                 </View>
                                 <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>食碗用於飲食記錄，水碗用於飲水記錄</Text>
                             </View>
-
-                            {vesselType === 'feeding' && (
-                                <View style={{ marginBottom: 16 }}>
-                                    <Text style={styles.formLabel}>食物類型</Text>
-                                    <View style={styles.choiceRow}>
-                                        <Pressable
-                                            style={[styles.choiceBtn, foodType === 'dry' && styles.choiceBtnActive]}
-                                            onPress={() => setFoodType('dry')}
-                                        >
-                                            <Text style={[styles.choiceBtnText, foodType === 'dry' && styles.choiceBtnTextActive]}>乾飼料</Text>
-                                        </Pressable>
-                                        <Pressable
-                                            style={[styles.choiceBtn, foodType === 'wet' && styles.choiceBtnActive]}
-                                            onPress={() => setFoodType('wet')}
-                                        >
-                                            <Text style={[styles.choiceBtnText, foodType === 'wet' && styles.choiceBtnTextActive]}>罐頭濕食</Text>
-                                        </Pressable>
-                                    </View>
-                                    <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
-                                        {foodType === 'dry' ? '份量通常固定，可設預設值沿用' : '每次給量可能不同（半罐、1/4 罐等），需每次輸入克數'}
-                                    </Text>
-                                    {foodType === 'dry' && (
-                                        <View style={{ marginTop: 12 }}>
-                                            <Text style={[styles.formLabel, { marginBottom: 4 }]}>預設份量（克）</Text>
-                                            <TextInput
-                                                style={styles.input}
-                                                placeholder="例：50"
-                                                keyboardType="numeric"
-                                                value={defaultPortionGrams}
-                                                onChangeText={setDefaultPortionGrams}
-                                            />
-                                            <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>設定後不用每次輸入，沿用即可</Text>
-                                        </View>
-                                    )}
-                                </View>
-                            )}
 
                             <View style={{ marginBottom: 16 }}>
                                 <Text style={styles.formLabel}>碗型選擇</Text>

@@ -103,8 +103,11 @@ function createHttpAiService(baseUrl: string): AiRecognitionService {
 
 export function getAiRecognitionService(): AiRecognitionService {
   if (AI_SERVICE_MODE === 'gemini') {
-    if (!__DEV__) {
-      console.warn('[AI] EXPO_PUBLIC_AI_SERVICE_MODE=gemini is disabled in production. Falling back to mock service.');
+    // Web production still supports Gemini when a public key is configured at build time.
+    // If key is missing, fall back to mock to avoid startup failure.
+    const hasGeminiKey = Boolean(process.env.EXPO_PUBLIC_GEMINI_API_KEY);
+    if (!hasGeminiKey) {
+      console.warn('[AI] EXPO_PUBLIC_GEMINI_API_KEY is missing. Falling back to mock service.');
       return mockAiService;
     }
     return geminiService;
