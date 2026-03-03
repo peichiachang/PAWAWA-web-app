@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import { BottomTab } from '../types/app';
 import { BOTTOM_ITEMS } from '../constants';
-import { styles } from '../styles/common';
+import { palette, styles } from '../styles/common';
 import { AppIcon } from './AppIcon';
 
 interface Props {
@@ -19,7 +19,7 @@ export function BottomNav({ activeTab, onTabPress }: Props) {
             <AppIcon
               name={item.icon as any}
               size={24}
-              color={active ? '#000000' : '#666666'}
+              color={active ? palette.primaryStrong : palette.muted}
               style={{ marginBottom: 4 }}
             />
             <Text style={[styles.navLabel, active && styles.navActive]}>{item.label}</Text>

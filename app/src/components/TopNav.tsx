@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Level } from '../types/app';
 import { CatIdentity } from '../types/domain';
-import { styles } from '../styles/common';
+import { palette, styles } from '../styles/common';
 import { extractCatSeries, getScopedCats } from '../utils/catScope';
 
 interface Props {
@@ -51,14 +51,14 @@ export function TopNav({ level, onLevelChange, cats, activeTab }: Props) {
             <MaterialIcons
               name={currentItem.key === 'household' ? 'home' : 'pets'}
               size={16}
-              color="#000000"
+              color={palette.text}
               style={styles.levelIcon}
             />
             <Text style={styles.levelName}>{currentItem.name}</Text>
             <MaterialIcons
               name={menuVisible ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
               size={18}
-              color="#000000"
+              color={palette.text}
               style={styles.levelArrow}
             />
           </Pressable>
@@ -85,7 +85,7 @@ export function TopNav({ level, onLevelChange, cats, activeTab }: Props) {
                       <MaterialIcons
                         name={item.key === 'household' ? 'home' : 'pets'}
                         size={16}
-                        color={active ? '#ffffff' : '#000000'}
+                        color={active ? palette.onPrimary : palette.text}
                         style={styles.levelIcon}
                       />
                       <Text style={[styles.levelName, active && styles.levelTextActive]}>{item.name}</Text>
