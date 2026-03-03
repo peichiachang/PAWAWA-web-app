@@ -168,6 +168,10 @@ function AppMain() {
 
   const currentCat = level === 'household' ? null : cats.find((cat) => cat.id === level) || null;
   const currentSummary = currentCat ? summaryByCatId[currentCat.id] : null;
+  const indexedCats = useMemo(() => {
+    const matched = cats.filter((cat) => /^cat_\d+_/.test(cat.id));
+    return matched.length > 0 ? matched : cats;
+  }, [cats]);
 
   const getRecentDailyWaterIntakesForCat = (catId: string): number[] => {
     const byDay = new Map<string, number>();
@@ -400,13 +404,13 @@ function AppMain() {
         visible={activeModal === 'kcalAdvice'}
         onClose={closeModal}
         currentKcal={todayHouseholdKcal}
-        goalKcal={cats.reduce((sum, c) => sum + calculateDailyKcalGoal(c), 0) || 625}
+        goalKcal={indexedCats.reduce((sum, c) => sum + calculateDailyKcalGoal(c), 0) || 625}
       />
       <WaterAdviceModal
         visible={activeModal === 'waterAdvice'}
         onClose={closeModal}
         currentWater={todayHouseholdWater}
-        goalWater={cats.reduce((sum, c) => sum + calculateAdaptiveDailyWaterGoal(c, getRecentDailyWaterIntakesForCat(c.id)), 0) || 569}
+        goalWater={indexedCats.reduce((sum, c) => sum + calculateAdaptiveDailyWaterGoal(c, getRecentDailyWaterIntakesForCat(c.id)), 0) || 569}
       />
       <BackupModal
         visible={activeModal === 'backup'}

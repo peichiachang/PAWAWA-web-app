@@ -52,6 +52,8 @@ export function HomeContent({
   onEditCat,
   onRecordPress,
 }: Props) {
+  const householdDivisor = Math.max(1, cats.length);
+
   // 若父層未傳入 vesselProfiles，則自行從 AsyncStorage 載入（向後相容）
   const [localVesselProfiles, setLocalVesselProfiles] = useState<VesselCalibration[]>([]);
   useEffect(() => {
@@ -134,11 +136,35 @@ export function HomeContent({
     // Filter by level
     const filteredFeedings = level === 'household'
       ? feedingHistory
-      : feedingHistory.filter(l => l.selectedTagId === level);
+      : [
+          ...feedingHistory.filter(l => l.selectedTagId === level),
+          ...feedingHistory
+            .filter(l => l.ownershipType === 'household_only')
+            .map(l => ({
+              ...l,
+              id: `${l.id}_share_${level}`,
+              totalGram: l.totalGram / householdDivisor,
+              kcal: l.kcal == null ? undefined : l.kcal / householdDivisor,
+              selectedTagId: level,
+              ownershipType: 'household_and_tag' as const,
+            })),
+        ];
 
     const filteredHydrations = level === 'household'
       ? hydrationHistory
-      : hydrationHistory.filter(l => l.selectedTagId === level);
+      : [
+          ...hydrationHistory.filter(l => l.selectedTagId === level),
+          ...hydrationHistory
+            .filter(l => l.ownershipType === 'household_only')
+            .map(l => ({
+              ...l,
+              id: `${l.id}_share_${level}`,
+              totalMl: l.totalMl / householdDivisor,
+              actualWaterMl: l.actualWaterMl == null ? undefined : l.actualWaterMl / householdDivisor,
+              selectedTagId: level,
+              ownershipType: 'household_and_tag' as const,
+            })),
+        ];
 
     // Group feeding (kcal) by date with error margin and record tracking
     const kcalData = days.map(day => {
@@ -198,7 +224,7 @@ export function HomeContent({
     const waterRecordsComplete = waterData.filter(d => d.hasRecord).length;
 
     return { kcalData, waterData, kcalRecordsComplete, waterRecordsComplete };
-  }, [feedingHistory, hydrationHistory, level, vesselProfiles]);
+  }, [feedingHistory, hydrationHistory, level, vesselProfiles, householdDivisor]);
 
   const recentRecords = useMemo(() => {
     const allFeedings = feedingHistory.filter(f => level === 'household' ? (f.ownershipType === 'household_only' || f.selectedTagId === 'household') : f.selectedTagId === level);
@@ -330,8 +356,10 @@ export function HomeContent({
   );
 
   if (level === 'household') {
-    const householdKcalGoal = cats.reduce((sum, cat) => sum + calculateDailyKcalGoal(cat), 0) || 625;
-    const householdWaterGoal = cats.reduce((sum, cat) => {
+    const indexedCats = cats.filter((cat) => /^cat_\d+_/.test(cat.id));
+    const goalCats = indexedCats.length > 0 ? indexedCats : cats;
+    const householdKcalGoal = goalCats.reduce((sum, cat) => sum + calculateDailyKcalGoal(cat), 0) || 625;
+    const householdWaterGoal = goalCats.reduce((sum, cat) => {
       const recent = getRecentDailyWaterIntakesForCat(cat.id);
       return sum + calculateAdaptiveDailyWaterGoal(cat, recent);
     }, 0) || 569;
