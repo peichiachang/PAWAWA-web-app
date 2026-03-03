@@ -149,7 +149,8 @@ function AppMain() {
       return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
     };
     return feeding.ownershipLogs
-      .filter(item => item.ownershipType === 'household_only' && isToday(item.createdAt))
+      // Household daily total should include shared logs and cat-tagged logs.
+      .filter(item => isToday(item.createdAt))
       .reduce((sum, item) => sum + (item.kcal ?? calculateDailyKcalIntake(item.totalGram, 3.5)), 0);
   }, [feeding.ownershipLogs]);
 
@@ -160,8 +161,9 @@ function AppMain() {
       return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
     };
     return hydration.ownershipLogs
-      .filter(item => item.ownershipType === 'household_only' && isToday(item.createdAt))
-      .reduce((sum, item) => sum + (item.totalMl || 0), 0);
+      // Household daily total should include shared logs and cat-tagged logs.
+      .filter(item => isToday(item.createdAt))
+      .reduce((sum, item) => sum + (item.actualWaterMl || item.totalMl || 0), 0);
   }, [hydration.ownershipLogs]);
 
   const currentCat = level === 'household' ? null : cats.find((cat) => cat.id === level) || null;
