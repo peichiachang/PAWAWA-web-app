@@ -175,6 +175,7 @@ export function useHydration(
     setT1Image(storedT1);
 
     try {
+      setIsAnalyzing(true);
       const t0 = currentT0!;
       const vessel = vessels.currentVessel;
       const volumeMl = vessel?.volumeMl ?? 1800;

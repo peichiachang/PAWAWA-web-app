@@ -51,11 +51,24 @@ function resolveApiBaseUrl(): string {
 
 function createHttpAiService(baseUrl: string): AiRecognitionService {
   async function post<T>(path: string, body: object): Promise<T> {
-    const response = await fetch(`${baseUrl}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
+    let response: Response;
+    try {
+      response = await fetch(`${baseUrl}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        throw new Error('AI service timeout: 請重試（建議重拍或上傳較小圖片）');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
     if (!response.ok) {
       let detail = '';
       try {
@@ -63,6 +76,9 @@ function createHttpAiService(baseUrl: string): AiRecognitionService {
         detail = payload?.error ? ` - ${payload.error}` : '';
       } catch (_error) {
         // Ignore JSON parse failure and keep status-only message.
+      }
+      if (response.status === 413) {
+        throw new Error('AI service failed: 413 - 圖片太大，請重拍或改用較小圖片');
       }
       throw new Error(`AI service failed: ${response.status}${detail}`);
     }

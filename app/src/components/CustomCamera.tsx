@@ -35,6 +35,8 @@ interface Props {
 }
 
 const MIN_LUX_REQUIRED = 50; // Threshold for low light warning
+const WEB_MAX_IMAGE_DIMENSION = 1280;
+const WEB_JPEG_QUALITY = 0.75;
 
 const DEFAULT_OPTIONS: Required<CameraCustomOptions> = {
     quality: 0.3,
@@ -84,6 +86,13 @@ export function CustomCamera({ title, onCapture, onCancel, customOptions }: Prop
         try {
             const image = await pickFromLibrary();
             if (image) {
+                if (isWeb) {
+                    const optimized = await optimizeWebImage(image.uri);
+                    if (optimized) {
+                        onCapture(optimized);
+                        return;
+                    }
+                }
                 onCapture(image);
             }
         } finally {
@@ -135,6 +144,13 @@ export function CustomCamera({ title, onCapture, onCancel, customOptions }: Prop
                 });
 
                 if (photo && photo.base64) {
+                    if (isWeb && photo.uri) {
+                        const optimized = await optimizeWebImage(photo.uri);
+                        if (optimized) {
+                            onCapture(optimized);
+                            return;
+                        }
+                    }
                     onCapture({
                         uri: photo.uri,
                         imageBase64: photo.base64,
@@ -261,6 +277,51 @@ export function CustomCamera({ title, onCapture, onCancel, customOptions }: Prop
             </View>
         </SafeAreaView>
     );
+}
+
+async function optimizeWebImage(uri: string): Promise<CapturedImage | null> {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') {
+        return null;
+    }
+    try {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+
+        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const el = new Image();
+            el.onload = () => resolve(el);
+            el.onerror = () => reject(new Error('Failed to decode image'));
+            el.src = objectUrl;
+        });
+
+        const maxEdge = Math.max(img.width, img.height);
+        const scale = maxEdge > WEB_MAX_IMAGE_DIMENSION ? WEB_MAX_IMAGE_DIMENSION / maxEdge : 1;
+        const width = Math.max(1, Math.round(img.width * scale));
+        const height = Math.max(1, Math.round(img.height * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            URL.revokeObjectURL(objectUrl);
+            return null;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', WEB_JPEG_QUALITY);
+        const commaIndex = dataUrl.indexOf(',');
+        URL.revokeObjectURL(objectUrl);
+        if (commaIndex < 0) return null;
+        return {
+            uri,
+            imageBase64: dataUrl.slice(commaIndex + 1),
+            mimeType: 'image/jpeg',
+        };
+    } catch (error) {
+        console.error('[CustomCamera] optimizeWebImage failed:', error);
+        return null;
+    }
 }
 
 async function uriToBase64(uri: string): Promise<{ base64: string; mimeType: string } | null> {
