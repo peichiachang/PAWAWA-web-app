@@ -23,7 +23,7 @@ export function BackupModal({ visible, onClose, isPro, onUpgrade }: Props) {
                             <View>
                                 <View style={{ backgroundColor: '#fff3cd', borderWidth: 2, borderColor: '#856404', padding: 16, marginBottom: 16 }}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}><AppIcon name="warning" size={18} color="#856404" style={{ marginRight: 6 }} /><Text style={{ fontWeight: '700', fontSize: 14 }}>免費版限制</Text></View>
-                                    <Text style={{ fontSize: 13, lineHeight: 1.6 }}>
+                                    <Text style={{ fontSize: 13, lineHeight: 20 }}>
                                         免費版<Text style={{ fontWeight: '700' }}>不提供備份功能</Text>{'\n'}
                                         資料僅儲存在本裝置中
                                     </Text>
@@ -32,7 +32,7 @@ export function BackupModal({ visible, onClose, isPro, onUpgrade }: Props) {
                                 <Text style={styles.sectionTitle}>這表示什麼？</Text>
                                 <View style={{ borderWidth: 2, borderColor: '#d32f2f', padding: 16, marginBottom: 16 }}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}><AppIcon name="cancel" size={18} color="#d32f2f" style={{ marginRight: 6 }} /><Text style={{ fontWeight: '700', fontSize: 14, color: '#d32f2f' }}>換手機會遺失資料</Text></View>
-                                    <Text style={{ fontSize: 12, lineHeight: 1.6, color: '#333' }}>
+                                    <Text style={{ fontSize: 12, lineHeight: 18, color: '#333' }}>
                                         • 換新手機 → 所有記錄消失{'\n'}
                                         • 刪除 App → 資料無法復原{'\n'}
                                         • 手機故障 → 記錄全部遺失{'\n'}
@@ -42,7 +42,7 @@ export function BackupModal({ visible, onClose, isPro, onUpgrade }: Props) {
 
                                 <View style={{ backgroundColor: '#e3f2fd', borderWidth: 2, borderColor: '#1976d2', padding: 16, marginBottom: 16 }}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}><AppIcon name="cloud" size={18} color="#1976d2" style={{ marginRight: 6 }} /><Text style={{ fontWeight: '700', fontSize: 14 }}>升級即享雲端備份</Text></View>
-                                    <Text style={{ fontSize: 12, lineHeight: 1.6, marginBottom: 12 }}>
+                                    <Text style={{ fontSize: 12, lineHeight: 18, marginBottom: 12 }}>
                                         升級到 <Text style={{ fontWeight: '700' }}>貓奴版</Text>，您的資料將：{'\n'}
                                         • 自動備份到雲端{'\n'}
                                         • 跨裝置同步（手機、平板）{'\n'}
@@ -57,7 +57,7 @@ export function BackupModal({ visible, onClose, isPro, onUpgrade }: Props) {
                             <View>
                                 <View style={{ backgroundColor: '#e8f5e9', borderWidth: 2, borderColor: '#2e7d32', padding: 16, marginBottom: 16 }}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}><AppIcon name="check-circle" size={18} color="#2e7d32" style={{ marginRight: 6 }} /><Text style={{ fontWeight: '700', fontSize: 14 }}>雲端備份已啟用</Text></View>
-                                    <Text style={{ fontSize: 13, lineHeight: 1.6 }}>
+                                    <Text style={{ fontSize: 13, lineHeight: 20 }}>
                                         您的資料已自動備份到雲端{'\n'}
                                         換手機或使用其他裝置都能同步查看
                                     </Text>
@@ -69,7 +69,7 @@ export function BackupModal({ visible, onClose, isPro, onUpgrade }: Props) {
                                         <Text style={{ fontWeight: '700', fontSize: 14 }}>最後備份時間</Text>
                                         <View style={{ flexDirection: 'row', alignItems: 'center' }}><AppIcon name="check-circle" size={14} color="#2e7d32" style={{ marginRight: 4 }} /><Text style={{ fontSize: 13, color: '#2e7d32' }}>剛才</Text></View>
                                     </View>
-                                    <Text style={{ fontSize: 12, lineHeight: 1.6, color: '#333', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#ddd' }}>
+                                    <Text style={{ fontSize: 12, lineHeight: 18, color: '#333', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#ddd' }}>
                                         自動備份已啟用{'\n'}
                                         已備份：2 隻貓咪，158 筆記錄{'\n'}
                                         雲端儲存：12.5 MB

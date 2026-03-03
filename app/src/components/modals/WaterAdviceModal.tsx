@@ -37,8 +37,8 @@ export function WaterAdviceModal({ visible, onClose, currentWater, goalWater }: 
                         {percent < 100 && (
                             <View style={{ backgroundColor: '#fff3cd', borderWidth: 2, borderColor: '#856404', padding: 16, marginBottom: 16 }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}><AppIcon name="warning" size={18} color="#856404" style={{ marginRight: 6 }} /><Text style={{ fontWeight: '700', fontSize: 14 }}>飲水不足</Text></View>
-                                <Text style={{ fontSize: 13, lineHeight: 1.6 }}>
-                                    當前飲水量僅達目標的 {percent}%，距離每日建議量還差 <Text style={{ fontWeight: '700' }}>{remaining} ml</Text>過量或不足。
+                                <Text style={{ fontSize: 13, lineHeight: 20 }}>
+                                    當前飲水量僅達目標的 {percent}%，距離每日建議量還差 <Text style={{ fontWeight: '700' }}>{remaining} ml</Text>。
                                 </Text>
                             </View>
                         )}
@@ -46,7 +46,7 @@ export function WaterAdviceModal({ visible, onClose, currentWater, goalWater }: 
                         <Text style={styles.sectionTitle}>可能造成的問題</Text>
                         <View style={{ borderWidth: 1, borderColor: '#000', padding: 12, marginBottom: 8 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="warning" size={14} color="#000" style={{ marginRight: 4 }} /><Text style={{ fontWeight: '700', fontSize: 13 }}>短期影響</Text></View>
-                            <Text style={{ fontSize: 12, lineHeight: 1.6 }}>
+                            <Text style={{ fontSize: 12, lineHeight: 18 }}>
                                 • 尿液濃縮、顏色變深{'\n'}
                                 • 排尿次數減少{'\n'}
                                 • 便秘風險增加
@@ -55,7 +55,7 @@ export function WaterAdviceModal({ visible, onClose, currentWater, goalWater }: 
 
                         <View style={{ borderWidth: 1, borderColor: '#000', padding: 12, marginBottom: 8 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="warning" size={14} color="#000" style={{ marginRight: 4 }} /><Text style={{ fontWeight: '700', fontSize: 13 }}>長期影響</Text></View>
-                            <Text style={{ fontSize: 12, lineHeight: 1.6 }}>
+                            <Text style={{ fontSize: 12, lineHeight: 18 }}>
                                 • 泌尿系統結石風險提高{'\n'}
                                 • 膀胱炎、尿道炎{'\n'}
                                 • 腎臟負擔加重
@@ -65,7 +65,7 @@ export function WaterAdviceModal({ visible, onClose, currentWater, goalWater }: 
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 8 }}><AppIcon name="lightbulb" size={18} color="#000" style={{ marginRight: 6 }} /><Text style={styles.sectionTitle}>建議改善方式</Text></View>
                         <View style={{ borderWidth: 2, borderColor: '#000', padding: 12, marginBottom: 8, backgroundColor: '#f9f9f9' }}>
                             <Text style={{ fontWeight: '700', marginBottom: 8, fontSize: 13 }}>1. 增加水源吸引力</Text>
-                            <Text style={{ fontSize: 12, lineHeight: 1.6 }}>
+                            <Text style={{ fontSize: 12, lineHeight: 18 }}>
                                 • 使用流動飲水機{'\n'}
                                 • 多處放置水碗{'\n'}
                                 • 每天更換新鮮水
@@ -74,7 +74,7 @@ export function WaterAdviceModal({ visible, onClose, currentWater, goalWater }: 
 
                         <View style={{ borderWidth: 2, borderColor: '#000', padding: 12, marginBottom: 8, backgroundColor: '#f9f9f9' }}>
                             <Text style={{ fontWeight: '700', marginBottom: 8, fontSize: 13 }}>2. 增加濕食比例</Text>
-                            <Text style={{ fontSize: 12, lineHeight: 1.6 }}>
+                            <Text style={{ fontSize: 12, lineHeight: 18 }}>
                                 • 濕食含水量 70-80%{'\n'}
                                 • 乾糧混合水或肉湯
                             </Text>

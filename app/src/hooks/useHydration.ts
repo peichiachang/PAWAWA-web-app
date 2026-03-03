@@ -320,9 +320,9 @@ export function useHydration(
 
     const catName = cats?.find((c) => c.id === newLog.selectedTagId)?.name ?? newLog.selectedTagId;
     if (newLog.ownershipType === 'household_only') {
-      Alert.alert('儲存完成', '飲水 log 已記錄於家庭看板（Tag A&B&C 範圍），不隸屬單一 tag。');
+      Alert.alert('儲存完成', '飲水紀錄已寫入家庭看板（全家共用範圍），不隸屬單一貓咪。');
     } else {
-      Alert.alert('儲存完成', `飲水 log 已記錄於家庭看板，並歸屬至 ${catName}。`);
+      Alert.alert('儲存完成', `飲水紀錄已寫入家庭看板，並歸屬至 ${catName}。`);
     }
   }
 

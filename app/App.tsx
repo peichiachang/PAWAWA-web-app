@@ -134,9 +134,15 @@ function AppMain() {
     loadData();
   }, []);
 
+  const indexedCats = useMemo(() => {
+    const scoped = getScopedCats(cats);
+    const matched = scoped.filter((cat) => /^cat_\d+_/.test(cat.id));
+    return matched.length > 0 ? matched : scoped;
+  }, [cats]);
+
   const summaries = useMemo(
-    () => cats.map((cat) => buildClinicalSummary(cat, vitalsLogs, feeding.ownershipLogs, hydration.ownershipLogs, medication.logs, cats.length)),
-    [cats, vitalsLogs, feeding.ownershipLogs, hydration.ownershipLogs, medication.logs]
+    () => indexedCats.map((cat) => buildClinicalSummary(cat, vitalsLogs, feeding.ownershipLogs, hydration.ownershipLogs, medication.logs, indexedCats.length)),
+    [indexedCats, vitalsLogs, feeding.ownershipLogs, hydration.ownershipLogs, medication.logs]
   );
   const summaryByCatId = useMemo(
     () => Object.fromEntries(summaries.map((item) => [item.catId, item])),
@@ -174,12 +180,6 @@ function AppMain() {
     return selected || null;
   }, [cats, level]);
   const currentSummary = currentCat ? summaryByCatId[currentCat.id] : null;
-  const indexedCats = useMemo(() => {
-    const scoped = getScopedCats(cats);
-    const matched = scoped.filter((cat) => /^cat_\d+_/.test(cat.id));
-    return matched.length > 0 ? matched : scoped;
-  }, [cats]);
-
   const getRecentDailyWaterIntakesForCat = (catId: string): number[] => {
     const byDay = new Map<string, number>();
     hydration.ownershipLogs
