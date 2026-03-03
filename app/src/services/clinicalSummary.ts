@@ -19,13 +19,36 @@ export function buildClinicalSummary(
   vitals: VitalsLog[],
   feedingRecords: FeedingOwnershipLog[],
   hydrationRecords: HydrationOwnershipLog[],
-  medicationLogs: MedicationLog[]
+  medicationLogs: MedicationLog[],
+  householdCatCount: number = 1
 ): ClinicalSummary {
   const relevantVitals = vitals.filter((item) => item.catId === cat.id);
+  const divisor = Math.max(1, householdCatCount);
 
-  // 僅歸屬此貓的紀錄（不含 household_only）
-  const catFeedings = feedingRecords.filter((item) => item.selectedTagId === cat.id);
-  const catHydrations = hydrationRecords.filter((item) => item.selectedTagId === cat.id);
+  // 歸屬此貓 + household_only 平均分配
+  const directFeedings = feedingRecords.filter((item) => item.selectedTagId === cat.id);
+  const sharedFeedings = feedingRecords
+    .filter((item) => item.ownershipType === 'household_only')
+    .map((item) => ({
+      ...item,
+      totalGram: item.totalGram / divisor,
+      kcal: item.kcal == null ? undefined : item.kcal / divisor,
+      selectedTagId: cat.id,
+      ownershipType: 'household_and_tag' as const,
+    }));
+  const catFeedings = [...directFeedings, ...sharedFeedings];
+
+  const directHydrations = hydrationRecords.filter((item) => item.selectedTagId === cat.id);
+  const sharedHydrations = hydrationRecords
+    .filter((item) => item.ownershipType === 'household_only')
+    .map((item) => ({
+      ...item,
+      totalMl: item.totalMl / divisor,
+      actualWaterMl: item.actualWaterMl == null ? undefined : item.actualWaterMl / divisor,
+      selectedTagId: cat.id,
+      ownershipType: 'household_and_tag' as const,
+    }));
+  const catHydrations = [...directHydrations, ...sharedHydrations];
 
   const now = new Date();
   const isToday = (ts: number) => {
@@ -40,8 +63,9 @@ export function buildClinicalSummary(
   const todayKcalIntake = catFeedings.filter((item) => isToday(item.createdAt)).reduce((sum, item) => sum + (item.kcal || 0), 0);
   const todayWaterMl = catHydrations.filter((item) => isToday(item.createdAt)).reduce((sum, item) => sum + (item.actualWaterMl || item.totalMl || 0), 0);
 
+  // Goal trend should come from direct tag records only; do not let household_only affect target.
   const waterByDay = new Map<string, number>();
-  catHydrations.forEach((item) => {
+  directHydrations.forEach((item) => {
     const d = new Date(item.createdAt);
     const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
     waterByDay.set(key, (waterByDay.get(key) || 0) + (item.actualWaterMl || item.totalMl || 0));
