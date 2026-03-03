@@ -123,10 +123,10 @@ export function FeedingModal({ visible, feeding, cats, onClose }: Props) {
           }
           customOptions={
             capturePhase === 't0'
-              ? { guideText: '請將裝滿食物的碗置於框內' }
+              ? { showGuide: true, guideShape: 'circle', guideText: '請將裝滿食物的碗置於框內' }
               : capturePhase === 't1'
-                ? { guideText: '請將剩餘食物的碗置於框內' }
-                : { guideText: '請將飼料標籤置於框內', quality: 0.5 }
+                ? { showGuide: true, guideShape: 'circle', guideText: '請將剩餘食物的碗置於框內' }
+                : { showGuide: false, quality: 0.5 }
           }
           onCapture={(image) => {
             if (capturePhase === 't0') {

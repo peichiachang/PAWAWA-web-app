@@ -422,6 +422,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                 {showSideCamera ? (
                                     <CustomCamera
                                         title="側面輪廓校準（從正側面拍攝空碗）"
+                                        customOptions={{ showGuide: false }}
                                         onCapture={(image) => {
                                             setSideProfileImage(image);
                                             setProfileAnalysisResult(null);
@@ -432,6 +433,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                 ) : showTopCamera ? (
                                     <CustomCamera
                                         title="空碗俯視照（從上方拍攝空碗，作為飲食記錄校準參考）"
+                                        customOptions={{ showGuide: false }}
                                         onCapture={(image) => {
                                             setTopViewImage(image);
                                             setIsCapturingTop(false);

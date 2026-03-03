@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions, SafeAreaView, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Dimensions, SafeAreaView, ActivityIndicator, Platform, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LightSensor } from 'expo-sensors';
 import { CapturedImage } from '../types/app';
@@ -140,11 +140,28 @@ export function CustomCamera({ title, onCapture, onCancel, customOptions }: Prop
                         imageBase64: photo.base64,
                         mimeType: 'image/jpeg',
                     });
+                    return;
+                }
+
+                // Web fallback: some browsers return uri but no base64 from CameraView.
+                if (photo?.uri) {
+                    const converted = await uriToBase64(photo.uri);
+                    if (converted) {
+                        onCapture({
+                            uri: photo.uri,
+                            imageBase64: converted.base64,
+                            mimeType: converted.mimeType,
+                        });
+                        return;
+                    }
+                    Alert.alert('拍照失敗', '無法處理拍攝圖片，請改用「上傳圖片」或重試。');
                 } else {
-                    setIsProcessing(false);
+                    Alert.alert('拍照失敗', '未取得拍攝內容，請重試。');
                 }
             } catch (e) {
                 console.error(e);
+                Alert.alert('拍照失敗', '相機處理失敗，請重試或改用上傳圖片。');
+            } finally {
                 setIsProcessing(false);
             }
         }
@@ -244,6 +261,29 @@ export function CustomCamera({ title, onCapture, onCancel, customOptions }: Prop
             </View>
         </SafeAreaView>
     );
+}
+
+async function uriToBase64(uri: string): Promise<{ base64: string; mimeType: string } | null> {
+    try {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        const mimeType = blob.type || 'image/jpeg';
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(blob);
+        });
+        const commaIndex = dataUrl.indexOf(',');
+        if (commaIndex < 0) return null;
+        return {
+            base64: dataUrl.slice(commaIndex + 1),
+            mimeType,
+        };
+    } catch (error) {
+        console.error('[CustomCamera] uriToBase64 failed:', error);
+        return null;
+    }
 }
 
 const styles = StyleSheet.create({

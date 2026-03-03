@@ -32,6 +32,7 @@ export function EliminationModal({ visible, elimination, currentCat, cats, onClo
       {showCamera ? (
         <CustomCamera
           title="P1 — 排泄紀錄（糞便）"
+          customOptions={{ showGuide: false }}
           onCapture={(image) => {
             void submitImage(image);
             setShowCamera(false);

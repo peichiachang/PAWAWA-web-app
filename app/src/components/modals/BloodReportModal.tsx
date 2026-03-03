@@ -69,6 +69,7 @@ export function BloodReportModal({ visible, bloodReport, currentCat, onClose }: 
       {showCamera ? (
         <CustomCamera
           title="血液報告拍攝"
+          customOptions={{ showGuide: false }}
           onCapture={(image) => {
             void runOcrFromImage(image);
             setShowCamera(false);

@@ -51,6 +51,7 @@ export function GlobalCameraProvider({ children }: { children: ReactNode }) {
                 <View style={StyleSheet.absoluteFill}>
                     <CustomCamera
                         title={title}
+                        customOptions={{ showGuide: false }}
                         onCapture={handleCapture}
                         onCancel={handleCancel}
                     />
