@@ -11,6 +11,7 @@ import { DetailRecord } from './modals/RecordDetailModal';
 import { AppIcon } from './AppIcon';
 import { VESSEL_PROFILES_KEY } from '../constants';
 import { recalculateVesselVolume } from '../utils/vesselVolume';
+import { extractCatSeries, getCatNameBySeries, matchesCatSeries, getScopedCats } from '../utils/catScope';
 
 interface Props {
   level: Level;
@@ -80,7 +81,7 @@ export function HomeContent({
   const getRecentDailyWaterIntakesForCat = (catId: string): number[] => {
     const byDay = new Map<string, number>();
     hydrationHistory
-      .filter((log) => log.selectedTagId === catId)
+      .filter((log) => matchesCatSeries(log.selectedTagId, catId))
       .forEach((log) => {
         const d = new Date(log.createdAt);
         const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
@@ -137,7 +138,7 @@ export function HomeContent({
     const filteredFeedings = level === 'household'
       ? feedingHistory
       : [
-          ...feedingHistory.filter(l => l.selectedTagId === level),
+          ...feedingHistory.filter(l => matchesCatSeries(l.selectedTagId, level)),
           ...feedingHistory
             .filter(l => l.ownershipType === 'household_only')
             .map(l => ({
@@ -153,7 +154,7 @@ export function HomeContent({
     const filteredHydrations = level === 'household'
       ? hydrationHistory
       : [
-          ...hydrationHistory.filter(l => l.selectedTagId === level),
+          ...hydrationHistory.filter(l => matchesCatSeries(l.selectedTagId, level)),
           ...hydrationHistory
             .filter(l => l.ownershipType === 'household_only')
             .map(l => ({
@@ -227,11 +228,11 @@ export function HomeContent({
   }, [feedingHistory, hydrationHistory, level, vesselProfiles, householdDivisor]);
 
   const recentRecords = useMemo(() => {
-    const allFeedings = feedingHistory.filter(f => level === 'household' ? (f.ownershipType === 'household_only' || f.selectedTagId === 'household') : f.selectedTagId === level);
-    const allHydrations = hydrationHistory.filter(h => level === 'household' ? (h.ownershipType === 'household_only' || h.selectedTagId === 'household') : h.selectedTagId === level);
-    const allEliminations = eliminationHistory.filter(h => level === 'household' || h.selectedTagId === level);
-    const allMedications = medicationHistory.filter(m => level === 'household' || m.catId === level);
-    const allSymptoms = symptomHistory.filter(s => level === 'household' || s.catId === level);
+    const allFeedings = feedingHistory.filter(f => level === 'household' ? (f.ownershipType === 'household_only' || f.selectedTagId === 'household') : matchesCatSeries(f.selectedTagId, level));
+    const allHydrations = hydrationHistory.filter(h => level === 'household' ? (h.ownershipType === 'household_only' || h.selectedTagId === 'household') : matchesCatSeries(h.selectedTagId, level));
+    const allEliminations = eliminationHistory.filter(h => level === 'household' || matchesCatSeries(h.selectedTagId, level));
+    const allMedications = medicationHistory.filter(m => level === 'household' || matchesCatSeries(m.catId, level));
+    const allSymptoms = symptomHistory.filter(s => level === 'household' || matchesCatSeries(s.catId, level));
 
     const logs = [
       ...allFeedings.map(f => ({ ...f, _type: 'feeding' as const })),
@@ -244,11 +245,11 @@ export function HomeContent({
   }, [feedingHistory, hydrationHistory, eliminationHistory, medicationHistory, symptomHistory, level]);
 
   const recordLists = useMemo(() => {
-    const feedings = feedingHistory.filter(f => f.selectedTagId === level).sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
-    const hydrations = hydrationHistory.filter(h => h.selectedTagId === level).sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
-    const eliminations = eliminationHistory.filter(e => e.selectedTagId === level).sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
-    const medications = medicationHistory.filter(m => m.catId === level).sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
-    const symptoms = symptomHistory.filter(s => s.catId === level).sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
+    const feedings = feedingHistory.filter(f => matchesCatSeries(f.selectedTagId, level)).sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
+    const hydrations = hydrationHistory.filter(h => matchesCatSeries(h.selectedTagId, level)).sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
+    const eliminations = eliminationHistory.filter(e => matchesCatSeries(e.selectedTagId, level)).sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
+    const medications = medicationHistory.filter(m => matchesCatSeries(m.catId, level)).sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
+    const symptoms = symptomHistory.filter(s => matchesCatSeries(s.catId, level)).sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
     return { feedings, hydrations, eliminations, medications, symptoms };
   }, [feedingHistory, hydrationHistory, eliminationHistory, medicationHistory, symptomHistory, level]);
 
@@ -293,9 +294,7 @@ export function HomeContent({
           const timeStr = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 
           const getCatName = (id: string | null) => {
-            if (id === 'household') return '家庭';
-            const cat = cats.find(c => c.id === id);
-            return cat ? cat.name : id;
+            return getCatNameBySeries(cats, id);
           };
 
           const recordIcon = record._type === 'feeding'
@@ -470,11 +469,11 @@ export function HomeContent({
           <AppIcon name="people" size={18} color="#000" style={{ marginRight: 6 }} />
           <Text style={styles.sectionTitle}>家庭成員</Text>
         </View>
-          {cats.map((cat) => (
+          {getScopedCats(cats).map((cat) => (
             <Pressable
               key={cat.id}
               style={styles.recordItem}
-              onPress={() => onLevelChange(cat.id as Level)}
+              onPress={() => onLevelChange((extractCatSeries(cat.id) || cat.id) as Level)}
             >
               <View style={styles.recordHeader}>
                 <Text style={styles.recordTitle}>{cat.name}</Text>
@@ -510,8 +509,32 @@ export function HomeContent({
       currentCat?.chronicConditions.includes('flutd') ? '50–65ml / kg（觀察區間）' :
         '50ml / kg (標準)';
   // 今日攝取（僅當日紀錄，非累積）
-  const currentKcal = currentSummary?.todayKcalIntake ?? currentSummary?.totalKcalIntake ?? 0;
-  const currentWater = currentSummary?.todayWaterMl ?? currentSummary?.totalActualWaterMl ?? 0;
+  const currentKcal = useMemo(
+    () => {
+      const now = new Date();
+      const isToday = (ts: number) => {
+        const d = new Date(ts);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+      };
+      return feedingHistory
+        .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
+        .reduce((sum, log) => sum + (log.kcal ?? log.totalGram * 3), 0);
+    },
+    [feedingHistory, level]
+  );
+  const currentWater = useMemo(
+    () => {
+      const now = new Date();
+      const isToday = (ts: number) => {
+        const d = new Date(ts);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+      };
+      return hydrationHistory
+        .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
+        .reduce((sum, log) => sum + (log.actualWaterMl ?? log.totalMl ?? 0), 0);
+    },
+    [hydrationHistory, level]
+  );
   const waterProgressBase = isWaterObservationMode ? Math.max(waterRange.max, 1) : Math.max(individualWaterGoal, 1);
   const waterProgressPct = Math.round((currentWater / waterProgressBase) * 100);
 

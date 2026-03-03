@@ -4,6 +4,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Level } from '../types/app';
 import { CatIdentity } from '../types/domain';
 import { styles } from '../styles/common';
+import { extractCatSeries, getScopedCats } from '../utils/catScope';
 
 interface Props {
   level: Level;
@@ -17,15 +18,15 @@ export function TopNav({ level, onLevelChange, cats, activeTab }: Props) {
 
   const levelItems = useMemo(() => {
     const household = { key: 'household' as Level, name: '家庭' };
-    const catItems = cats.map((cat) => ({
-      key: cat.id as Level,
+    const catItems = getScopedCats(cats).map((cat) => ({
+      key: (extractCatSeries(cat.id) || cat.id) as Level,
       name: cat.name,
     }));
     return [household, ...catItems];
   }, [cats]);
 
   const currentItem = useMemo(
-    () => levelItems.find(item => item.key === level) ?? levelItems[0],
+    () => levelItems.find(item => extractCatSeries(item.key) === extractCatSeries(level)) ?? levelItems[0],
     [levelItems, level]
   );
 
@@ -69,7 +70,7 @@ export function TopNav({ level, onLevelChange, cats, activeTab }: Props) {
               />
               <View style={styles.levelDropdownMenu}>
                 {levelItems.map((item, index) => {
-                  const active = item.key === level;
+                  const active = extractCatSeries(item.key) === extractCatSeries(level);
                   const isLast = index === levelItems.length - 1;
                   return (
                     <Pressable

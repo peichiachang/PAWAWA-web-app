@@ -6,6 +6,7 @@ import { CatIdentity, MedicationLog, SymptomLog } from '../types/domain';
 import { styles } from '../styles/common';
 import { DetailRecord } from './modals/RecordDetailModal';
 import { AppIcon } from './AppIcon';
+import { extractCatSeries, getCatNameBySeries, getScopedCats, matchesCatSeries } from '../utils/catScope';
 
 type RecordScope = 'household' | string;
 type RecordTypeFilter = 'all' | 'feeding' | 'hydration' | 'elimination' | 'medication' | 'symptom';
@@ -23,9 +24,7 @@ interface Props {
 }
 
 function getCatName(cats: CatIdentity[], id: string | null): string {
-  if (!id || id === 'household') return '家庭';
-  const cat = cats.find(c => c.id === id);
-  return cat ? cat.name : id;
+  return getCatNameBySeries(cats, id);
 }
 
 export function RecordsContent({
@@ -59,7 +58,7 @@ export function RecordsContent({
     let feedings = feedingHistory
       .filter(f => {
         if (scope === 'household') return f.ownershipType === 'household_only';
-        return f.selectedTagId === scope;
+        return matchesCatSeries(f.selectedTagId, scope);
       })
       .filter(f => filterByDate(f.createdAt))
       .map(l => ({ ...l, _type: 'feeding' as const }));
@@ -67,7 +66,7 @@ export function RecordsContent({
     let hydrations = hydrationHistory
       .filter(h => {
         if (scope === 'household') return h.ownershipType === 'household_only';
-        return h.selectedTagId === scope;
+        return matchesCatSeries(h.selectedTagId, scope);
       })
       .filter(h => filterByDate(h.createdAt))
       .map(l => ({ ...l, _type: 'hydration' as const }));
@@ -75,7 +74,7 @@ export function RecordsContent({
     let eliminations = eliminationHistory
       .filter(e => {
         if (scope === 'household') return e.selectedTagId === null;
-        return e.selectedTagId === scope;
+        return matchesCatSeries(e.selectedTagId, scope);
       })
       .filter(e => filterByDate(e.createdAt))
       .map(l => ({ ...l, _type: 'elimination' as const }));
@@ -84,7 +83,7 @@ export function RecordsContent({
     let medications = medicationHistory
       .filter(m => {
         if (scope === 'household') return false;
-        return m.catId === scope;
+        return matchesCatSeries(m.catId, scope);
       })
       .filter(m => filterByDate(m.createdAt))
       .map(l => ({ ...l, _type: 'medication' as const }));
@@ -92,7 +91,7 @@ export function RecordsContent({
     let symptoms = symptomHistory
       .filter(s => {
         if (scope === 'household') return false;
-        return s.catId === scope;
+        return matchesCatSeries(s.catId, scope);
       })
       .filter(s => filterByDate(s.createdAt))
       .map(l => ({ ...l, _type: 'symptom' as const }));
@@ -180,7 +179,7 @@ export function RecordsContent({
     );
   };
 
-  const scopeLabel = scope === 'household' ? '家庭' : cats.find(c => c.id === scope)?.name ?? scope;
+  const scopeLabel = scope === 'household' ? '家庭' : getCatName(cats, scope);
   const typeLabels: Record<RecordTypeFilter, string> = { all: '全部', feeding: '飲食記錄', hydration: '飲水紀錄', elimination: '排泄紀錄', medication: '用藥紀錄', symptom: '異常症狀' };
   const dateLabels: Record<DateFilter, string> = { all: '全部', '7d': '最近 7 天', '30d': '最近 30 天' };
 
@@ -195,12 +194,14 @@ export function RecordsContent({
             <Text style={{ fontSize: 15 }}>家庭</Text>
             {scope === 'household' && <AppIcon name="check-circle" size={20} color="#000" />}
           </Pressable>
-          {cats.map(c => (
-            <Pressable key={c.id} style={sheetOptionStyle} onPress={() => { setScope(c.id); setFilterSheet(null); }}>
+          {getScopedCats(cats).map(c => {
+            const series = extractCatSeries(c.id) || c.id;
+            return (
+            <Pressable key={c.id} style={sheetOptionStyle} onPress={() => { setScope(series); setFilterSheet(null); }}>
               <Text style={{ fontSize: 15 }}>{c.name}</Text>
-              {scope === c.id && <AppIcon name="check-circle" size={20} color="#000" />}
+              {extractCatSeries(scope) === extractCatSeries(series) && <AppIcon name="check-circle" size={20} color="#000" />}
             </Pressable>
-          ))}
+          )})}
         </>
       );
     }

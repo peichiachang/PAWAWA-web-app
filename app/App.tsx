@@ -44,6 +44,7 @@ import { CATS_STORAGE_KEY, VITALS_HISTORY_KEY } from './src/constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CatIdentity, ClinicalSummary, FeedingLog, VitalsLog } from './src/types/domain';
 import { applyDevDataMode } from './src/config/devDataMode';
+import { getScopedCats, matchesCatSeries } from './src/utils/catScope';
 
 function AppMain() {
   const ai = useMemo(() => getAiRecognitionService(), []);
@@ -166,17 +167,23 @@ function AppMain() {
       .reduce((sum, item) => sum + (item.actualWaterMl || item.totalMl || 0), 0);
   }, [hydration.ownershipLogs]);
 
-  const currentCat = level === 'household' ? null : cats.find((cat) => cat.id === level) || null;
+  const currentCat = useMemo(() => {
+    if (level === 'household') return null;
+    const scopedCats = getScopedCats(cats);
+    const selected = scopedCats.find((cat) => matchesCatSeries(cat.id, level));
+    return selected || null;
+  }, [cats, level]);
   const currentSummary = currentCat ? summaryByCatId[currentCat.id] : null;
   const indexedCats = useMemo(() => {
-    const matched = cats.filter((cat) => /^cat_\d+_/.test(cat.id));
-    return matched.length > 0 ? matched : cats;
+    const scoped = getScopedCats(cats);
+    const matched = scoped.filter((cat) => /^cat_\d+_/.test(cat.id));
+    return matched.length > 0 ? matched : scoped;
   }, [cats]);
 
   const getRecentDailyWaterIntakesForCat = (catId: string): number[] => {
     const byDay = new Map<string, number>();
     hydration.ownershipLogs
-      .filter((log) => log.selectedTagId === catId)
+      .filter((log) => matchesCatSeries(log.selectedTagId, catId))
       .forEach((log) => {
         const d = new Date(log.createdAt);
         const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
@@ -295,14 +302,14 @@ function AppMain() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.appFrame}>
-        <TopNav level={level} onLevelChange={setLevel} cats={cats} activeTab={bottomTab} />
+        <TopNav level={level} onLevelChange={setLevel} cats={indexedCats} activeTab={bottomTab} />
         <ScrollView contentContainerStyle={styles.mainContent}>
           {bottomTab === 'home' && (
             <HomeContent
               level={level}
               onLevelChange={setLevel}
               onOpenModal={openModal}
-              cats={cats}
+              cats={indexedCats}
               summaryByCatId={summaryByCatId}
               todayKcal={todayHouseholdKcal}
               todayWater={todayHouseholdWater}
@@ -326,14 +333,14 @@ function AppMain() {
               eliminationHistory={elimination.ownershipLogs}
               medicationHistory={medication.logs}
               symptomHistory={symptoms.logs}
-              cats={cats}
+              cats={indexedCats}
               onRecordPress={(record) => { setSelectedRecord(record); openModal('recordDetail'); }}
             />
           )}
           {bottomTab === 'knowledge' && <KnowledgeContent />}
           {bottomTab === 'profile' && (
             <ProfileContent
-              cats={cats}
+              cats={indexedCats}
               onOpenModal={openModal}
               onOpenVesselCalibration={handleOpenVesselCalibration}
             />
@@ -347,13 +354,13 @@ function AppMain() {
       <FeedingModal 
         visible={activeModal === 'feeding'} 
         feeding={feeding} 
-        cats={cats} 
+              cats={indexedCats}
         onClose={closeModal}
       />
       <HydrationModal 
         visible={activeModal === 'water'} 
         hydration={hydration} 
-        cats={cats} 
+              cats={indexedCats}
         onClose={closeModal}
       />
       <EliminationModal
