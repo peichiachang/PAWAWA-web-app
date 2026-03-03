@@ -72,6 +72,12 @@ describe('Health Calculations', () => {
             const goal = calculateAdaptiveDailyWaterGoal(diabeticCat, [260, 250]);
             expect(goal).toBe(200);
         });
+
+        it('should apply higher water baseline for kittens', () => {
+            const kitten = { ...baseCat, birthDate: '2025-10-01' };
+            const goal = calculateDailyWaterGoal(kitten);
+            expect(goal).toBe(220); // 4kg * 55
+        });
     });
 
     describe('calculateDailyKcalGoal', () => {
@@ -94,6 +100,13 @@ describe('Health Calculations', () => {
             const goal = calculateDailyKcalGoal(obeseCat);
             // Goal = RER * 0.8 ≈ 158.39
             expect(goal).toBeCloseTo(158.39, 1);
+        });
+
+        it('should apply senior age factor for healthy cat', () => {
+            const seniorCat = { ...baseCat, birthDate: '2010-01-01' };
+            const goal = calculateDailyKcalGoal(seniorCat);
+            // Base neutered goal ≈ 237.58, with senior factor 0.9 => ≈ 213.82
+            expect(goal).toBeCloseTo(213.82, 1);
         });
     });
 });

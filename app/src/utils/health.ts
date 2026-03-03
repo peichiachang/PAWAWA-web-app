@@ -7,19 +7,46 @@ export function calculateRER(weightKg: number): number {
   return 70 * Math.pow(weightKg, 0.75);
 }
 
+function getCatAgeYears(cat: CatIdentity): number {
+  const d = new Date(cat.birthDate);
+  if (Number.isNaN(d.getTime())) return 3;
+  const now = new Date();
+  let years = now.getFullYear() - d.getFullYear();
+  const hasBirthdayPassed =
+    now.getMonth() > d.getMonth() ||
+    (now.getMonth() === d.getMonth() && now.getDate() >= d.getDate());
+  if (!hasBirthdayPassed) years -= 1;
+  return Math.max(0, years);
+}
+
+function getAgeKcalFactor(cat: CatIdentity): number {
+  const age = getCatAgeYears(cat);
+  if (age < 1) return 1.8; // kitten growth period
+  if (age >= 11) return 0.9; // senior cats usually need slightly less kcal
+  return 1.0;
+}
+
+function getAgeWaterMultiplier(cat: CatIdentity): number {
+  const age = getCatAgeYears(cat);
+  if (age < 1) return 55;
+  if (age >= 11) return 45;
+  return 50;
+}
+
 export function calculateDailyKcalGoal(cat: CatIdentity): number {
   const rer = calculateRER(cat.currentWeightKg);
+  const ageKcalFactor = getAgeKcalFactor(cat);
 
   // Disease multipliers
-  if (cat.chronicConditions.includes('hyperthyroidism')) return rer * 1.6;
+  if (cat.chronicConditions.includes('hyperthyroidism')) return rer * 1.6 * ageKcalFactor;
   if (cat.chronicConditions.includes('obesity')) return rer * 0.8;
 
   const neuteredFactor = cat.spayedNeutered ? 1.2 : 1.4;
-  return rer * neuteredFactor;
+  return rer * neuteredFactor * ageKcalFactor;
 }
 
 export function calculateDailyWaterGoal(cat: CatIdentity): number {
-  let multiplier = 50; // Standard 50ml/kg
+  let multiplier = getAgeWaterMultiplier(cat); // Age-adjusted baseline
 
   if (cat.chronicConditions.includes('ckd')) {
     // CKD cats: use a conservative default target and show range guidance in UI.

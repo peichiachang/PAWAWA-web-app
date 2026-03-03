@@ -211,6 +211,15 @@ function AppMain() {
     setBottomTab(tab);
   }
 
+  function birthDateFromAge(age: number | undefined, fallbackBirthDate?: string): string {
+    if (!Number.isFinite(age) || age == null || age < 0) {
+      return fallbackBirthDate || '2020-01-01';
+    }
+    const now = new Date();
+    const birth = new Date(now.getFullYear() - age, now.getMonth(), now.getDate());
+    return birth.toISOString().slice(0, 10);
+  }
+
   async function handleSaveCat(data: any) {
     try {
       if (data.id) {
@@ -219,6 +228,7 @@ function AppMain() {
           ...c,
           name: data.name,
           gender: data.gender,
+          birthDate: birthDateFromAge(data.age, c.birthDate),
           currentWeightKg: data.weight,
           spayedNeutered: data.spayedNeutered,
           chronicConditions: data.chronicConditions || [],
@@ -241,7 +251,7 @@ function AppMain() {
       const newCat: CatIdentity = {
         id: generatedCatId,
         name: data.name,
-        birthDate: '2020-01-01',
+        birthDate: birthDateFromAge(data.age),
         gender: data.gender,
         spayedNeutered: data.spayedNeutered,
         baselineWeightKg: data.weight,

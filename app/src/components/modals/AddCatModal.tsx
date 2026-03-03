@@ -20,12 +20,26 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
     const [activity, setActivity] = useState('normal');
     const [bodyCondition, setBodyCondition] = useState('ideal');
     const [chronicConditions, setChronicConditions] = useState<ChronicCondition[]>([]);
+    
+    function deriveAgeFromBirthDate(birthDate?: string): string {
+        if (!birthDate) return '';
+        const d = new Date(birthDate);
+        if (Number.isNaN(d.getTime())) return '';
+        const now = new Date();
+        let years = now.getFullYear() - d.getFullYear();
+        const hasBirthdayPassed =
+            now.getMonth() > d.getMonth() ||
+            (now.getMonth() === d.getMonth() && now.getDate() >= d.getDate());
+        if (!hasBirthdayPassed) years -= 1;
+        return String(Math.max(0, years));
+    }
 
     useEffect(() => {
         if (visible && initialData) {
             setName(initialData.name);
             setGender(initialData.gender);
             setWeight(initialData.currentWeightKg.toString());
+            setAge(deriveAgeFromBirthDate(initialData.birthDate));
             setSpayedNeutered(initialData.spayedNeutered);
             setChronicConditions(initialData.chronicConditions || []);
             // Activity and BodyCondition aren't in CatIdentity yet, but we'll keep them for UI
@@ -51,7 +65,7 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
     };
 
     const handleSave = async () => {
-        if (!name || !gender || !weight) {
+        if (!name || !gender || !weight || !age) {
             Alert.alert('錯誤', '請填寫必填欄位');
             return;
         }
@@ -61,13 +75,18 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
             Alert.alert('錯誤', '請輸入有效體重（例如 4.2）');
             return;
         }
+        const parsedAge = parseInt(age, 10);
+        if (!Number.isFinite(parsedAge) || parsedAge < 0 || parsedAge > 30) {
+            Alert.alert('錯誤', '請輸入有效年齡（0-30 歲）');
+            return;
+        }
         try {
             await onSave({
                 ...(initialData ? { id: initialData.id } : {}),
                 name,
                 gender,
                 weight: parsedWeight,
-                age: parseInt(age) || undefined,
+                age: parsedAge,
                 spayedNeutered,
                 activity,
                 bodyCondition,
@@ -102,6 +121,18 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
                                 placeholder="例如：小花"
                                 value={name}
                                 onChangeText={setName}
+                            />
+                        </View>
+
+                        <View style={styles.formGroup}>
+                            <Text style={styles.formLabel}>年齡 (歲) *</Text>
+                            <TextInput
+                                style={styles.formInput}
+                                keyboardType="number-pad"
+                                inputMode="numeric"
+                                placeholder="例如：5"
+                                value={age}
+                                onChangeText={setAge}
                             />
                         </View>
 
