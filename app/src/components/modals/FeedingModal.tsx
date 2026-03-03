@@ -75,6 +75,17 @@ export function FeedingModal({ visible, feeding, cats, onClose }: Props) {
   const [capturePhase, setCapturePhase] = useState<'t0' | 't1' | 'nutrition' | null>(null);
   const [manualBoundaryLevel, setManualBoundaryLevel] = useState<ConsumptionLevel | null>(null);
 
+  function resetToBlankRecordScreen() {
+    feeding.openReset();
+    setCapturePhase(null);
+    setInputMode('camera');
+    setManualWeight('');
+    setManualGrams('');
+    setManualTagId(null);
+    setManualBoundaryLevel(null);
+    setNote('');
+  }
+
   const t0RefGramsForBoundary = t0Image?.manualWeight || (currentVessel?.volumeMl ? currentVessel.volumeMl * 0.8 * 0.45 : 500);
 
   const gramsByLevel = (level: ConsumptionLevel): number => {
@@ -210,7 +221,7 @@ export function FeedingModal({ visible, feeding, cats, onClose }: Props) {
                   onPress={() => {
                     const g = parseFloat(manualGrams);
                     if (!g || g <= 0) { Alert.alert('請輸入克數', '克數必須大於 0。'); return; }
-                    saveManualLog(g, manualTagId, () => { setManualGrams(''); setManualTagId(null); setNote(''); onClose(); }, note);
+                    saveManualLog(g, manualTagId, resetToBlankRecordScreen, note);
                   }}
                 >
                   <Text style={styles.primaryBtnText}>儲存記錄</Text>
@@ -654,7 +665,7 @@ export function FeedingModal({ visible, feeding, cats, onClose }: Props) {
                     const overrideGram = needsBoundaryConfirm && manualBoundaryLevel
                       ? gramsByLevel(manualBoundaryLevel)
                       : undefined;
-                    saveOwnershipLog(() => { setNote(''); onClose(); }, note, overrideGram);
+                    saveOwnershipLog(resetToBlankRecordScreen, note, overrideGram);
                   }}
                 >
                   <Text style={styles.primaryBtnText}>儲存記錄</Text>

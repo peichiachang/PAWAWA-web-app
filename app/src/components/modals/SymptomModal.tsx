@@ -52,7 +52,6 @@ export function SymptomModal({ visible, onClose, cats, onSave }: Props) {
     setSeverity('mild');
     setObservedAt('');
     setNotes('');
-    onClose();
   };
 
   return (

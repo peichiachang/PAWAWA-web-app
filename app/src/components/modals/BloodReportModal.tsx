@@ -55,6 +55,11 @@ export function BloodReportModal({ visible, bloodReport, currentCat, onClose }: 
   const { isAnalyzing, photo, interpretations, reportDate, runOcr, runOcrFromImage, reset, saveReport } = bloodReport;
   const [showCamera, setShowCamera] = useState(false);
 
+  function resetToBlankRecordScreen() {
+    reset();
+    setShowCamera(false);
+  }
+
   const grouped = interpretations
     ? interpretations.reduce<Record<string, BloodMarkerInterpretation[]>>((acc, item) => {
       const key = BLOOD_CATEGORY_LABEL[item.category] ?? '其他';
@@ -189,7 +194,7 @@ export function BloodReportModal({ visible, bloodReport, currentCat, onClose }: 
                 </View>
                 <Pressable
                   style={styles.primaryBtn}
-                  onPress={() => saveReport(currentCat?.id ?? 'household', onClose)}
+                  onPress={() => saveReport(currentCat?.id ?? 'household', resetToBlankRecordScreen)}
                 >
                   <Text style={styles.primaryBtnText}>
                     儲存報告

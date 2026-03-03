@@ -43,7 +43,6 @@ export function WeightRecordModal({ visible, onClose, cats, vitalsLogs, onSave }
         }
         onSave(selectedCatId, w);
         setWeightInput('');
-        onClose();
     };
 
     if (!visible) return null;

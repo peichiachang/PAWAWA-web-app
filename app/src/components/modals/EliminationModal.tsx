@@ -27,6 +27,16 @@ export function EliminationModal({ visible, elimination, currentCat, cats, onClo
   const [manualTagId, setManualTagId] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
+  function resetToBlankRecordScreen() {
+    reset();
+    setShowCamera(false);
+    setInputMode('camera');
+    setManualBristol(4);
+    setManualColor('棕色');
+    setManualAbnormal(false);
+    setManualTagId(null);
+  }
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       {showCamera ? (
@@ -130,13 +140,7 @@ export function EliminationModal({ visible, elimination, currentCat, cats, onClo
                 <Pressable
                   style={styles.primaryBtn}
                   onPress={() => {
-                    saveManualLog(manualBristol, '手動輸入', manualColor, manualAbnormal, manualTagId, () => {
-                      setManualBristol(4);
-                      setManualColor('棕色');
-                      setManualAbnormal(false);
-                      setManualTagId(null);
-                      onClose();
-                    });
+                    saveManualLog(manualBristol, '手動輸入', manualColor, manualAbnormal, manualTagId, resetToBlankRecordScreen);
                   }}
                 >
                   <Text style={styles.primaryBtnText}>儲存記錄</Text>
@@ -243,7 +247,7 @@ export function EliminationModal({ visible, elimination, currentCat, cats, onClo
 
                 <Pressable
                   style={[styles.primaryBtn, (!result || !selectedTagId) && { opacity: 0.5 }]}
-                  onPress={() => saveOwnershipLog(onClose)}
+                  onPress={() => saveOwnershipLog(resetToBlankRecordScreen)}
                   disabled={!result || !selectedTagId}
                 >
                   <Text style={styles.primaryBtnText}>儲存記錄</Text>

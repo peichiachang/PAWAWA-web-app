@@ -42,7 +42,7 @@ export function MedicationModal({ visible, onClose, cats, onSave }: Props) {
         setMedName('');
         setDosage('');
         setNotes('');
-        onClose();
+        setReminderTime('');
     };
 
     return (
