@@ -1,7 +1,8 @@
 import { StyleSheet } from 'react-native';
 
 export const palette = {
-  bg: '#F5F2EA',
+  bg: '#EEF1EE',
+  chrome: '#F4E9D2',
   surface: '#FFFFFF',
   surfaceSoft: '#F8FBF9',
   border: '#D3DED8',
@@ -27,7 +28,7 @@ export const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: palette.border,
-    backgroundColor: palette.surface,
+    backgroundColor: palette.chrome,
   },
   appTitle: {
     fontSize: 22,
@@ -284,7 +285,7 @@ export const styles = StyleSheet.create({
     bottom: 0,
     borderTopWidth: 1,
     borderTopColor: palette.border,
-    backgroundColor: palette.surface,
+    backgroundColor: palette.chrome,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 24,
