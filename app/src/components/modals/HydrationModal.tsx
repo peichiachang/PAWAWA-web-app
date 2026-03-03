@@ -52,6 +52,14 @@ export function HydrationModal({ visible, hydration, cats, onClose }: Props) {
   const [manualTagId, setManualTagId] = useState<string | null>(null);
   const [capturePhase, setCapturePhase] = useState<'t0' | 't1' | null>(null);
 
+  function resetToBlankRecordScreen() {
+    openReset();
+    setCapturePhase(null);
+    setInputMode('camera');
+    setManualMl('');
+    setManualTagId(null);
+  }
+
   // 可分辨貓咪時，若尚未選擇且有多隻貓，預設選第一隻
   useEffect(() => {
     if (canIdentifyTags && !selectedTagId && cats.length > 0) {
@@ -143,7 +151,7 @@ export function HydrationModal({ visible, hydration, cats, onClose }: Props) {
                       onPress={() => {
                         const ml = parseFloat(manualMl);
                         if (!ml || ml <= 0) { Alert.alert('請輸入飲水量', '飲水量必須大於 0。'); return; }
-                        saveManualLog(ml, manualTagId, () => { setManualMl(''); setManualTagId(null); onClose(); });
+                        saveManualLog(ml, manualTagId, resetToBlankRecordScreen);
                       }}
                     >
                       <Text style={styles.primaryBtnText}>儲存記錄</Text>
@@ -350,7 +358,7 @@ export function HydrationModal({ visible, hydration, cats, onClose }: Props) {
 
                     {isAnalyzing && <ActivityIndicator size="small" color="#000000" style={styles.loadingSpinner} />}
 
-                    <Pressable style={styles.primaryBtn} onPress={() => saveOwnershipLog(onClose)}>
+                    <Pressable style={styles.primaryBtn} onPress={() => saveOwnershipLog(resetToBlankRecordScreen)}>
                       <Text style={styles.primaryBtnText}>儲存記錄</Text>
                     </Pressable>
                   </>
