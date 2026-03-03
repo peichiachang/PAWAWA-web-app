@@ -23,17 +23,20 @@ export function IAPModal({ visible, onClose }: Props) {
                     <ScrollView style={styles.modalBody}>
                         <View style={{ backgroundColor: '#e8f5e9', borderWidth: 2, borderColor: '#2e7d32', padding: 16, marginBottom: 16 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}><AppIcon name="check-circle" size={18} color="#2e7d32" style={{ marginRight: 6 }} /><Text style={{ fontWeight: '700', fontSize: 14 }}>目前方案</Text></View>
-                            <Text style={{ fontSize: 13, lineHeight: 1.6 }}>
+                            <Text style={{ fontSize: 13, lineHeight: 20 }}>
                                 <Text style={{ fontWeight: '700' }}>免費版</Text>{'\n'}
                                 • 最多 2 隻貓咪{'\n'}
                                 • 手動記錄功能{'\n'}
                                 • 本地數據儲存{'\n'}
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}><AppIcon name="cancel" size={14} color="#d32f2f" style={{ marginRight: 4 }} /><Text style={{ color: '#d32f2f' }}>無 AI 智能分析</Text></View>
                             </Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                                <AppIcon name="cancel" size={14} color="#d32f2f" style={{ marginRight: 4 }} />
+                                <Text style={{ color: '#d32f2f', fontSize: 13 }}>無 AI 智能分析</Text>
+                            </View>
                         </View>
 
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}><AppIcon name="pets" size={18} color="#000" style={{ marginRight: 6 }} /><Text style={styles.sectionTitle}>升級為貓奴版</Text></View>
-                        <Text style={{ fontSize: 12, color: '#666', marginBottom: 12, lineHeight: 1.6 }}>
+                        <Text style={{ fontSize: 12, color: '#666', marginBottom: 12, lineHeight: 18 }}>
                             解鎖 AI 智能分析，讓照顧貓主子更輕鬆！
                         </Text>
 
@@ -51,7 +54,7 @@ export function IAPModal({ visible, onClose }: Props) {
                                     <Text style={{ fontSize: 11, color: '#666' }}>/月</Text>
                                 </View>
                             </View>
-                            <Text style={{ fontSize: 12, lineHeight: 1.6, color: '#333' }}>
+                            <Text style={{ fontSize: 12, lineHeight: 20, color: '#333' }}>
                                 無限貓咪數量{'\n'}
                                 AI 智能分析（每月 200 次）{'\n'}
                                 雲端備份與同步{'\n'}
@@ -77,7 +80,7 @@ export function IAPModal({ visible, onClose }: Props) {
                                     <Text style={{ fontSize: 11, color: '#666' }}>/年</Text>
                                 </View>
                             </View>
-                            <Text style={{ fontSize: 12, lineHeight: 1.6, color: '#333' }}>
+                            <Text style={{ fontSize: 12, lineHeight: 20, color: '#333' }}>
                                 無限貓咪數量{'\n'}
                                 AI 智能分析（每月 300 次）{'\n'}
                                 雲端備份與同步{'\n'}
@@ -88,7 +91,7 @@ export function IAPModal({ visible, onClose }: Props) {
 
                         <View style={{ backgroundColor: '#fff3cd', borderWidth: 2, borderColor: '#856404', padding: 12, marginBottom: 16 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="smart-toy" size={16} color="#856404" style={{ marginRight: 4 }} /><Text style={{ fontWeight: '700', fontSize: 13 }}>AI 智能分析說明</Text></View>
-                            <Text style={{ fontSize: 11, lineHeight: 1.6 }}>
+                            <Text style={{ fontSize: 11, lineHeight: 18 }}>
                                 <Text style={{ fontWeight: '700' }}>AI 功能包含：</Text>{'\n'}
                                 • 食物熱量辨識{'\n'}
                                 • 排泄物健康分析{'\n'}

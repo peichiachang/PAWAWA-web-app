@@ -90,7 +90,7 @@ export function buildClinicalSummary(
     }
   }
 
-  const intakeAlert = checkIntakeAlert(cat.id, todayKcalIntake, bmrKcal, new Date().toISOString());
+  const intakeAlert = checkIntakeAlert(cat.id, cat.name, todayKcalIntake, bmrKcal, new Date().toISOString());
   if (intakeAlert) {
     alerts.push(intakeAlert);
   }

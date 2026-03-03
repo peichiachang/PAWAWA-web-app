@@ -29,6 +29,8 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: palette.border,
     backgroundColor: palette.chrome,
+    zIndex: 20,
+    elevation: 6,
   },
   appTitle: {
     fontSize: 22,
@@ -90,6 +92,7 @@ export const styles = StyleSheet.create({
   levelDropdownWrap: {
     position: 'relative',
     alignSelf: 'flex-start',
+    zIndex: 30,
   },
   levelDropdownBackdrop: {
     position: 'absolute',

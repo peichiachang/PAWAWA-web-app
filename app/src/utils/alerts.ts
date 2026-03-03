@@ -14,13 +14,14 @@ export function checkTemperatureAlert(catId: string, temperatureC: number, times
     catId,
     type: 'fever',
     severity: 'high',
-    message: `Body temperature out of range: ${temperatureC.toFixed(1)} C`,
+    message: `體溫超出正常範圍（${temperatureC.toFixed(1)}°C）`,
     timestamp,
   };
 }
 
 export function checkIntakeAlert(
   catId: string,
+  catName: string,
   intakeKcal: number,
   bmrKcal: number,
   timestamp: string
@@ -36,7 +37,7 @@ export function checkIntakeAlert(
     catId,
     type: 'intake',
     severity: 'medium',
-    message: `Intake below 70% BMR (${intakeKcal.toFixed(0)} / ${bmrKcal.toFixed(0)} kcal)`,
+    message: `${catName} 今日攝取低於建議下限（低於目標 70%）：${intakeKcal.toFixed(0)} / ${bmrKcal.toFixed(0)} kcal`,
     timestamp,
   };
 }
@@ -54,7 +55,7 @@ export function checkWeeklyWeightAlert(
     catId,
     type: 'weight',
     severity: 'high',
-    message: `Weight loss rate too fast (${weeklyWeightChangeRatePct.toFixed(2)}% / week)`,
+    message: `體重下降速度過快（${weeklyWeightChangeRatePct.toFixed(2)}% / 週）`,
     timestamp,
   };
 }
