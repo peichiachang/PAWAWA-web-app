@@ -1,6 +1,6 @@
 import { AiImageInput } from './ai';
 
-export type Level = 'household' | 'cat_001' | 'cat_002';
+export type Level = 'household' | `cat_${string}`;
 export type BottomTab = 'home' | 'records' | 'knowledge' | 'profile';
 export type ActiveModal = 'feeding' | 'water' | 'elimination' | 'medication' | 'symptom' | 'settings' | 'blood' | 'bloodHistory' | 'bloodDetail' | 'kcalAdvice' | 'waterAdvice' | 'backup' | 'iap' | 'addCat' | 'editCat' | 'recordDetail' | 'weightRecord' | null;
 export type CapturedImage = Required<Pick<AiImageInput, 'uri' | 'imageBase64' | 'mimeType'>>;

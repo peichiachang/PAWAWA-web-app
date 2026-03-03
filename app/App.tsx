@@ -134,7 +134,7 @@ function AppMain() {
   }, []);
 
   const summaries = useMemo(
-    () => cats.map((cat) => buildClinicalSummary(cat, vitalsLogs, feeding.ownershipLogs, hydration.ownershipLogs, medication.logs)),
+    () => cats.map((cat) => buildClinicalSummary(cat, vitalsLogs, feeding.ownershipLogs, hydration.ownershipLogs, medication.logs, cats.length)),
     [cats, vitalsLogs, feeding.ownershipLogs, hydration.ownershipLogs, medication.logs]
   );
   const summaryByCatId = useMemo(
@@ -218,9 +218,17 @@ function AppMain() {
         return;
       }
 
-      // New cat logic (existing)
+      // New cat id format: cat_<index>_<timestamp>
+      const nextCatIndex = cats.reduce((max, c) => {
+        const m = String(c.id).match(/^cat_(\d+)(?:_|$)/);
+        const n = m ? Number(m[1]) : 0;
+        return Number.isFinite(n) ? Math.max(max, n) : max;
+      }, 0) + 1;
+      const generatedCatId = `cat_${nextCatIndex}_${Date.now()}`;
+
+      // New cat logic
       const newCat: CatIdentity = {
-        id: `cat_${Date.now()}`,
+        id: generatedCatId,
         name: data.name,
         birthDate: '2020-01-01',
         gender: data.gender,
