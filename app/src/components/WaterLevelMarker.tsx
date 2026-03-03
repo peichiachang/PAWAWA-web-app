@@ -85,6 +85,24 @@ export function WaterLevelMarker({ imageUri, onConfirm, onCancel }: Props) {
     });
   }, [imageUri, updateImageRect]);
 
+  useEffect(() => {
+    // Web: lock pull-to-refresh / page overscroll while marking lines.
+    if (typeof document === 'undefined') return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverscroll = html.style.overscrollBehavior;
+    const prevBodyOverscroll = body.style.overscrollBehavior;
+    const prevBodyTouchAction = body.style.touchAction;
+    html.style.overscrollBehavior = 'none';
+    body.style.overscrollBehavior = 'none';
+    body.style.touchAction = 'none';
+    return () => {
+      html.style.overscrollBehavior = prevHtmlOverscroll;
+      body.style.overscrollBehavior = prevBodyOverscroll;
+      body.style.touchAction = prevBodyTouchAction;
+    };
+  }, []);
+
   const getLineY = (type: LineType) => (type === 'rim' ? rimY : type === 'bottom' ? bottomY : waterY);
   const setLineY = (type: LineType, v: number) => {
     const clamped = Math.max(0, Math.min(1, v));
@@ -116,6 +134,9 @@ export function WaterLevelMarker({ imageUri, onConfirm, onCancel }: Props) {
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt) => {
         const pageY = evt.nativeEvent.pageY;
         const line = findNearestLine(pageY);

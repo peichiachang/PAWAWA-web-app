@@ -178,7 +178,10 @@ export function useHydration(
       setIsAnalyzing(true);
       const t0 = currentT0!;
       const vessel = vessels.currentVessel;
-      const volumeMl = vessel?.volumeMl ?? 1800;
+      const volumeMl = vessel?.volumeMl;
+      if (!volumeMl || volumeMl <= 0) {
+        throw new Error('此水碗尚未設定容量，請先到「食碗管理」完成水碗容量校準。');
+      }
 
       // 純數學計算：兩張都有像素座標時，不呼叫 AI
       const hasPixelData =
@@ -192,11 +195,14 @@ export function useHydration(
       let analysisResult: HydrationVisionResult | null = null;
 
       if (hasPixelData) {
-        const bowlTopY = t0.bowl_top_y!;
-        const bowlBottomY = t0.bowl_bottom_y!;
-        const bowlPx = bowlBottomY - bowlTopY;
-        const w0Ratio = (bowlBottomY - t0.water_y!) / bowlPx;
-        const w1Ratio = (bowlBottomY - storedT1.water_y!) / bowlPx;
+        // 以各自圖片的碗口/碗底標線算比例，避免不同拍攝縮放造成偏差
+        const t0BowlPx = t0.bowl_bottom_y! - t0.bowl_top_y!;
+        const t1BowlPx = storedT1.bowl_bottom_y! - storedT1.bowl_top_y!;
+        if (t0BowlPx <= 0 || t1BowlPx <= 0) {
+          throw new Error('標線無效：碗口與碗底位置錯誤，請重新標記 W0/W1。');
+        }
+        const w0Ratio = (t0.bowl_bottom_y! - t0.water_y!) / t0BowlPx;
+        const w1Ratio = (storedT1.bowl_bottom_y! - storedT1.water_y!) / t1BowlPx;
         const waterT0Ml = Math.round(Math.max(0, Math.min(1, w0Ratio)) * volumeMl);
         const waterT1Ml = Math.round(Math.max(0, Math.min(1, w1Ratio)) * volumeMl);
         const actualIntakeMl = Math.round(Math.max(0, (w0Ratio - w1Ratio) * volumeMl));
