@@ -444,6 +444,7 @@ function AppMain() {
         onClose={closeModal}
         onSave={handleSaveCat}
         initialData={activeModal === 'editCat' ? currentCat : null}
+        mode={activeModal === 'editCat' ? 'edit' : 'add'}
       />
       <MedicationModal
         visible={activeModal === 'medication'}

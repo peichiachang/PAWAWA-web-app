@@ -9,9 +9,10 @@ interface Props {
     onClose: () => void;
     onSave: (catData: any) => Promise<void> | void;
     initialData?: CatIdentity | null;
+    mode?: 'add' | 'edit';
 }
 
-export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
+export function AddCatModal({ visible, onClose, onSave, initialData, mode = 'add' }: Props) {
     const [name, setName] = useState('');
     const [gender, setGender] = useState('');
     const [weight, setWeight] = useState('');
@@ -20,6 +21,7 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
     const [activity, setActivity] = useState('normal');
     const [bodyCondition, setBodyCondition] = useState('ideal');
     const [chronicConditions, setChronicConditions] = useState<ChronicCondition[]>([]);
+    const isEditMode = mode === 'edit' && !!initialData;
     
     function deriveAgeFromBirthDate(birthDate?: string): string {
         if (!birthDate) return '';
@@ -32,7 +34,7 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
     }
 
     useEffect(() => {
-        if (visible && initialData) {
+        if (visible && isEditMode && initialData) {
             setName(initialData.name);
             setGender(initialData.gender);
             setWeight(initialData.currentWeightKg.toString());
@@ -40,7 +42,7 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
             setSpayedNeutered(initialData.spayedNeutered);
             setChronicConditions(initialData.chronicConditions || []);
             // Activity and BodyCondition aren't in CatIdentity yet, but we'll keep them for UI
-        } else if (visible && !initialData) {
+        } else if (visible && !isEditMode) {
             // Reset state for new cat
             setName('');
             setGender('');
@@ -51,7 +53,7 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
             setBodyCondition('ideal');
             setChronicConditions([]);
         }
-    }, [visible, initialData]);
+    }, [visible, initialData, isEditMode]);
 
     const toggleChronicCondition = (condition: ChronicCondition) => {
         setChronicConditions(prev =>
@@ -80,7 +82,7 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
         }
         try {
             await onSave({
-                ...(initialData ? { id: initialData.id } : {}),
+                ...(isEditMode && initialData ? { id: initialData.id } : {}),
                 name,
                 gender,
                 weight: parsedWeight,
@@ -102,12 +104,12 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
             <SafeAreaView style={styles.modalBackdrop}>
                 <View style={styles.modalCard}>
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>{initialData ? '編輯貓咪檔案' : '新增貓咪檔案'}</Text>
+                        <Text style={styles.modalTitle}>{isEditMode ? '編輯貓咪檔案' : '新增貓咪檔案'}</Text>
                         <Pressable onPress={onClose}><Text style={styles.closeText}>×</Text></Pressable>
                     </View>
                     <ScrollView style={styles.modalBody}>
                         <View style={styles.infoBox}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="assignment" size={18} color="#000" style={{ marginRight: 6 }} /><Text style={styles.infoTitle}>{initialData ? `編輯 ${name} 的檔案` : '建立新的貓咪檔案'}</Text></View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="assignment" size={18} color="#000" style={{ marginRight: 6 }} /><Text style={styles.infoTitle}>{isEditMode ? `編輯 ${name} 的檔案` : '建立新的貓咪檔案'}</Text></View>
                             <Text style={{ fontSize: 12 }}>填寫以下資料以更新個體檔案</Text>
                         </View>
 
@@ -247,7 +249,7 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
                         </View>
 
                         <Pressable style={styles.primaryBtn} onPress={handleSave}>
-                            <Text style={styles.primaryBtnText}>{initialData ? '儲存變更' : '建立貓咪檔案'}</Text>
+                            <Text style={styles.primaryBtnText}>{isEditMode ? '儲存變更' : '建立貓咪檔案'}</Text>
                         </Pressable>
                     </ScrollView>
                 </View>
