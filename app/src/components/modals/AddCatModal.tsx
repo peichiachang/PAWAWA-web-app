@@ -26,12 +26,9 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
         const d = new Date(birthDate);
         if (Number.isNaN(d.getTime())) return '';
         const now = new Date();
-        let years = now.getFullYear() - d.getFullYear();
-        const hasBirthdayPassed =
-            now.getMonth() > d.getMonth() ||
-            (now.getMonth() === d.getMonth() && now.getDate() >= d.getDate());
-        if (!hasBirthdayPassed) years -= 1;
-        return String(Math.max(0, years));
+        const ageYears = Math.max(0, (now.getTime() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+        const oneDecimal = Math.round(ageYears * 10) / 10;
+        return Number.isInteger(oneDecimal) ? String(oneDecimal) : oneDecimal.toFixed(1);
     }
 
     useEffect(() => {
@@ -75,9 +72,10 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
             Alert.alert('錯誤', '請輸入有效體重（例如 4.2）');
             return;
         }
-        const parsedAge = parseInt(age, 10);
+        const normalizedAge = age.replace(',', '.');
+        const parsedAge = parseFloat(normalizedAge);
         if (!Number.isFinite(parsedAge) || parsedAge < 0 || parsedAge > 30) {
-            Alert.alert('錯誤', '請輸入有效年齡（0-30 歲）');
+            Alert.alert('錯誤', '請輸入有效年齡（0-30 歲，可含小數，例如 0.7）');
             return;
         }
         try {
@@ -128,11 +126,11 @@ export function AddCatModal({ visible, onClose, onSave, initialData }: Props) {
                             <Text style={styles.formLabel}>年齡 (歲) *</Text>
                             <TextInput
                                 style={styles.formInput}
-                                keyboardType="number-pad"
-                                inputMode="numeric"
-                                placeholder="例如：5"
+                                keyboardType="decimal-pad"
+                                inputMode="decimal"
+                                placeholder="例如：0.7"
                                 value={age}
-                                onChangeText={setAge}
+                                onChangeText={(v) => setAge(v.replace(',', '.'))}
                             />
                         </View>
 

@@ -11,11 +11,7 @@ function getCatAgeYears(cat: CatIdentity): number {
   const d = new Date(cat.birthDate);
   if (Number.isNaN(d.getTime())) return 3;
   const now = new Date();
-  let years = now.getFullYear() - d.getFullYear();
-  const hasBirthdayPassed =
-    now.getMonth() > d.getMonth() ||
-    (now.getMonth() === d.getMonth() && now.getDate() >= d.getDate());
-  if (!hasBirthdayPassed) years -= 1;
+  const years = (now.getTime() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
   return Math.max(0, years);
 }
 
