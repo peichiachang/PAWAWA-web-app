@@ -48,6 +48,7 @@ export function RecordsContent({
   const [typeFilter, setTypeFilter] = useState<RecordTypeFilter>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [filterSheet, setFilterSheet] = useState<'scope' | 'type' | 'date' | null>(null);
+  const [addRecordDropdownOpen, setAddRecordDropdownOpen] = useState(false);
 
   const showLowAppetiteBanner = useMemo(() => {
     const filtered = scope === 'household'
@@ -178,19 +179,27 @@ export function RecordsContent({
     }
 
     return (
-      <Pressable
-        key={record.id}
-        style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]}
-        onPress={() => onRecordPress?.(record as DetailRecord)}
-      >
-        <View style={styles.recordHeader}>
-          <AppIcon name={recordIcon as any} size={16} color="#000" style={{ marginRight: 6 }} />
-          <Text style={[styles.recordTitle, { flex: 1 }]}>{title}</Text>
-          <Text style={styles.recordTime}>{dateStr} {timeStr}</Text>
-        </View>
-        <Text style={styles.recordData}>{dataStr}</Text>
-        {descStr ? <Text style={styles.recordDesc}>{descStr}</Text> : null}
-      </Pressable>
+      <View key={record.id} style={[styles.recordItem, { padding: 12, flexDirection: 'row', alignItems: 'center' }]}>
+        <Pressable
+          style={{ flex: 1 }}
+          onPress={() => onRecordPress?.(record as DetailRecord)}
+        >
+          <View style={styles.recordHeader}>
+            <AppIcon name={recordIcon as any} size={16} color="#000" style={{ marginRight: 6 }} />
+            <Text style={[styles.recordTitle, { flex: 1 }]}>{title}</Text>
+            <Text style={styles.recordTime}>{dateStr} {timeStr}</Text>
+          </View>
+          <Text style={styles.recordData}>{dataStr}</Text>
+          {descStr ? <Text style={styles.recordDesc}>{descStr}</Text> : null}
+        </Pressable>
+        <Pressable
+          onPress={() => onRecordPress?.(record as DetailRecord)}
+          style={{ padding: 8, marginLeft: 8 }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <AppIcon name="edit" size={20} color="#666" />
+        </Pressable>
+      </View>
     );
   };
 
@@ -293,40 +302,40 @@ export function RecordsContent({
         </View>
       )}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { fontSize: 18, marginBottom: 20 }]}>新增記錄</Text>
-        <View style={styles.actionGrid}>
-          <Pressable style={styles.actionBtn} onPress={() => onOpenModal('feeding')}>
-            <AppIcon name="restaurant" size={24} color="#000" style={styles.actionIcon} />
-            <Text style={styles.actionLabel}>食物記錄</Text>
+        <Text style={[styles.sectionTitle, { fontSize: 18, marginBottom: 12 }]}>新增記錄</Text>
+        <View style={{ position: 'relative', zIndex: 20 }}>
+          <Pressable
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff' }}
+            onPress={() => setAddRecordDropdownOpen((v) => !v)}
+          >
+            <Text style={{ fontSize: 14, color: '#333' }}>請選擇要新增的記錄類型</Text>
+            <AppIcon name={addRecordDropdownOpen ? 'expand-less' : 'expand-more'} size={22} color="#000" />
           </Pressable>
-          <Pressable style={styles.actionBtn} onPress={() => onOpenModal('feedingLateEntry')}>
-            <AppIcon name="schedule" size={24} color="#000" style={styles.actionIcon} />
-            <Text style={styles.actionLabel}>補填記錄</Text>
-          </Pressable>
-          <Pressable style={styles.actionBtn} onPress={() => onOpenModal('water')}>
-            <AppIcon name="opacity" size={24} color="#000" style={styles.actionIcon} />
-            <Text style={styles.actionLabel}>飲水記錄</Text>
-          </Pressable>
-          <Pressable style={styles.actionBtn} onPress={() => onOpenModal('elimination')}>
-            <AppIcon name="sanitizer" size={24} color="#000" style={styles.actionIcon} />
-            <Text style={styles.actionLabel}>排泄記錄</Text>
-          </Pressable>
-          <Pressable style={styles.actionBtn} onPress={() => onOpenModal('weightRecord')}>
-            <AppIcon name="monitor-weight" size={24} color="#000" style={styles.actionIcon} />
-            <Text style={styles.actionLabel}>體重記錄</Text>
-          </Pressable>
-          <Pressable style={styles.actionBtn} onPress={() => onOpenModal('medication')}>
-            <AppIcon name="medication" size={24} color="#000" style={styles.actionIcon} />
-            <Text style={styles.actionLabel}>用藥記錄</Text>
-          </Pressable>
-          <Pressable style={styles.actionBtn} onPress={() => onOpenModal('symptom')}>
-            <AppIcon name="healing" size={24} color="#000" style={styles.actionIcon} />
-            <Text style={styles.actionLabel}>異常症狀</Text>
-          </Pressable>
-          <Pressable style={styles.actionBtn} onPress={() => onOpenModal('blood')}>
-            <AppIcon name="biotech" size={24} color="#000" style={styles.actionIcon} />
-            <Text style={styles.actionLabel}>報告掃描</Text>
-          </Pressable>
+          {addRecordDropdownOpen && (
+            <>
+              <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -320, zIndex: 1 }} onPress={() => setAddRecordDropdownOpen(false)} />
+              <View style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, zIndex: 2, overflow: 'hidden' }}>
+                {[
+                  { modal: 'feeding' as ActiveModal, label: '食物記錄', icon: 'restaurant' },
+                  { modal: 'water' as ActiveModal, label: '飲水記錄', icon: 'opacity' },
+                  { modal: 'elimination' as ActiveModal, label: '排泄記錄', icon: 'sanitizer' },
+                  { modal: 'weightRecord' as ActiveModal, label: '體重記錄', icon: 'monitor-weight' },
+                  { modal: 'medication' as ActiveModal, label: '用藥記錄', icon: 'medication' },
+                  { modal: 'symptom' as ActiveModal, label: '異常症狀', icon: 'healing' },
+                  { modal: 'blood' as ActiveModal, label: '報告掃描', icon: 'biotech' },
+                ].map(({ modal, label, icon }) => (
+                  <Pressable
+                    key={modal}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                    onPress={() => { onOpenModal(modal); setAddRecordDropdownOpen(false); }}
+                  >
+                    <AppIcon name={icon as any} size={20} color="#000" style={{ marginRight: 10 }} />
+                    <Text style={{ fontSize: 14, fontWeight: '500' }}>{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          )}
         </View>
       </View>
 
