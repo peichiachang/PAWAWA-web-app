@@ -65,9 +65,6 @@ export function ProfileContent({ cats, onOpenModal, onEditCat, onOpenVesselCalib
                                 <AppIcon name="pets" size={24} color="#000" style={{ marginBottom: 4 }} />
                                 <Text style={{ fontSize: 13, fontWeight: '700' }}>{cat.name}</Text>
                                 <Text style={{ fontSize: 11, color: '#666' }}>{cat.currentWeightKg}kg • {cat.gender === 'male' ? '公' : '母'}</Text>
-                                {onEditCat && (
-                                    <Text style={{ fontSize: 10, color: '#666', marginTop: 4 }}>點擊可編輯檔案</Text>
-                                )}
                             </Pressable>
                         ))}
                         {cats.length < 5 && (

@@ -78,6 +78,10 @@ export function HomeContent({
 
   const vesselProfiles = vesselProfilesFromParent ?? localVesselProfiles;
 
+  /** 數據／趨勢區塊：今日數據 | 熱量趨勢 | 飲水量趨勢 */
+  const [dataTrendTab, setDataTrendTab] = useState<'today' | 'kcal' | 'water'>('today');
+  const [dataTrendDropdownOpen, setDataTrendDropdownOpen] = useState(false);
+
   const getRecentDailyWaterIntakesForCat = (catId: string): number[] => {
     const byDay = new Map<string, number>();
     hydrationHistory
@@ -274,29 +278,6 @@ export function HomeContent({
     return { feedings, hydrations, eliminations, medications, symptoms };
   }, [feedingHistory, hydrationHistory, eliminationHistory, medicationHistory, symptomHistory, level]);
 
-  const renderAlerts = (alerts: any[]) => {
-    if (alerts.length === 0) return null;
-    const alertIcon = (type: string) => type === 'intake' ? 'restaurant' : type === 'hydration' ? 'opacity' : type === 'weight' ? 'monitor-weight' : 'thermostat';
-    const alertLabel = (type: string) => type === 'intake' ? '攝食異常' : type === 'hydration' ? '飲水不足' : type === 'weight' ? '體重變動' : '體溫異常';
-    return (
-      <View style={{ marginBottom: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-          <AppIcon name="warning" size={18} color="#ef4444" style={{ marginRight: 6 }} />
-          <Text style={[styles.sectionTitle, { color: '#ef4444' }]}>健康注意項目</Text>
-        </View>
-        {alerts.map((alert, idx) => (
-          <View key={idx} style={{ padding: 12, backgroundColor: '#fef2f2', borderLeftWidth: 4, borderLeftColor: alert.severity === 'high' ? '#ef4444' : '#f59e0b', marginBottom: 8, borderWidth: 1, borderColor: '#fee2e2' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-              <AppIcon name={alertIcon(alert.type) as any} size={14} color="#991b1b" style={{ marginRight: 4 }} />
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#991b1b' }}>{alertLabel(alert.type)}</Text>
-            </View>
-            <Text style={{ fontSize: 12, color: '#991b1b', lineHeight: 18 }}>{alert.message}</Text>
-          </View>
-        ))}
-      </View>
-    );
-  };
-
   const renderRecentRecords = () => (
     <View style={styles.section}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
@@ -404,103 +385,120 @@ export function HomeContent({
           </View>
         )}
         <View style={styles.cardBlock}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <AppIcon name="dashboard" size={20} color="#000" style={{ marginRight: 8 }} />
-            <Text style={styles.cardTitle}>今日家庭數據</Text>
+            <Text style={styles.cardTitle}>數據與趨勢</Text>
+          </View>
+          <View style={{ position: 'relative', zIndex: 10, marginBottom: 16 }}>
+            <Pressable
+              onPress={() => setDataTrendDropdownOpen((o) => !o)}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: '#000' }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600' }}>
+                {dataTrendTab === 'today' ? '今日家庭數據' : dataTrendTab === 'kcal' ? '熱量攝取趨勢' : '飲水量趨勢'}
+              </Text>
+              <AppIcon name={dataTrendDropdownOpen ? 'expand-less' : 'expand-more'} size={22} color="#000" />
+            </Pressable>
+            {dataTrendDropdownOpen && (
+              <>
+                <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -200, zIndex: 1 }} onPress={() => setDataTrendDropdownOpen(false)} />
+                <View style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 2, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', zIndex: 2 }}>
+                  {[
+                    { key: 'today' as const, label: '今日家庭數據' },
+                    { key: 'kcal' as const, label: '熱量攝取趨勢' },
+                    { key: 'water' as const, label: '飲水量趨勢' },
+                  ].map(({ key, label }) => (
+                    <Pressable
+                      key={key}
+                      style={{ paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                      onPress={() => { setDataTrendTab(key); setDataTrendDropdownOpen(false); }}
+                    >
+                      <Text style={{ fontSize: 14, fontWeight: dataTrendTab === key ? '700' : '400' }}>{label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
           </View>
 
-          <View style={{ borderWidth: 2, borderColor: '#000000', padding: 16, marginBottom: 16 }}>
-            <Text style={{ fontSize: 11, textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', opacity: 0.6 }}>總攝取熱量</Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>每日目標</Text>
-                <Text style={{ fontSize: 48, fontWeight: '700', lineHeight: 48 }}>{Math.round(householdKcalGoal)}</Text>
-                <Text style={{ fontSize: 14, marginTop: 4 }}>kcal</Text>
+          {dataTrendTab === 'today' && (
+            <>
+              <View style={{ borderWidth: 2, borderColor: '#000000', padding: 16, marginBottom: 16 }}>
+                <Text style={{ fontSize: 11, textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', opacity: 0.6 }}>總攝取熱量</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>每日目標</Text>
+                    <Text style={{ fontSize: 48, fontWeight: '700', lineHeight: 48 }}>{Math.round(householdKcalGoal)}</Text>
+                    <Text style={{ fontSize: 14, marginTop: 4 }}>kcal</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>目前攝取</Text>
+                    <Text style={{ fontSize: 32, fontWeight: '700', lineHeight: 32 }}>{Math.round(todayKcal)}</Text>
+                    <Text style={{ fontSize: 12, marginTop: 2 }}>kcal</Text>
+                  </View>
+                </View>
+                <View style={{ height: 8, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', marginBottom: 4 }}>
+                  <View style={{ width: `${Math.min(100, Math.round((todayKcal / householdKcalGoal) * 100))}%`, height: '100%', backgroundColor: '#000' }} />
+                </View>
+                <Text style={{ fontSize: 11, color: '#666', textAlign: 'right' }}>{Math.round((todayKcal / householdKcalGoal) * 100)}% 達成</Text>
+                <Pressable style={{ borderTopWidth: 1, borderTopColor: '#dddddd', marginTop: 8, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }} onPress={() => onOpenModal('kcalAdvice')}>
+                  <AppIcon name="lightbulb" size={14} color="#666" style={{ marginRight: 4 }} />
+                  <Text style={{ fontSize: 11, color: '#666' }}>點擊查看建議</Text>
+                </Pressable>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>目前攝取</Text>
-                <Text style={{ fontSize: 32, fontWeight: '700', lineHeight: 32 }}>{Math.round(todayKcal)}</Text>
-                <Text style={{ fontSize: 12, marginTop: 2 }}>kcal</Text>
+              <View style={{ borderWidth: 2, borderColor: '#000000', padding: 16, marginBottom: 16 }}>
+                <Text style={{ fontSize: 11, textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', opacity: 0.6 }}>總飲水量</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>每日目標</Text>
+                    <Text style={{ fontSize: 48, fontWeight: '700', lineHeight: 48 }}>{Math.round(householdWaterGoal)}</Text>
+                    <Text style={{ fontSize: 14, marginTop: 4 }}>ml</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>目前攝取</Text>
+                    <Text style={{ fontSize: 32, fontWeight: '700', lineHeight: 32 }}>{Math.round(todayWater)}</Text>
+                    <Text style={{ fontSize: 12, marginTop: 2 }}>ml</Text>
+                  </View>
+                </View>
+                <View style={{ height: 8, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', marginBottom: 4 }}>
+                  <View style={{ width: `${Math.min(100, Math.round((todayWater / householdWaterGoal) * 100))}%`, height: '100%', backgroundColor: '#000' }} />
+                </View>
+                <Text style={{ fontSize: 11, color: '#666', textAlign: 'right' }}>{Math.round((todayWater / householdWaterGoal) * 100)}% 達成</Text>
+                <Pressable style={{ borderTopWidth: 1, borderTopColor: '#dddddd', marginTop: 8, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }} onPress={() => onOpenModal('waterAdvice')}>
+                  <AppIcon name="lightbulb" size={14} color="#666" style={{ marginRight: 4 }} />
+                  <Text style={{ fontSize: 11, color: '#666' }}>點擊查看建議</Text>
+                </Pressable>
               </View>
-            </View>
-            <View style={{ height: 8, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', marginBottom: 4 }}>
-              <View style={{ width: `${Math.min(100, Math.round((todayKcal / householdKcalGoal) * 100))}%`, height: '100%', backgroundColor: '#000' }} />
-            </View>
-            <Text style={{ fontSize: 11, color: '#666', textAlign: 'right' }}>{Math.round((todayKcal / householdKcalGoal) * 100)}% 達成</Text>
-            <Pressable style={{ borderTopWidth: 1, borderTopColor: '#dddddd', marginTop: 8, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }} onPress={() => onOpenModal('kcalAdvice')}>
-              <AppIcon name="lightbulb" size={14} color="#666" style={{ marginRight: 4 }} />
-              <Text style={{ fontSize: 11, color: '#666' }}>點擊查看建議</Text>
-            </Pressable>
-          </View>
-
-          <View style={{ borderWidth: 2, borderColor: '#000000', padding: 16, marginBottom: 16 }}>
-            <Text style={{ fontSize: 11, textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', opacity: 0.6 }}>總飲水量</Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>每日目標</Text>
-                <Text style={{ fontSize: 48, fontWeight: '700', lineHeight: 48 }}>{Math.round(householdWaterGoal)}</Text>
-                <Text style={{ fontSize: 14, marginTop: 4 }}>ml</Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>目前攝取</Text>
-                <Text style={{ fontSize: 32, fontWeight: '700', lineHeight: 32 }}>{Math.round(todayWater)}</Text>
-                <Text style={{ fontSize: 12, marginTop: 2 }}>ml</Text>
-              </View>
-            </View>
-            <View style={{ height: 8, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', marginBottom: 4 }}>
-              <View style={{ width: `${Math.min(100, Math.round((todayWater / householdWaterGoal) * 100))}%`, height: '100%', backgroundColor: '#000' }} />
-            </View>
-            <Text style={{ fontSize: 11, color: '#666', textAlign: 'right' }}>{Math.round((todayWater / householdWaterGoal) * 100)}% 達成</Text>
-            <Pressable style={{ borderTopWidth: 1, borderTopColor: '#dddddd', marginTop: 8, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }} onPress={() => onOpenModal('waterAdvice')}>
-              <AppIcon name="lightbulb" size={14} color="#666" style={{ marginRight: 4 }} />
-              <Text style={{ fontSize: 11, color: '#666' }}>點擊查看建議</Text>
-            </Pressable>
-          </View>
+            </>
+          )}
+          {dataTrendTab === 'kcal' && (
+            <TrendChart
+              title="熱量攝取趨勢 (kcal)"
+              data={chartData.kcalData}
+              goal={householdKcalGoal}
+              unit="kcal"
+              color="#000"
+              recordsComplete={chartData.kcalRecordsComplete}
+            />
+          )}
+          {dataTrendTab === 'water' && (
+            <TrendChart
+              title="飲水量趨勢 (ml)"
+              data={chartData.waterData}
+              goal={householdWaterGoal}
+              unit="ml"
+              color="#3b82f6"
+              recordsComplete={chartData.waterRecordsComplete}
+            />
+          )}
         </View>
 
-        {renderAlerts(Object.values(summaryByCatId).flatMap(s => s.alerts))}
         {showLowAppetiteBanner && (
           <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#fef3c7', borderWidth: 2, borderColor: '#f59e0b', borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
             <AppIcon name="warning" size={22} color="#92400e" style={{ marginRight: 10 }} />
             <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#92400e' }}>貓咪最近胃口偏低，建議觀察或就醫</Text>
           </View>
         )}
-
-        <View style={styles.section}>
-<View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-          <AppIcon name="show-chart" size={18} color="#000" style={{ marginRight: 6 }} />
-          <Text style={styles.sectionTitle}>近 7 日趨勢</Text>
-        </View>
-        <TrendChart
-          title="熱量攝取趨勢 (kcal)"
-          data={chartData.kcalData}
-          goal={householdKcalGoal}
-          unit="kcal"
-          color="#000"
-          recordsComplete={chartData.kcalRecordsComplete}
-        />
-        <TrendChart
-          title="飲水量趨勢 (ml)"
-          data={chartData.waterData}
-          goal={householdWaterGoal}
-          unit="ml"
-          color="#3b82f6"
-          recordsComplete={chartData.waterRecordsComplete}
-        />
-        <TrendChart
-          title="胃口趨勢（攝取程度）"
-          data={chartData.appetiteData}
-          goal={100}
-          unit="%"
-          color="#166534"
-          recordsComplete={chartData.appetiteRecordsComplete}
-        />
-        {chartData.appetiteRecordsComplete < 4 && (
-          <View style={{ marginTop: -8, marginBottom: 16, padding: 10, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 4 }}>
-            <Text style={{ fontSize: 11, color: '#92400e', textAlign: 'center' }}>近期記錄不完整，趨勢僅供參考</Text>
-          </View>
-        )}
-        </View>
 
         {renderRecentRecords()}
 
@@ -615,47 +613,107 @@ export function HomeContent({
           </View>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-          <View style={{ flex: 1, borderWidth: 2, borderColor: '#000', padding: 12 }}>
-            <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 6, textTransform: 'uppercase', opacity: 0.6 }}>今日攝取熱量</Text>
-            <Text style={{ fontSize: 24, fontWeight: '700', textAlign: 'center' }}>{Math.round(currentKcal)}</Text>
-            <Text style={{ fontSize: 11, textAlign: 'center' }}>kcal</Text>
-            <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#000' }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                <Text style={{ fontSize: 10 }}>目標</Text>
-                <Text style={{ fontSize: 10, fontWeight: '700' }}>{individualKcalGoal} kcal</Text>
-              </View>
-              <View style={{ height: 6, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', marginBottom: 2 }}>
-                <View style={{ width: `${Math.min(100, Math.round((currentKcal / individualKcalGoal) * 100))}%`, height: '100%', backgroundColor: '#000' }} />
-              </View>
-              <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>{Math.round((currentKcal / individualKcalGoal) * 100)}% 達成</Text>
-            </View>
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <AppIcon name="dashboard" size={18} color="#000" style={{ marginRight: 6 }} />
+            <Text style={styles.sectionTitle}>數據與趨勢</Text>
           </View>
-          <View style={{ flex: 1, borderWidth: 2, borderColor: '#000', padding: 12 }}>
-            <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 6, textTransform: 'uppercase', opacity: 0.6 }}>今日飲水量</Text>
-            <Text style={{ fontSize: 24, fontWeight: '700', textAlign: 'center' }}>{Math.round(currentWater)}</Text>
-            <Text style={{ fontSize: 11, textAlign: 'center' }}>ml</Text>
-            <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#000' }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                <Text style={{ fontSize: 10 }}>{isWaterObservationMode ? '觀察區間' : '目標'}</Text>
-                <Text style={{ fontSize: 10, fontWeight: '700' }}>
-                  {(hasCkd || hasDiabetes || hasFlutd)
-                    ? `${Math.round(waterRange.min)}–${Math.round(waterRange.max)} ml`
-                    : `${individualWaterGoal} ml`}
-                </Text>
-              </View>
-              <View style={{ height: 6, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', marginBottom: 2 }}>
-                <View style={{ width: `${Math.min(100, waterProgressPct)}%`, height: '100%', backgroundColor: '#000' }} />
-              </View>
-              {isWaterObservationMode ? (
-                <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>
-                  觀察：若連續多日 {'>'} {Math.round(waterRange.max)} ml，建議回診檢查控制狀態
-                </Text>
-              ) : (
-                <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>{waterProgressPct}% 達成</Text>
-              )}
-            </View>
+          <View style={{ position: 'relative', zIndex: 10, marginBottom: 12 }}>
+            <Pressable
+              onPress={() => setDataTrendDropdownOpen((o) => !o)}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: '#000' }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600' }}>
+                {dataTrendTab === 'today' ? '今日數據' : dataTrendTab === 'kcal' ? '熱量攝取趨勢' : '飲水量趨勢'}
+              </Text>
+              <AppIcon name={dataTrendDropdownOpen ? 'expand-less' : 'expand-more'} size={22} color="#000" />
+            </Pressable>
+            {dataTrendDropdownOpen && (
+              <>
+                <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -200, zIndex: 1 }} onPress={() => setDataTrendDropdownOpen(false)} />
+                <View style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 2, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', zIndex: 2 }}>
+                  {[
+                    { key: 'today' as const, label: '今日數據' },
+                    { key: 'kcal' as const, label: '熱量攝取趨勢' },
+                    { key: 'water' as const, label: '飲水量趨勢' },
+                  ].map(({ key, label }) => (
+                    <Pressable
+                      key={key}
+                      style={{ paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                      onPress={() => { setDataTrendTab(key); setDataTrendDropdownOpen(false); }}
+                    >
+                      <Text style={{ fontSize: 14, fontWeight: dataTrendTab === key ? '700' : '400' }}>{label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
           </View>
+
+          {dataTrendTab === 'today' && (
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flex: 1, borderWidth: 2, borderColor: '#000', padding: 12 }}>
+                <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 6, textTransform: 'uppercase', opacity: 0.6 }}>今日攝取熱量</Text>
+                <Text style={{ fontSize: 24, fontWeight: '700', textAlign: 'center' }}>{Math.round(currentKcal)}</Text>
+                <Text style={{ fontSize: 11, textAlign: 'center' }}>kcal</Text>
+                <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#000' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ fontSize: 10 }}>目標</Text>
+                    <Text style={{ fontSize: 10, fontWeight: '700' }}>{individualKcalGoal} kcal</Text>
+                  </View>
+                  <View style={{ height: 6, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', marginBottom: 2 }}>
+                    <View style={{ width: `${Math.min(100, Math.round((currentKcal / individualKcalGoal) * 100))}%`, height: '100%', backgroundColor: '#000' }} />
+                  </View>
+                  <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>{Math.round((currentKcal / individualKcalGoal) * 100)}% 達成</Text>
+                </View>
+              </View>
+              <View style={{ flex: 1, borderWidth: 2, borderColor: '#000', padding: 12 }}>
+                <Text style={{ fontSize: 10, textAlign: 'center', marginBottom: 6, textTransform: 'uppercase', opacity: 0.6 }}>今日飲水量</Text>
+                <Text style={{ fontSize: 24, fontWeight: '700', textAlign: 'center' }}>{Math.round(currentWater)}</Text>
+                <Text style={{ fontSize: 11, textAlign: 'center' }}>ml</Text>
+                <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#000' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ fontSize: 10 }}>{isWaterObservationMode ? '觀察區間' : '目標'}</Text>
+                    <Text style={{ fontSize: 10, fontWeight: '700' }}>
+                      {(hasCkd || hasDiabetes || hasFlutd)
+                        ? `${Math.round(waterRange.min)}–${Math.round(waterRange.max)} ml`
+                        : `${individualWaterGoal} ml`}
+                    </Text>
+                  </View>
+                  <View style={{ height: 6, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', marginBottom: 2 }}>
+                    <View style={{ width: `${Math.min(100, waterProgressPct)}%`, height: '100%', backgroundColor: '#000' }} />
+                  </View>
+                  {isWaterObservationMode ? (
+                    <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>
+                      觀察：若連續多日 {'>'} {Math.round(waterRange.max)} ml，建議回診檢查控制狀態
+                    </Text>
+                  ) : (
+                    <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>{waterProgressPct}% 達成</Text>
+                  )}
+                </View>
+              </View>
+            </View>
+          )}
+          {dataTrendTab === 'kcal' && (
+            <TrendChart
+              title="熱量攝取趨勢 (kcal)"
+              data={chartData.kcalData}
+              goal={individualKcalGoal}
+              unit="kcal"
+              color="#000"
+              recordsComplete={chartData.kcalRecordsComplete}
+            />
+          )}
+          {dataTrendTab === 'water' && (
+            <TrendChart
+              title="飲水量趨勢 (ml)"
+              data={chartData.waterData}
+              goal={individualWaterGoal}
+              unit="ml"
+              color="#3b82f6"
+              recordsComplete={chartData.waterRecordsComplete}
+            />
+          )}
         </View>
         <View style={{ borderWidth: 1, borderColor: '#000', backgroundColor: '#f8fafc', padding: 10 }}>
           <Text style={{ fontSize: 11, lineHeight: 18, color: '#334155' }}>
@@ -665,49 +723,12 @@ export function HomeContent({
         </View>
       </View>
 
-      {currentSummary?.alerts && renderAlerts(currentSummary.alerts)}
       {showLowAppetiteBanner && (
         <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#fef3c7', borderWidth: 2, borderColor: '#f59e0b', borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
           <AppIcon name="warning" size={22} color="#92400e" style={{ marginRight: 10 }} />
           <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#92400e' }}>貓咪最近胃口偏低，建議觀察或就醫</Text>
         </View>
       )}
-
-      <View style={styles.section}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-          <AppIcon name="show-chart" size={18} color="#000" style={{ marginRight: 6 }} />
-          <Text style={styles.sectionTitle}>近 7 日趨勢</Text>
-        </View>
-        <TrendChart
-          title="熱量攝取趨勢 (kcal)"
-          data={chartData.kcalData}
-          goal={individualKcalGoal}
-          unit="kcal"
-          color="#000"
-          recordsComplete={chartData.kcalRecordsComplete}
-        />
-        <TrendChart
-          title="飲水量趨勢 (ml)"
-          data={chartData.waterData}
-          goal={individualWaterGoal}
-          unit="ml"
-          color="#3b82f6"
-          recordsComplete={chartData.waterRecordsComplete}
-        />
-        <TrendChart
-          title="胃口趨勢（攝取程度）"
-          data={chartData.appetiteData}
-          goal={100}
-          unit="%"
-          color="#166534"
-          recordsComplete={chartData.appetiteRecordsComplete}
-        />
-        {chartData.appetiteRecordsComplete < 4 && (
-          <View style={{ marginTop: -8, marginBottom: 16, padding: 10, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 4 }}>
-            <Text style={{ fontSize: 11, color: '#92400e', textAlign: 'center' }}>近期記錄不完整，趨勢僅供參考</Text>
-          </View>
-        )}
-      </View>
 
       <View style={[styles.section, { maxWidth: 320, alignSelf: 'center', width: '100%' }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>

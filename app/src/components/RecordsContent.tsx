@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { ActiveModal, FeedingOwnershipLog, HydrationOwnershipLog, INTAKE_LEVEL_LABEL } from '../types/app';
 import { EliminationOwnershipLog } from '../hooks/useElimination';
 import { CatIdentity, MedicationLog, SymptomLog } from '../types/domain';
@@ -271,15 +271,15 @@ export function RecordsContent({
     return null;
   };
 
-  const filterRow = (label: string, value: string, onPress: () => void) => (
+  const filterCell = (label: string, value: string, onPress: () => void) => (
     <Pressable
       onPress={onPress}
-      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: '#000', marginBottom: 8 }}
+      style={{ flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 6, borderWidth: 1, borderColor: '#000', marginRight: 6, marginBottom: 8 }}
     >
-      <Text style={{ fontSize: 12, color: '#666' }}>{label}</Text>
+      <Text style={{ fontSize: 11, color: '#666', marginBottom: 2 }}>{label}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Text style={{ fontSize: 14, fontWeight: '600', marginRight: 4 }}>{value}</Text>
-        <AppIcon name="expand-more" size={18} color="#000" />
+        <Text style={{ fontSize: 12, fontWeight: '600', marginRight: 2 }} numberOfLines={1}>{value}</Text>
+        <AppIcon name="expand-more" size={14} color="#000" />
       </View>
     </Pressable>
   );
@@ -313,33 +313,35 @@ export function RecordsContent({
           </Pressable>
           {addRecordDropdownOpen && (
             <>
-              <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -320, zIndex: 1 }} onPress={() => setAddRecordDropdownOpen(false)} />
-              <View style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, zIndex: 2, overflow: 'hidden' }}>
-                {[
-                  { modal: 'feeding' as ActiveModal, label: '食物記錄', icon: 'restaurant' },
-                  { modal: 'water' as ActiveModal, label: '飲水記錄', icon: 'opacity' },
-                  { modal: 'elimination' as ActiveModal, label: '排泄記錄', icon: 'sanitizer' },
-                  { modal: 'weightRecord' as ActiveModal, label: '體重記錄', icon: 'monitor-weight' },
-                  { modal: 'medication' as ActiveModal, label: '用藥記錄', icon: 'medication' },
-                  { modal: 'symptom' as ActiveModal, label: '異常症狀', icon: 'healing' },
-                  { modal: 'blood' as ActiveModal, label: '報告掃描', icon: 'biotech' },
-                ].map(({ modal, label, icon }) => (
-                  <Pressable
-                    key={modal}
-                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#eee' }}
-                    onPress={() => { onOpenModal(modal); setAddRecordDropdownOpen(false); }}
-                  >
-                    <AppIcon name={icon as any} size={20} color="#000" style={{ marginRight: 10 }} />
-                    <Text style={{ fontSize: 14, fontWeight: '500' }}>{label}</Text>
-                  </Pressable>
-                ))}
+              <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -260, zIndex: 1 }} onPress={() => setAddRecordDropdownOpen(false)} />
+              <View style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, zIndex: 2, overflow: 'hidden' }}>
+                <ScrollView style={{ maxHeight: 256 }} keyboardShouldPersistTaps="handled">
+                  {[
+                    { modal: 'feeding' as ActiveModal, label: '食物記錄', icon: 'restaurant' },
+                    { modal: 'water' as ActiveModal, label: '飲水記錄', icon: 'opacity' },
+                    { modal: 'elimination' as ActiveModal, label: '排泄記錄', icon: 'sanitizer' },
+                    { modal: 'weightRecord' as ActiveModal, label: '體重記錄', icon: 'monitor-weight' },
+                    { modal: 'medication' as ActiveModal, label: '用藥記錄', icon: 'medication' },
+                    { modal: 'symptom' as ActiveModal, label: '異常症狀', icon: 'healing' },
+                    { modal: 'blood' as ActiveModal, label: '報告掃描', icon: 'biotech' },
+                  ].map(({ modal, label, icon }) => (
+                    <Pressable
+                      key={modal}
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                      onPress={() => { onOpenModal(modal); setAddRecordDropdownOpen(false); }}
+                    >
+                      <AppIcon name={icon as any} size={20} color="#000" style={{ marginRight: 10 }} />
+                      <Text style={{ fontSize: 14, fontWeight: '500' }}>{label}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
               </View>
             </>
           )}
         </View>
       </View>
 
-      <View style={{ marginTop: 32, borderWidth: 2, borderColor: '#000', padding: 16 }}>
+      <View style={{ marginTop: 32, borderTopWidth: 1, borderTopColor: '#ddd', paddingTop: 16, paddingHorizontal: 16, paddingBottom: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <AppIcon name="history" size={20} color="#000" style={{ marginRight: 8 }} />
@@ -350,9 +352,11 @@ export function RecordsContent({
           </Pressable>
         </View>
 
-        {filterRow('範圍', scopeLabel, () => setFilterSheet('scope'))}
-        {filterRow('類型', typeLabels[typeFilter], () => setFilterSheet('type'))}
-        {filterRow('日期', dateLabels[dateFilter], () => setFilterSheet('date'))}
+        <View style={{ flexDirection: 'row' }}>
+          {filterCell('範圍', scopeLabel, () => setFilterSheet('scope'))}
+          {filterCell('類型', typeLabels[typeFilter], () => setFilterSheet('type'))}
+          {filterCell('日期', dateLabels[dateFilter], () => setFilterSheet('date'))}
+        </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#ddd' }}>
           <Text style={{ fontSize: 12, color: '#666' }}>共 {filteredRecords.length} 筆</Text>
@@ -361,7 +365,7 @@ export function RecordsContent({
         {filteredRecords.length === 0 ? (
           <Text style={{ fontSize: 13, color: '#666' }}>尚無符合條件的紀錄</Text>
         ) : (
-          <View style={{ paddingBottom: 40, maxWidth: 320, alignSelf: 'center', width: '100%' }}>
+          <View style={{ paddingBottom: 40, width: '100%' }}>
             {filteredRecords.map(record => renderRecordItem(record))}
           </View>
         )}
