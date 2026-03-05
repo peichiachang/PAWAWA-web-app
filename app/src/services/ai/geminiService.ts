@@ -171,17 +171,18 @@ export const geminiService: AiRecognitionService = {
 ## IMAGE ROLES（三張圖的定義）
 
 You receive THREE images in order:
-- [1] Empty bowl（空碗） = 0% food — used as contour/texture reference only. Does NOT define what a "full bowl" looks like.
-- [2] T0 = The state immediately after feeding this meal. This is the 100% anchor for THIS meal. T0 may be 70%, 80%, or any fill level — it does not need to be a full bowl.
+- [1] Empty bowl（空碗） = 0% food — used as contour/texture reference and absolute fill level baseline.
+- [2] T0 = The state immediately after feeding this meal.
 - [3] T1 = The state after some time has passed.
 
-Core question: "Relative to T0 (this meal's starting point), how much food remains in T1?"
+Your task is to estimate the absolute fill level of each image relative to the empty bowl.
 
-The empty bowl image is used ONLY to:
+The empty bowl image is used to:
 1. Identify the bowl's shape, color, and texture (to separate bowl from food)
-2. Provide the 0% food anchor
+2. Provide the 0% food anchor for absolute fill level estimation
+3. Enable precise comparison of T0 and T1 fill levels
 
-Do NOT use the empty bowl to infer how much food T0 "should" contain.
+Core question: "How full is each image relative to the empty bowl, and how much was consumed?"
 `
       : `
 ## IMAGE ROLES（雙圖模式）
@@ -204,7 +205,46 @@ For shallow bowls, food height difference is minimal. Focus on:
 `
       : '';
 
-    const prompt = `
+    const prompt = hasEmptyBowl
+      ? `
+You are a production vision model for cat feeding analysis.
+Return valid JSON only (no markdown, no extra text).
+
+${imageRolesSection}
+
+Task:
+Your task is to estimate the absolute fill level of each image relative to the empty bowl.
+
+Return:
+- "t0FillRatio": how full is T0 relative to empty bowl (0.0 = empty, 1.0 = full to brim)
+- "t1FillRatio": how full is T1 relative to empty bowl (0.0 = empty, 1.0 = full to brim)
+- "consumedRatio": t0FillRatio - t1FillRatio (how much was eaten as a fraction of T0)
+
+Hard rules:
+1. Compare only bowl interior ROI.
+2. Normalize brightness/contrast between all images before judging.
+3. Ignore background, camera tilt, and non-bowl regions.
+4. Use Empty bowl as the absolute baseline (0% fill).
+5. Estimate T0 and T1 fill levels independently relative to empty bowl.
+6. Calculate consumedRatio = t0FillRatio - t1FillRatio.
+7. If bowl mismatch between T0 and T1, set isBowlMatch=false.
+8. If uncertain near boundaries, set uncertain=true and explain briefly in reason.
+
+${shallowBowlSection}
+
+Return JSON:
+{
+  "t0FillRatio": number (0.0-1.0),
+  "t1FillRatio": number (0.0-1.0),
+  "consumedRatio": number (0.0-1.0),
+  "isBowlMatch": boolean,
+  "mismatchReason": string | null,
+  "uncertain": boolean,
+  "reason": string,
+  "confidence": number (0.0-1.0)
+}
+`
+      : `
 You are a production vision model for cat feeding analysis.
 Return valid JSON only (no markdown, no extra text).
 
@@ -219,9 +259,7 @@ Hard rules:
 1. Compare only bowl interior ROI.
 2. Normalize brightness/contrast between T0 and T1 before judging.
 3. Ignore background, camera tilt, and non-bowl regions.
-4. ${hasEmptyBowl
-    ? 'Use Empty bowl only for bowl-material reference; do NOT use Empty as fullness baseline.'
-    : 'Use T0 as the only meal baseline.'}
+4. Use T0 as the only meal baseline.
 5. If bowl mismatch between T0 and T1, set isBowlMatch=false.
 6. If uncertain near boundaries, set uncertain=true and explain briefly in reason.
 
@@ -253,25 +291,61 @@ Return JSON:
       preCheck?: { Q1?: boolean; Q2?: boolean; Q3?: boolean; Q4?: boolean };
       uncertain?: boolean;
       reason?: string;
+      t0FillRatio?: number;
+      t1FillRatio?: number;
     }>(response.text());
 
-    const levelToGram: Record<ConsumptionLevel, number> = {
-      almost_all_eaten: Math.round(0.9 * t0RefGrams),
-      more_than_half: Math.round(0.75 * t0RefGrams),
-      about_half: Math.round(0.5 * t0RefGrams),
-      a_little: Math.round(0.25 * t0RefGrams),
-      almost_none: 0,
-    };
+    // 從飲食紀錄的食物類型取得密度
+    const foodType = input.vessel?.foodType;
+    const density = foodType === 'wet' ? 0.95 : 0.45; // 乾飼料用 0.45，罐頭用 0.95
 
-    const consumedRatio = inferConsumedRatio(parsed, t0RefGrams);
-    const baseLevel = ratioToBaseLevel(consumedRatio);
-    const hysteresisKey = buildFeedingHysteresisKey(input.t0.imageBase64, input.t1.imageBase64, t0RefGrams);
-    let normalizedLevel = applyFeedingHysteresis(hysteresisKey, consumedRatio, baseLevel);
+    let consumedRatio: number;
+    let householdTotalGram: number;
 
-    // 安全網：若 PRE-CHECK 任一為 true（Q1||Q2||Q3||Q4），almost_none 不可用；若 AI/規則仍落到 almost_none，強制改為 a_little
-    const almostNoneForbidden = parsed.preCheck && (parsed.preCheck.Q1 || parsed.preCheck.Q2 || parsed.preCheck.Q3 || parsed.preCheck.Q4);
-    if (almostNoneForbidden && normalizedLevel === 'almost_none') {
-      normalizedLevel = 'a_little';
+    if (hasEmptyBowl && parsed.t0FillRatio !== undefined && parsed.t1FillRatio !== undefined) {
+      // 版本 A：有空碗照片，使用絕對填充比例計算
+      const t0FillRatio = clamp(parsed.t0FillRatio ?? 0.8, 0, 1);
+      const t1FillRatio = clamp(parsed.t1FillRatio ?? 0, 0, 1);
+      
+      // 如果 AI 有回傳 consumedRatio，優先使用；否則計算
+      if (parsed.consumedRatio !== undefined && Number.isFinite(parsed.consumedRatio)) {
+        consumedRatio = clamp(parsed.consumedRatio, 0, 1);
+      } else {
+        consumedRatio = clamp(t0FillRatio - t1FillRatio, 0, 1);
+      }
+
+      // 計算克數：使用絕對填充比例和容器容量
+      if (vesselVolumeMl && vesselVolumeMl > 0) {
+        const t0Grams = t0FillRatio * vesselVolumeMl * density;
+        householdTotalGram = Math.round(consumedRatio * t0Grams);
+      } else {
+        // 沒有容器容量時，使用 fallback 計算
+        const t0Grams = t0FillRatio * (hasManualWeight ? input.t0.manualWeight! : 500);
+        householdTotalGram = Math.round(consumedRatio * t0Grams);
+      }
+    } else {
+      // 版本 B：沒有空碗照片，使用相對比例（保留原有邏輯）
+      const levelToGram: Record<ConsumptionLevel, number> = {
+        almost_all_eaten: Math.round(0.9 * t0RefGrams),
+        more_than_half: Math.round(0.75 * t0RefGrams),
+        about_half: Math.round(0.5 * t0RefGrams),
+        a_little: Math.round(0.25 * t0RefGrams),
+        almost_none: 0,
+      };
+
+      consumedRatio = inferConsumedRatio(parsed, t0RefGrams);
+      const baseLevel = ratioToBaseLevel(consumedRatio);
+      const hysteresisKey = buildFeedingHysteresisKey(input.t0.imageBase64, input.t1.imageBase64, t0RefGrams);
+      let normalizedLevel = applyFeedingHysteresis(hysteresisKey, consumedRatio, baseLevel);
+
+      // 安全網：若 PRE-CHECK 任一為 true（Q1||Q2||Q3||Q4），almost_none 不可用；若 AI/規則仍落到 almost_none，強制改為 a_little
+      const almostNoneForbidden = parsed.preCheck && (parsed.preCheck.Q1 || parsed.preCheck.Q2 || parsed.preCheck.Q3 || parsed.preCheck.Q4);
+      if (almostNoneForbidden && normalizedLevel === 'almost_none') {
+        normalizedLevel = 'a_little';
+      }
+
+      parsed.consumptionLevel = normalizedLevel;
+      householdTotalGram = levelToGram[normalizedLevel];
     }
 
     parsed.confidence = clamp(Number(parsed.confidence ?? 0.5), 0, 1);
@@ -279,11 +353,10 @@ Return JSON:
     parsed.isBowlMatch = Boolean(parsed.isBowlMatch);
     parsed.mismatchReason = parsed.isBowlMatch ? undefined : (parsed.mismatchReason || 'Bowl mismatch');
     parsed.consumedRatio = consumedRatio;
-    parsed.consumptionLevel = normalizedLevel;
-    parsed.householdTotalGram = levelToGram[normalizedLevel];
+    parsed.householdTotalGram = householdTotalGram;
     if (!Array.isArray(parsed.assignments)) parsed.assignments = [];
     if (parsed.assignments[0]) {
-      parsed.assignments[0].estimatedIntakeGram = parsed.householdTotalGram;
+      parsed.assignments[0].estimatedIntakeGram = householdTotalGram;
     }
 
     return parsed as FeedingVisionResult;

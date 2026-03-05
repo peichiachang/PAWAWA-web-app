@@ -1,7 +1,7 @@
 # PAWAWA — Software Design Document (SDD)
 
-> Version: 1.0
-> Last updated: 2026-02-27
+> Version: 1.1
+> Last updated: 2026-03-05
 > Platform: React Native (Expo)
 > Language: TypeScript
 
@@ -44,8 +44,8 @@ PAWAWA 是一款貓咪健康管理 App，核心功能為：
 App.tsx (GlobalCameraProvider)
 ├── 導航層：TopNav (Level Switcher) + BottomNav
 ├── 畫面層：HomeContent / RecordsContent / KnowledgeContent / ProfileContent
-├── Modal 層：14 個 Modal 元件
-├── Hooks 層：useFeeding / useHydration / useElimination / useBloodReport / useMedication / useVessels
+├── Modal 層：17 個 Modal 元件
+├── Hooks 層：useFeeding / useHydration / useElimination / useBloodReport / useMedication / useSymptoms / useVessels / useRecordReminders
 ├── AI 服務層：geminiService / mockAiService (透過 getAiRecognitionService() 統一切換)
 └── 資料層：AsyncStorage (本地) + types/domain + types/app
 ```
@@ -104,7 +104,8 @@ type ActiveModal =
   | 'water'         // 飲水記錄
   | 'elimination'   // 排泄記錄
   | 'medication'    // 用藥記錄
-  | 'settings'      // 系統設定（體重記錄入口）
+  | 'symptom'       // 異常症狀記錄
+  | 'settings'      // 系統設定
   | 'blood'         // 血液報告掃描
   | 'bloodHistory'  // 血液報告歷史
   | 'bloodDetail'   // 血液報告詳情
@@ -114,6 +115,8 @@ type ActiveModal =
   | 'iap'           // 訂閱方案
   | 'addCat'        // 新增貓咪
   | 'editCat'       // 編輯貓咪
+  | 'recordDetail'  // 紀錄詳情
+  | 'weightRecord'  // 體重記錄
   | null
 ```
 
@@ -217,13 +220,18 @@ interface Props {
    └─ 精確：T0 手動輸入秤重 + T1 影像，誤差 ±8%
 
 ② 選擇食碗（vesselProfiles，需先校準）
+   └─ 可選擇食物類型（乾飼料 / 罐頭濕食）
+   └─ 乾飼料可設定預設份量
 
 ③ T₀ 拍攝（裝滿的碗）
    └─ 精確模式：輸入電子秤克數
+   └─ 可選：拍攝空碗俯視照（供 T0/T1 碗位比對）
    └─ 儲存至 t0Map[vesselId]（24hr TTL）
 
 ④ T₁ 拍攝（剩餘的碗）
    └─ AI 分析 FeedingVisionResult
+   └─ 版本 A（有空碗照片）：估算絕對填充比例（t0FillRatio, t1FillRatio）
+   └─ 版本 B（無空碗照片）：估算相對消耗比例（consumedRatio）
    └─ 合理性檢查（> maxPossibleGrams × 1.1 → 警告）
    └─ 碗位一致性檢查（isBowlMatch）
 
@@ -237,6 +245,19 @@ interface Props {
 ⑦ 儲存 FeedingOwnershipLog
 ```
 
+**克數計算邏輯：**
+
+**版本 A（有空碗照片）：**
+```typescript
+const density = foodType === 'wet' ? 0.95 : 0.45;  // 乾飼料 0.45，罐頭 0.95
+const t0Grams = t0FillRatio * vesselVolumeMl * density;
+const consumedGrams = consumedRatio * t0Grams;
+```
+
+**版本 B（無空碗照片）：**
+- 使用離散等級轉換（almost_none / a_little / about_half / more_than_half / almost_all_eaten）
+- 根據等級對應的百分比計算克數
+
 ### 5.2 HydrationModal — 飲水記錄
 
 **路徑：** `src/components/modals/HydrationModal.tsx`
@@ -246,14 +267,24 @@ interface Props {
 
 ```
 ① 選擇容器
-② T₀ 拍攝 → 顯示 WaterLevelMarker，使用者手動標記水位百分比
+② T₀ 拍攝 → 顯示 WaterLevelMarker，使用者手動標記三條線（碗口、水位、碗底）
 ③ T₁ 拍攝 → 顯示 WaterLevelMarker
-④ AI 分析（附帶 waterLevelYPct 優先用於計算）
-⑤ 歸屬設定
-⑥ 儲存 HydrationOwnershipLog
+④ 計算 waterLevelPct = (waterY - rimY) / (bottomY - rimY)
+   └─ waterLevelPct = 0 表示滿（水位在碗口）
+   └─ waterLevelPct = 1 表示空（水位在碗底）
+⑤ 計算水量：
+   └─ 有側面輪廓校準：使用輪廓積分計算
+   └─ 無側面輪廓：水量 = (1 - waterLevelPct) * volumeMl
+⑥ 歸屬設定
+⑦ 儲存 HydrationOwnershipLog
 ```
 
-**蒸發修正：** AI 回傳 `envFactorMl`，`actualIntakeMl = T0 - T1 - envFactor`
+**計算邏輯：**
+- 優先使用使用者標記的 `waterLevelPct`（像素座標轉換）
+- 有側面輪廓校準時，使用精確的輪廓積分計算體積
+- 無側面輪廓時，使用線性計算（假設圓柱形）
+- 蒸發修正：`envFactorMl = (waterT0Ml - waterT1Ml) * 0.02`（2% 蒸發）
+- `actualIntakeMl = max(0, waterT0Ml - waterT1Ml - envFactorMl)`
 
 ### 5.3 EliminationModal — 排泄記錄
 
@@ -320,21 +351,42 @@ interface Props {
 **路徑：** `src/components/modals/VesselCalibrationModal.tsx`
 **Hook：** `useVessels()`
 
-**容器形狀與量測欄位：**
+**三種輸入方式：**
 
-| 形狀 | 欄位 |
-|---|---|
-| cylinder（圓柱） | radius, height |
-| trapezoid（梯形碗） | topRadius, bottomRadius, height |
-| sphere（半球） | radius |
+#### 方式 1：測量尺寸（幾何計算）
+| 形狀 | 欄位 | 公式 |
+|---|---|---|
+| cylinder（圓柱） | radius（直徑）, height | `V = π × (直徑/2)² × 高度` |
+| trapezoid（梯形/長方體） | length, width, height | `V = 長 × 寬 × 高` |
+| sphere（圓台） | topRadius（頂直徑）, bottomRadius（底直徑）, height | `V = (π × h / 3) × (R² + R×r + r²)` |
 
-- 儲存時自動計算 volumeMl
+#### 方式 2：側面輪廓（AI 識別，最準確）
+- 拍攝側面照（從正側面拍攝空碗）
+- 輸入碗口直徑和碗高度
+- AI 識別輪廓並計算體積（誤差 ±3-5%）
+- 支援高度校正和實測校準係數
+
+#### 方式 3：已知容量（直接輸入）
+- 直接輸入容器標示的容量（毫升）
+- 適合飲水機等大型容器
+
+**其他設定：**
+- 容器用途：食碗（`feeding`）或水碗（`hydration`）
+- 食物類型：乾飼料（`dry`）或罐頭濕食（`wet`）
+- 乾飼料可設定預設份量（`defaultPortionGrams`）
+- 空碗俯視照（供 T0/T1 碗位比對使用）
 - iOS：提供「使用量尺 App 測量」捷徑
+
+**自動重新計算：**
+- 側面輪廓模式：當使用者改變數值或重新拍攝時，自動清除 AI 計算結果並提示重新計算
 
 ### 5.9 其他 Modals
 
 | Modal | 用途 |
 |---|---|
+| SymptomModal | 異常症狀記錄（嚴重度：mild / moderate / severe） |
+| WeightRecordModal | 體重記錄（更新貓咪體重並建立 VitalsLog） |
+| RecordDetailModal | 紀錄詳情檢視（統一檢視各類紀錄） |
 | BloodHistoryModal | 血液報告歷史列表 |
 | BloodReportDetailModal | 血液報告詳細解讀 |
 | KcalAdviceModal | 熱量不足建議 |
@@ -395,6 +447,18 @@ CRUD 操作，對應 `carecat:medication_v1`。
 
 **路徑：** `src/hooks/useVessels.ts`
 管理 VesselCalibration 陣列，提供選取與儲存功能。
+- 載入時自動重新計算所有容器體積（修正可能存在的錯誤計算）
+- 選取容器時確保體積正確計算
+
+### 6.7 useSymptoms
+
+**路徑：** `src/hooks/useSymptoms.ts`
+管理異常症狀記錄（SymptomLog），支援嚴重度分級（mild / moderate / severe）。
+
+### 6.8 useRecordReminders
+
+**路徑：** `src/hooks/useRecordReminders.ts`
+飲食/飲水紀錄提醒（上午 8:00、傍晚 18:00），使用 `expo-notifications`。
 
 ---
 
@@ -407,10 +471,12 @@ CRUD 操作，對應 `carecat:medication_v1`。
 ```typescript
 interface AiRecognitionService {
   analyzeFeedingImages(input: { t0, t1, vessel? }): Promise<FeedingVisionResult>
+  analyzeWithMajorityVote?(input: { t0, t1, vessel? }): Promise<FeedingMajorityVoteResult>
   extractNutritionLabel(input: AiImageInput): Promise<NutritionOCRResult>
   analyzeHydrationImages(input: { t0, t1, vessel?, t0LevelYPct?, t1LevelYPct? }): Promise<HydrationVisionResult>
   analyzeEliminationImage(input: AiImageInput): Promise<EliminationVisionResult>
   extractBloodReport(input: AiImageInput): Promise<BloodReportOCRResult>
+  analyzeSideProfile?(input: { imageBase64: string; rimDiameterCm: number }): Promise<SideProfileAnalysisResult>
 }
 ```
 
@@ -421,13 +487,14 @@ interface AiRecognitionService {
 **格式：** `responseMimeType: 'application/json'`
 **圖片輸入：** base64 inline data
 
-| 功能 | Prompt 重點 |
-|---|---|
-| `analyzeFeedingImages` | T0/T1 對比，估算每碗消耗克數，vessel 存在時驗證碗位一致性 |
-| `extractNutritionLabel` | 從飼料標籤萃取 kcal/g、蛋白質%、磷% |
-| `analyzeHydrationImages` | 若有 waterLevelYPct 則優先使用人工標記，否則視覺估算；計算蒸發修正 |
-| `analyzeEliminationImage` | Bristol Scale 1–7，回傳繁體中文（zh-TW） |
-| `extractBloodReport` | OCR 血液報告，萃取指標代碼、數值、單位、參考範圍 |
+| 功能 | Prompt 重點 | 計算邏輯 |
+|---|---|---|
+| `analyzeFeedingImages` | **版本 A（有空碗）**：估算絕對填充比例（t0FillRatio, t1FillRatio），計算 consumedRatio = t0FillRatio - t1FillRatio<br>**版本 B（無空碗）**：T0/T1 相對對比，估算消耗比例 | **版本 A**：`t0Grams = t0FillRatio × volumeMl × density`，`consumedGrams = consumedRatio × t0Grams`<br>**版本 B**：使用離散等級轉換（almost_none / a_little / about_half / more_than_half / almost_all_eaten） |
+| `extractNutritionLabel` | 從飼料標籤萃取 kcal/g、蛋白質%、磷% | - |
+| `analyzeHydrationImages` | 若有 waterLevelPct 則優先使用人工標記，否則視覺估算；計算蒸發修正 | 有側面輪廓：使用輪廓積分計算<br>無側面輪廓：`水量 = (1 - waterLevelPct) × volumeMl` |
+| `analyzeEliminationImage` | Bristol Scale 1–7，回傳繁體中文（zh-TW） | - |
+| `extractBloodReport` | OCR 血液報告，萃取指標代碼、數值、單位、參考範圍 | - |
+| `analyzeSideProfile` | 側面輪廓識別，重建碗的實際截面形狀 | 使用數值積分計算體積 |
 
 ### 7.3 Mock Service
 
@@ -521,6 +588,8 @@ interface ClinicalSummary {
   avgTemperatureC: number
   totalKcalIntake: number
   totalActualWaterMl: number
+  todayKcalIntake: number  // 今日攝取熱量（僅當日紀錄）
+  todayWaterMl: number  // 今日飲水量（僅當日紀錄）
   weeklyWeightChangeRatePct: number
   medicationLogs: MedicationLog[]
   alerts: MedicalAlert[]
@@ -543,12 +612,22 @@ interface CapturedImage {
 interface VesselCalibration {
   id: string
   name: string
+  vesselType?: 'feeding' | 'hydration'  // 容器用途
   shape: VesselShape
   dimensions: {
     length?: number; width?: number; height: number
     radius?: number; topRadius?: number; bottomRadius?: number
   }
   volumeMl?: number
+  calibrationFactor?: number  // 校準係數
+  measuredVolumeMl?: number  // 實際測量容量
+  calibrationMethod?: 'dimensions' | 'side_profile' | 'known_volume'
+  sideProfileImageBase64?: string  // 側面照
+  rimDiameterCm?: number  // 碗口直徑
+  profileContour?: ProfileContour  // 輪廓數據
+  topViewImageBase64?: string  // 空碗俯視照
+  foodType?: 'dry' | 'wet'  // 食物類型
+  defaultPortionGrams?: number  // 乾飼料預設份量
 }
 
 interface StoredFeedingT0 extends CapturedImage {
@@ -565,7 +644,9 @@ interface FeedingOwnershipLog {
   ownershipType: FeedingOwnershipType
   selectedTagId: string | null
   mode: FeedingPrecisionMode
-  _type: 'feeding'
+  confidence?: number  // AI 辨識信心度
+  vesselId?: string  // 使用的容器 ID
+  note?: string  // 使用者備註
 }
 
 interface HydrationOwnershipLog {
@@ -575,7 +656,6 @@ interface HydrationOwnershipLog {
   actualWaterMl?: number
   ownershipType: FeedingOwnershipType
   selectedTagId: string | null
-  _type: 'hydration'
 }
 
 interface EliminationOwnershipLog {
@@ -585,7 +665,16 @@ interface EliminationOwnershipLog {
   color: string
   abnormal: boolean
   selectedTagId: string | null
-  _type: 'elimination'
+}
+
+interface SymptomLog {
+  id: string
+  catId: string
+  symptom: string
+  severity: 'mild' | 'moderate' | 'severe'
+  observedAt?: string
+  notes?: string
+  createdAt: number
 }
 ```
 
@@ -605,9 +694,13 @@ interface FeedingVisionResult {
   bowlsDetected: number
   assignments: { bowlId: string; tag: string; estimatedIntakeGram: number }[]
   householdTotalGram: number
+  consumedRatio?: number  // 0~1，消耗比例
+  consumptionLevel?: ConsumptionLevel  // 離散分級（版本 B 使用）
   isBowlMatch: boolean
   mismatchReason?: string
-  confidence?: number         // 0.0–1.0
+  confidence?: number  // 0.0–1.0
+  estimatedErrorMargin?: number  // AI 估算誤差範圍（0.08-0.20）
+  preCheck?: FeedingPreCheck
 }
 
 interface NutritionOCRResult {
@@ -651,6 +744,13 @@ interface BloodReportOCRResult {
   reportDate?: string
   labName?: string
   confidence?: number
+}
+
+interface SideProfileAnalysisResult {
+  contour: ProfileContour
+  confidence: number
+  estimatedHeightCm?: number
+  estimatedVolumeMl?: number
 }
 ```
 
@@ -703,6 +803,7 @@ interface BloodReportRecord {
 | `carecat:hydration_v3` | HydrationOwnershipLog 陣列 |
 | `carecat:elimination_v1` | EliminationOwnershipLog 陣列（最多 50 筆） |
 | `carecat:medication_v1` | MedicationLog 陣列 |
+| `carecat:symptom_v1` | SymptomLog 陣列 |
 | `carecat:blood-reports` | BloodReportRecord 陣列（最多 30 筆） |
 | `carecat:vessel_profiles_v1` | VesselCalibration 陣列 |
 | `carecat:initial_clear` | 初始化旗標 |
@@ -743,10 +844,16 @@ calculateDailyKcalGoal(cat: CatIdentity): number
 
 // 每日飲水目標
 calculateDailyWaterGoal(cat: CatIdentity): number
-  → 標準：50 ml/kg
-  → CKD：80 ml/kg
-  → 糖尿病：70 ml/kg
-  → FLUTD：65 ml/kg
+  → 標準：50 ml/kg（依年齡調整：幼貓 55 ml/kg，老貓 45 ml/kg）
+  → CKD：50 ml/kg（顯示範圍 40-60 ml/kg）
+  → 糖尿病：顯示範圍 50-70 ml/kg
+  → FLUTD：顯示範圍 50-65 ml/kg
+
+// 適應性每日飲水目標（根據最近飲水量調整）
+calculateAdaptiveDailyWaterGoal(cat: CatIdentity, recentDailyIntakesMl: number[]): number
+  → 根據最近 7 天的飲水量趨勢，動態調整目標值
+  → 如果最近飲水量持續低於目標，適度降低目標值
+  → 如果最近飲水量持續高於目標，適度提高目標值
 
 // 實際飲水量
 calculateActualWaterIntakeMl(t0, t1, envFactor): number
@@ -786,6 +893,34 @@ interpretBloodReport(markers: BloodMarkerRaw[]): BloodMarkerInterpretation[]
 - 100+ 指標知識庫，涵蓋中英文名稱、類別、描述、高低值說明
 - 根據 refLow / refHigh 判斷 high / low / normal / unknown
 
+### 10.5 容器體積計算（`src/utils/vesselVolume.ts`）
+
+```typescript
+calculateVesselVolume(vessel: VesselCalibration): number | undefined
+```
+
+**計算優先順序：**
+1. 已知容量模式：直接返回 `volumeMl`
+2. 側面輪廓模式：使用輪廓積分計算（`calculateTotalVolumeFromContour`）
+3. 幾何尺寸模式：根據形狀使用標準幾何公式
+
+**支援的容器形狀：**
+- `cylinder`：圓柱體 `V = π × r² × h`
+- `trapezoid`：長方體 `V = l × w × h`
+- `sphere`：圓台（截頭圓錐）`V = (π × h / 3) × (R² + R×r + r²)`
+
+### 10.6 側面輪廓體積計算（`src/utils/profileVolume.ts`）
+
+```typescript
+calculateVolumeFromContour(contour, waterLevelTopCm, waterLevelBottomCm): number
+calculateTotalVolumeFromContour(contour): number
+calculateVolumeToWaterLevel(contour, waterLevelPct): number
+```
+
+- 使用數值積分：`V = ∫[bottom to top] π × r(y)² dy`
+- 步長：0.1cm
+- 支援線性插值從輪廓點陣列取得各高度的半徑
+
 ---
 
 ## 11. 相機模組
@@ -820,8 +955,19 @@ interface CameraContextProps {
 
 - 低光時顯示警告文字
 - 使用 `useCameraPermissions()` 管理權限
+- 支援內嵌模式（在 Modal 內顯示，不透過全域 Context）
 
-### 11.3 相簿選取（`src/utils/camera.ts`）
+### 11.3 WaterLevelMarker — 水位標記工具
+
+**路徑：** `src/components/WaterLevelMarker.tsx`
+
+- 使用者手動拖動三條線：碗口（綠色）、碗底（橙色）、水面（藍色）
+- 計算 `waterLevelPct = (waterY - rimY) / (bottomY - rimY)`
+  - `waterLevelPct = 0`：滿（水位在碗口）
+  - `waterLevelPct = 1`：空（水位在碗底）
+- 回傳像素座標（`bowl_top_y`, `bowl_bottom_y`, `water_y`）供純數學計算
+
+### 11.4 相簿選取（`src/utils/camera.ts`）
 
 ```typescript
 pickFromLibrary(): Promise<CapturedImage | null>
@@ -853,6 +999,9 @@ App 啟動
 - 排泄紀錄：最多 50 筆
 - 血液報告：最多 30 筆
 - 飲食紀錄：最多 50 筆（FeedingOwnershipLog）
+- 飲水紀錄：最多 50 筆（HydrationOwnershipLog）
+- 用藥紀錄：無限制
+- 症狀紀錄：無限制
 
 ---
 
