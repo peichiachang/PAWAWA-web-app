@@ -1169,6 +1169,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                         </Text>
                                                                     </View>
                                                                 )}
+                                                                <Text style={{ fontSize: 10, color: '#6b7280', fontStyle: 'italic', marginTop: 6 }}>僅供參考</Text>
                                                             </>
                                                         );
                                                     })()}
@@ -1305,6 +1306,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                     <Text style={{ fontSize: 11, color: '#666' }}>
                                                         預估體積: {Math.round(calculatedVol)}ml
                                                     </Text>
+                                                    <Text style={{ fontSize: 10, color: '#6b7280', fontStyle: 'italic', marginTop: 4 }}>僅供參考</Text>
                                                     <Text style={{ fontSize: 10, color: '#999', marginTop: 2 }}>
                                                         計算：直徑 {radiusVal}cm → 半徑 {actualRadius.toFixed(1)}cm → π × {actualRadius.toFixed(1)}² × {heightVal} = {Math.round(calculatedVol)}ml
                                                     </Text>
@@ -1392,9 +1394,12 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                                             <Text style={styles.formLabel}>長度 (cm)</Text>
                                             {length && width && height && parseFloat(length) > 0 && parseFloat(width) > 0 && parseFloat(height) > 0 && (
-                                                <Text style={{ fontSize: 11, color: '#666' }}>
-                                                    預估體積: {Math.round(parseFloat(length) * parseFloat(width) * parseFloat(height))}ml
-                                                </Text>
+                                                <View>
+                                                    <Text style={{ fontSize: 11, color: '#666' }}>
+                                                        預估體積: {Math.round(parseFloat(length) * parseFloat(width) * parseFloat(height))}ml
+                                                    </Text>
+                                                    <Text style={{ fontSize: 10, color: '#6b7280', fontStyle: 'italic' }}>僅供參考</Text>
+                                                </View>
                                             )}
                                         </View>
                                         <TextInput

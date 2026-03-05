@@ -31,8 +31,8 @@ export function FullWaterCalibrationModal({ visible, volumeMl, vesselName, onClo
   const step1Line3 = '③ 系統將以此作為容量上限的對應基準';
   const warnText = '⚠️ 請確認是裝到滿再拍照';
   const confirmSubtitle = isFood
-    ? '水位／食物線：目前的位置（滿的狀態）'
-    : '水位線：目前的水面位置（滿的狀態）';
+    ? '水位／食物線：目前的位置（裝到滿）'
+    : '水位線：目前的水面位置（裝到滿）';
   const completeDesc = isFood
     ? '之後每次記錄 T0 和 T1，系統會依此換算並計算差值。'
     : '之後每次記錄 W0 和 W1，系統會自動換算水量並計算差值。';
