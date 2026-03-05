@@ -9,6 +9,7 @@ import { calculateAdaptiveDailyWaterGoal, calculateDailyKcalGoal, calculateDaily
 import { TrendChart } from './TrendChart';
 import { DetailRecord } from './modals/RecordDetailModal';
 import { AppIcon } from './AppIcon';
+import { RecordLogItem } from './RecordLogItem';
 import { VESSEL_PROFILES_KEY } from '../constants';
 import { recalculateVesselVolume } from '../utils/vesselVolume';
 import { extractCatSeries, getCatNameBySeries, matchesCatSeries, getScopedCats } from '../utils/catScope';
@@ -281,77 +282,20 @@ export function HomeContent({
   const renderRecentRecords = () => (
     <View style={styles.section}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-              <AppIcon name="history" size={18} color="#000" style={{ marginRight: 6 }} />
-              <Text style={styles.sectionTitle}>最近記錄</Text>
-            </View>
+        <AppIcon name="history" size={18} color="#000" style={{ marginRight: 6 }} />
+        <Text style={styles.sectionTitle}>最近記錄</Text>
+      </View>
       {recentRecords.length === 0 ? (
         <Text style={{ fontSize: 13, color: '#666' }}>尚無最近紀錄</Text>
       ) : (
-        recentRecords.map(record => {
-          let title = '';
-          let dataStr = '';
-          let descStr = '';
-
-          const date = new Date(record.createdAt);
-          const timeStr = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-
-          const getCatName = (id: string | null) => {
-            return getCatNameBySeries(cats, id);
-          };
-
-          const recordIcon = record._type === 'feeding'
-            ? 'restaurant'
-            : record._type === 'hydration'
-              ? 'opacity'
-              : record._type === 'elimination'
-                ? 'sanitizer'
-                : record._type === 'medication'
-                  ? 'medication'
-                  : 'healing';
-          if (record._type === 'feeding') {
-            const l = record as FeedingOwnershipLog;
-            title = `食物記錄${l.selectedTagId ? ` · ${getCatName(l.selectedTagId)}` : ''}`;
-            dataStr = `提供熱量：${Math.round(l.totalGram * 3)} kcal (${l.totalGram}g)`;
-            descStr = l.note ? `${l.mode === 'precise' ? '進階' : '標準'} • ${l.note.length > 20 ? l.note.slice(0, 20) + '…' : l.note}` : `使用模式：${l.mode === 'precise' ? '進階' : '標準'}`;
-          } else if (record._type === 'hydration') {
-            const l = record as HydrationOwnershipLog;
-            title = `飲水記錄${l.selectedTagId ? ` - ${getCatName(l.selectedTagId)}` : ''}`;
-            dataStr = `總計：${Math.round(l.totalMl)} ml`;
-            descStr = `估算攝取`;
-          } else if (record._type === 'elimination') {
-            const l = record as EliminationOwnershipLog;
-            title = `排泄記錄${l.selectedTagId ? ` - ${getCatName(l.selectedTagId)}` : ''}`;
-            dataStr = `Bristol Type ${l.bristolType}`;
-            descStr = `${l.color} • ${l.abnormal ? '異常' : '正常'}`;
-          } else if (record._type === 'medication') {
-            const l = record as MedicationLog;
-            title = `投藥記錄${l.catId ? ` - ${getCatName(l.catId)}` : ''}`;
-            dataStr = `${l.medicationName} ${l.dosage}`;
-            descStr = `${l.reminderTime ? `預定：${l.reminderTime} • ` : ''}${l.notes || '無備註'}`;
-          } else if (record._type === 'symptom') {
-            const l = record as SymptomLog;
-            const severity = l.severity === 'severe' ? '嚴重' : l.severity === 'moderate' ? '中等' : '輕微';
-            title = `異常症狀${l.catId ? ` - ${getCatName(l.catId)}` : ''}`;
-            dataStr = l.symptom;
-            descStr = `${severity}${l.observedAt ? ` • 觀察時間：${l.observedAt}` : ''}`;
-          }
-
-          return (
-            <Pressable
-              key={record.id}
-              style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000' }]}
-              onPress={() => onRecordPress?.(record as DetailRecord)}
-            >
-              <View style={styles.recordHeader}>
-                <AppIcon name={recordIcon as any} size={16} color="#000" style={{ marginRight: 6 }} />
-                <Text style={[styles.recordTitle, { flex: 1 }]}>{title}</Text>
-                <Text style={styles.recordTime}>{new Date(record.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-              </View>
-              <Text style={styles.recordData}>{dataStr}</Text>
-              <Text style={styles.recordDesc}>{descStr}</Text>
-            </Pressable>
-          );
-        })
+        recentRecords.map(record => (
+          <RecordLogItem
+            key={record.id}
+            record={record}
+            cats={cats}
+            onRecordPress={onRecordPress}
+          />
+        ))
       )}
     </View>
   );

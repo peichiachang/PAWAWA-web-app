@@ -21,6 +21,7 @@ import {
   INTAKE_LEVEL_RATIO,
   CannedItem,
   FeedLibraryItem,
+  getFeedDisplayName,
 } from '../types/app';
 import {
   FEEDING_T0_STORAGE_KEY,
@@ -30,6 +31,7 @@ import {
   CAN_LIBRARY_KEY,
   FEEDING_FOOD_LIBRARY_KEY,
 } from '../constants';
+import { DRY_FEED_SEED } from '../constants/feedLibrarySeed';
 import type { CatIdentity } from '../types/domain';
 
 import { useVessels } from './useVessels';
@@ -75,7 +77,14 @@ export function useFeeding(
     async function loadFeedLibrary() {
       try {
         const raw = await AsyncStorage.getItem(FEEDING_FOOD_LIBRARY_KEY);
-        if (raw) setFeedLibrary(JSON.parse(raw));
+        if (raw) {
+          const list = JSON.parse(raw) as FeedLibraryItem[];
+          setFeedLibrary(list.length > 0 ? list : DRY_FEED_SEED);
+          if (list.length === 0) await AsyncStorage.setItem(FEEDING_FOOD_LIBRARY_KEY, JSON.stringify(DRY_FEED_SEED));
+        } else {
+          setFeedLibrary(DRY_FEED_SEED);
+          await AsyncStorage.setItem(FEEDING_FOOD_LIBRARY_KEY, JSON.stringify(DRY_FEED_SEED));
+        }
       } catch (_e) { }
     }
     void loadFeedLibrary();
@@ -237,7 +246,7 @@ export function useFeeding(
       kcalPerGram: item.kcalPerGram,
       proteinPct: 0,
       phosphorusPct: 0,
-      rawText: item.name,
+      rawText: getFeedDisplayName(item),
     });
   }
 

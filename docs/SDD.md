@@ -1,6 +1,6 @@
 # PAWAWA — Software Design Document (SDD)
 
-> Version: 1.1
+> Version: 1.2
 > Last updated: 2026-03-06
 > Platform: React Native (Expo)
 > Language: TypeScript
@@ -117,6 +117,8 @@ type ActiveModal =
   | 'editCat'       // 編輯貓咪
   | 'recordDetail'  // 紀錄詳情
   | 'weightRecord'  // 體重記錄
+  | 'canLibrary'    // 罐頭庫
+  | 'feedLibrary'   // 飼料設定
   | null
 ```
 
@@ -151,18 +153,14 @@ completeT1VesselId: string | null        // 待補填 T1 的食碗 ID
 **路徑：** `src/components/HomeContent.tsx`
 
 **家庭層顯示：**
-- 每日總熱量 vs. 目標（進度條）
-- 每日總飲水 vs. 目標（進度條）
-- 過去 7 天熱量 / 飲水趨勢圖
+- **數據與趨勢**區（單一版面、下拉切換）：可選「今日家庭數據」／「熱量攝取趨勢」／「飲水量趨勢」；今日數據含總熱量 vs. 目標、總飲水 vs. 目標（進度條與建議入口）；趨勢為近 7 日對應圖表
 - 家庭成員貓咪列表
-- 健康預警（所有貓）
 
 **個體層顯示：**
 - 當前體重、基準體重、目標體重
-- 個體每日熱量目標（RER × 乘數）
-- 個體每日飲水目標（50–80 ml/kg，依病況調整）
-- 今日用藥
-- 慢性病史、飲食限制
+- 個體每日熱量目標（RER × 乘數）、個體每日飲水目標（50–80 ml/kg，依病況調整）
+- **數據與趨勢**區（下拉切換）：今日數據（熱量／飲水兩卡）／熱量攝取趨勢／飲水量趨勢
+- 今日用藥、慢性病史、飲食限制
 
 **Props 介面：**
 ```typescript
@@ -187,10 +185,10 @@ interface Props {
 **路徑：** `src/components/RecordsContent.tsx`
 
 **功能：**
-- 「新增記錄」區：食物記錄、補填記錄、飲水、排泄、體重、用藥、症狀、報告掃描等動作按鈕
-- **完整紀錄**區：範圍／類型／日期篩選；標題列右側有「＋ 補填記錄」入口，補填儲存後筆數會加入同一紀錄 list
+- 「新增記錄」區：**下拉選單**選擇記錄類型（食物、飲水、排泄、體重、用藥、異常症狀、報告掃描），選後開啟對應 Modal
+- **完整紀錄**區：**範圍／類型／日期**合併為同一列（三格並排），篩選後顯示紀錄筆數；每筆為 `RecordLogItem`（圖示、標題、日期時間、主資料、說明、右側編輯圖示），可點擊進入 RecordDetailModal
 - 待補填 T1 時顯示橫幅與「去填寫」入口
-- 紀錄列表可點擊進入 RecordDetailModal
+- **最近紀錄**與完整紀錄共用同一元件 `RecordLogItem`，UI 與資訊結構一致
 
 ### 4.3 KnowledgeContent
 
@@ -205,7 +203,7 @@ interface Props {
 **路徑：** `src/components/ProfileContent.tsx`
 
 - 使用者資料卡
-- **家庭成員**（最多 5 隻貓）：每隻貓為可點擊卡片，點擊後呼叫 `onEditCat(cat)`，開啟編輯貓咪檔案（AddCatModal，mode=edit，initialData=該貓）
+- **家庭成員**（最多 5 隻貓）：每隻貓為可點擊卡片，點擊後開啟編輯貓咪檔案（AddCatModal）；不顯示「點擊可編輯檔案」等提示文字
 - 「＋ 新增貓咪」進入 AddCatModal（mode=add）
 - 食碗管理、罐頭庫、飼料設定、快捷功能（訂閱 / 血檢歷史等）
 - App 版本 v1.6
@@ -261,6 +259,8 @@ interface Props {
 **罐頭流程：**
 - 無罐頭時顯示「請新增罐頭」與「＋ 新增罐頭」；新增表單內「取消」：若尚無任何罐頭則回到食物類型選擇，否則回到罐頭列表
 - 已選罐頭後可「變更」回到食物類型選擇；按 X 關閉 Modal 會重置至初始流程
+
+**飼料／罐頭選擇順序：** 食物紀錄中「選擇已存飼料」「選擇罐頭」時，**率先顯示使用者已儲存的項目**（`fromSeed === false`），再顯示來自種子庫的項目（`fromSeed === true`）。
 
 **補填記錄：** `initialMode='late_entry'` 時僅顯示參考克數、記錄日期、攝取程度、歸屬，儲存為 `isLateEntry: true`，筆數會加入同一 Feeding 紀錄 list（FEEDING_HISTORY_KEY）。
 
@@ -410,7 +410,25 @@ const consumedGrams = consumedRatio * t0Grams;
 **自動重新計算：**
 - 側面輪廓模式：當使用者改變數值或重新拍攝時，自動清除 AI 計算結果並提示重新計算
 
-### 5.9 其他 Modals
+### 5.9 FeedLibraryModal — 飼料設定
+
+**路徑：** `src/components/modals/FeedLibraryModal.tsx`
+
+- **從乾糧庫搜尋並加入**：輸入關鍵字（品牌、品名、口味或 search_keywords）後，對 `DRY_FEED_SEED` 做比對，顯示符合項目列表（最多 20 筆、排除已存在於飼料庫者）；點選一筆即加入飼料庫（`fromSeed: false`），預設 kcal/g 來自種子
+- **或手動新增**：品牌、品名、口味、每克熱量（kcal/g），送出時 `fromSeed: false`
+- 已儲存列表可刪除；顯示用 `getFeedDisplayName(item)`（相容舊 `name`）
+
+### 5.10 CanLibraryModal — 罐頭庫
+
+**路徑：** `src/components/modals/CanLibraryModal.tsx`
+
+- **從罐頭庫搜尋並加入**：同飼料設定邏輯，目前對 `WET_CAN_SEED`（可擴充）搜尋；若種子為空則無候選
+- **或手動新增**：品牌、品名、口味、預設克數、每 100g 熱量（選填）；可選掃描罐頭標籤（API 串接後帶入）
+- 已儲存列表可刪除；顯示用 `getCannedDisplayName(item)`
+
+**共用元件：** `RecordLogItem`（`src/components/RecordLogItem.tsx`）— 單筆紀錄列，含圖示、標題、日期時間、主資料、說明、右側編輯鈕；接受 `DetailRecord`、`cats`、`onRecordPress`，用於 RecordsContent 完整紀錄與 HomeContent 最近紀錄。
+
+### 5.11 其他 Modals
 
 | Modal | 用途 |
 |---|---|
@@ -442,6 +460,13 @@ const consumedGrams = consumedRatio * t0Grams;
 | `precisionMode` | 'standard' \| 'precise' | 精度模式 |
 | `mismatchError` | string \| null | 碗位不一致錯誤訊息 |
 | `isAnalyzing` | boolean | AI 分析中 |
+| `feedLibrary` | FeedLibraryItem[] | 飼料設定列表；若儲存為空則首次載入時寫入 `DRY_FEED_SEED`（每筆 `fromSeed: true`） |
+| `canLibrary` | CannedItem[] | 罐頭庫列表 |
+
+**飼料／罐頭庫：**
+- `addFeedLibraryItem` / `addCanLibraryItem`：新增一筆（id 由 hook 產生）；自種子選入或手動新增時可帶 `fromSeed: false`
+- `removeFeedLibraryItem` / `removeCanLibraryItem`：依 id 刪除
+- `setNutritionFromFeedLibraryItem`：將該筆飼料的 kcalPerGram、display_name 帶入本次記錄的營養結果
 
 **重試邏輯：** 最多 3 次，間隔 `800ms × attempt`，`confidence < 0.6` 繼續重試
 
@@ -706,6 +731,39 @@ interface SymptomLog {
   notes?: string
   createdAt: number
 }
+
+// 罐頭庫（極簡版 Wet Food DB）
+interface CannedItem {
+  id: string
+  brand?: string
+  product_name?: string   // 品名可帶主食罐/副食罐/幼貓/泌尿配方等
+  flavor?: string
+  food_form?: 'wet'
+  complete_or_complement?: string
+  is_prescription?: 'yes' | 'no'
+  search_keywords?: string
+  display_name?: string  // brand + " " + product_name + " " + flavor
+  defaultGrams?: number
+  kcalPer100?: number
+  fromSeed?: boolean     // false = 使用者自選加入，紀錄時優先顯示
+  name?: string          // 向後相容
+}
+
+// 飼料設定（極簡版 Dry Food DB）
+interface FeedLibraryItem {
+  id: string
+  brand?: string
+  product_name?: string  // 品名可帶幼貓/室內/泌尿保健等
+  flavor?: string
+  food_form?: 'dry'
+  complete_or_complement?: string
+  is_prescription?: 'yes' | 'no'
+  search_keywords?: string
+  display_name?: string
+  kcalPerGram: number
+  fromSeed?: boolean     // false = 使用者自選加入，紀錄時優先顯示
+  name?: string          // 向後相容
+}
 ```
 
 ### 8.3 AI Types（`src/types/ai.ts`）
@@ -836,6 +894,8 @@ interface BloodReportRecord {
 | `carecat:symptom_v1` | SymptomLog 陣列 |
 | `carecat:blood-reports` | BloodReportRecord 陣列（最多 30 筆） |
 | `carecat:vessel_profiles_v1` | VesselCalibration 陣列 |
+| `carecat:can_library_v1` | 罐頭庫（CannedItem 陣列） |
+| `carecat:feeding:food_library_v1` | 飼料設定（FeedLibraryItem 陣列）；若為空則首次載入時寫入乾糧種子 `DRY_FEED_SEED` |
 | `carecat:initial_clear` | 初始化旗標 |
 
 ### TTL
@@ -854,6 +914,15 @@ FEEDING_TAG_OPTIONS = [
   { id: 'C', label: 'Tag C' },
 ]
 ```
+
+### 種子庫（極簡版給 App 用）
+
+| 常數 | 路徑 | 說明 |
+|---|---|---|
+| `DRY_FEED_SEED` | `src/constants/feedLibrarySeed.ts` | 乾糧庫種子（FeedLibraryItem[]，約 40 筆）；含 id、brand、product_name、flavor、food_form、complete_or_complement、is_prescription、search_keywords、display_name、kcalPerGram、fromSeed: true |
+| `WET_CAN_SEED` | `src/constants/canLibrarySeed.ts` | 罐頭庫種子（目前為空陣列，可擴充） |
+
+顯示名稱相容：`getCannedDisplayName(item)`、`getFeedDisplayName(item)` 會依序使用 `display_name`、舊欄位 `name`、或 brand + product_name + flavor 組合。
 
 ---
 

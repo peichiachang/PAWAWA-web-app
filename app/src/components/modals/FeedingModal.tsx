@@ -1,10 +1,10 @@
 import { ActivityIndicator, Alert, Modal, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
 import { useFeeding } from '../../hooks/useFeeding';
-import { FeedingPrecisionMode, FoodType, VesselCalibration, FoodSourceType, IntakeLevel, INTAKE_LEVEL_LABEL, INTAKE_LEVEL_RATIO, HOMEMADE_INGREDIENTS, CapturedImage } from '../../types/app';
+import { FeedingPrecisionMode, FoodType, VesselCalibration, FoodSourceType, IntakeLevel, INTAKE_LEVEL_LABEL, INTAKE_LEVEL_RATIO, HOMEMADE_INGREDIENTS, CapturedImage, getCannedDisplayName, getFeedDisplayName } from '../../types/app';
 import { CatIdentity } from '../../types/domain';
 import { styles, palette } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { recalculateVesselVolume } from '../../utils/vesselVolume';
 import { CustomCamera } from '../CustomCamera';
 import { calculateDailyKcalIntake } from '../../utils/health';
@@ -85,6 +85,16 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
   // 食物記錄只顯示「食碗」
   const feedingVessels = vesselProfiles.filter(p => (p.vesselType || 'feeding') === 'feeding');
 
+  /** 飼料／罐頭列表：已儲存（fromSeed 為 false 或未設）的排前面 */
+  const sortedFeedLibrary = useMemo(
+    () => [...feedLibrary].sort((a, b) => (a.fromSeed ? 1 : 0) - (b.fromSeed ? 1 : 0)),
+    [feedLibrary]
+  );
+  const sortedCanLibrary = useMemo(
+    () => [...canLibrary].sort((a, b) => (a.fromSeed ? 1 : 0) - (b.fromSeed ? 1 : 0)),
+    [canLibrary]
+  );
+
   /** 自動餵食器流程：不需相機，單一表單合併今日克數、飼料、攝取程度、貓、儲存 */
   const renderAutoFeederFlow = () => {
     const autoFeederVessels = feedingVessels.filter(v => v.feedingContainerMode === 'auto_feeder');
@@ -120,18 +130,18 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
         </View>
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>選擇已存飼料（選填，用於熱量估算）</Text>
-          {feedLibrary.length === 0 ? (
+          {sortedFeedLibrary.length === 0 ? (
             <Text style={{ fontSize: 12, color: palette.muted }}>尚無飼料，可至個人 → 飼料設定新增</Text>
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {feedLibrary.map((feed) => (
+              {sortedFeedLibrary.map((feed) => (
                 <Pressable
                   key={feed.id}
-                  style={[styles.choiceBtn, nutritionResult?.rawText === feed.name && styles.choiceBtnActive]}
+                  style={[styles.choiceBtn, nutritionResult?.rawText === getFeedDisplayName(feed) && styles.choiceBtnActive]}
                   onPress={() => setNutritionFromFeedLibraryItem(feed)}
                 >
-                  <Text style={[styles.choiceBtnText, nutritionResult?.rawText === feed.name && styles.choiceBtnTextActive]}>
-                    {feed.name}（{feed.kcalPerGram} kcal/g）
+                  <Text style={[styles.choiceBtnText, nutritionResult?.rawText === getFeedDisplayName(feed) && styles.choiceBtnTextActive]}>
+                    {getFeedDisplayName(feed)}（{feed.kcalPerGram} kcal/g）
                   </Text>
                 </Pressable>
               ))}
@@ -173,7 +183,10 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                 <Pressable
                   onPress={() => {
                     addFeedLibraryItem({
-                      name: (nutritionResult.rawText?.trim()) || `營養標籤 ${new Date().toISOString().slice(0, 10)}`,
+                      product_name: (nutritionResult.rawText?.trim()) || `營養標籤 ${new Date().toISOString().slice(0, 10)}`,
+                      display_name: (nutritionResult.rawText?.trim()) || `營養標籤 ${new Date().toISOString().slice(0, 10)}`,
+                      food_form: 'dry',
+                      is_prescription: 'no',
                       kcalPerGram: nutritionResult.kcalPerGram,
                     });
                     Alert.alert('已加入飼料庫', '之後可在「選擇已存飼料」或個人 → 飼料設定中選用。');
@@ -574,7 +587,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                               const g = parseFloat(newCanGrams);
                               if (!newCanName.trim()) { Alert.alert('請輸入罐頭名稱'); return; }
                               if (!g || g <= 0) { Alert.alert('請輸入克數', '克數必須大於 0。'); return; }
-                              const id = addCanLibraryItem({ name: newCanName.trim(), defaultGrams: g });
+                              const id = addCanLibraryItem({ product_name: newCanName.trim(), display_name: newCanName.trim(), food_form: 'wet', is_prescription: 'no', defaultGrams: g });
                               setCannedSelectedCanId(id);
                               setCannedGrams(String(g));
                               setAddCanMode(false);
@@ -611,14 +624,14 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                       ) : (
                         <>
                           <View style={{ marginTop: 8, gap: 8 }}>
-                            {canLibrary.map((can) => (
+                            {sortedCanLibrary.map((can) => (
                               <Pressable
                                 key={can.id}
                                 style={[styles.choiceBtn, cannedSelectedCanId === can.id && styles.choiceBtnActive]}
-                                onPress={() => { setCannedSelectedCanId(can.id); setCannedGrams(String(can.defaultGrams)); }}
+                                onPress={() => { setCannedSelectedCanId(can.id); setCannedGrams(String(can.defaultGrams ?? 80)); }}
                               >
                                 <Text style={[styles.choiceBtnText, cannedSelectedCanId === can.id && styles.choiceBtnTextActive]}>
-                                  {can.name}（{can.defaultGrams}g）
+                                  {getCannedDisplayName(can)}（{can.defaultGrams ?? 80}g）
                                 </Text>
                               </Pressable>
                             ))}
@@ -1213,18 +1226,18 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
 
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>③ 選擇已存飼料（選填）</Text>
-                  {feedLibrary.length === 0 ? (
+                  {sortedFeedLibrary.length === 0 ? (
                     <Text style={{ fontSize: 12, color: palette.muted }}>尚無飼料，可至個人 → 飼料設定新增，或下方掃描標籤</Text>
                   ) : (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                      {feedLibrary.map((feed) => (
+                      {sortedFeedLibrary.map((feed) => (
                         <Pressable
                           key={feed.id}
-                          style={[styles.choiceBtn, nutritionResult?.rawText === feed.name && styles.choiceBtnActive]}
+                          style={[styles.choiceBtn, nutritionResult?.rawText === getFeedDisplayName(feed) && styles.choiceBtnActive]}
                           onPress={() => setNutritionFromFeedLibraryItem(feed)}
                         >
-                          <Text style={[styles.choiceBtnText, nutritionResult?.rawText === feed.name && styles.choiceBtnTextActive]}>
-                            {feed.name}（{feed.kcalPerGram} kcal/g）
+                          <Text style={[styles.choiceBtnText, nutritionResult?.rawText === getFeedDisplayName(feed) && styles.choiceBtnTextActive]}>
+                            {getFeedDisplayName(feed)}（{feed.kcalPerGram} kcal/g）
                           </Text>
                         </Pressable>
                       ))}
@@ -1268,7 +1281,10 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                         <Pressable
                           onPress={() => {
                             addFeedLibraryItem({
-                              name: (nutritionResult.rawText?.trim()) || `營養標籤 ${new Date().toISOString().slice(0, 10)}`,
+                              product_name: (nutritionResult.rawText?.trim()) || `營養標籤 ${new Date().toISOString().slice(0, 10)}`,
+                              display_name: (nutritionResult.rawText?.trim()) || `營養標籤 ${new Date().toISOString().slice(0, 10)}`,
+                              food_form: 'dry',
+                              is_prescription: 'no',
                               kcalPerGram: nutritionResult.kcalPerGram,
                             });
                             Alert.alert('已加入飼料庫', '之後可在「選擇已存飼料」或個人 → 飼料設定中選用。');

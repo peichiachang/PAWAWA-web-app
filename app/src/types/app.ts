@@ -31,22 +31,48 @@ export type FoodType = 'dry' | 'wet';
 /** 食物記錄來源：自動餵食器／乾糧一次給一天／罐頭／自煮 */
 export type FoodSourceType = 'auto_feeder' | 'dry_once' | 'canned' | 'homemade';
 
-/** 罐頭庫項目（掃描後儲存，記錄時從清單選取） */
+/** 罐頭庫項目（極簡版，Canned / Wet Food DB；新欄位可選以相容舊儲存） */
 export interface CannedItem {
   id: string;
-  name: string;
-  /** 預設克數（一罐／一份） */
-  defaultGrams: number;
+  brand?: string;
+  /** 品名內可帶「主食罐/副食罐/幼貓/泌尿配方」等 */
+  product_name?: string;
+  flavor?: string;
+  food_form?: 'wet';
+  complete_or_complement?: string;
+  is_prescription?: 'yes' | 'no';
+  search_keywords?: string;
+  /** brand + " " + product_name + " " + flavor；新增時必填 */
+  display_name?: string;
+  /** 預設克數（一罐／一份），記錄時用 */
+  defaultGrams?: number;
   /** 每 100g 熱量（kcal），用於預估；未設則用預設值 */
   kcalPer100?: number;
+  /** 是否來自種子庫（false = 使用者自選加入，紀錄時優先顯示） */
+  fromSeed?: boolean;
+  /** 向後相容舊資料，請用 getCannedDisplayName() */
+  name?: string;
 }
 
-/** 飼料／成份表庫項目（掃描一次永久儲存，記錄時可選帶入熱量） */
+/** 飼料設定項目（極簡版，Dry Food DB；新欄位可選以相容舊儲存） */
 export interface FeedLibraryItem {
   id: string;
-  name: string;
-  /** 每克熱量 kcal/g（來自成份表 OCR 或手動輸入） */
+  brand?: string;
+  /** 品名內可帶幼貓/室內/泌尿保健等字 */
+  product_name?: string;
+  flavor?: string;
+  food_form?: 'dry';
+  complete_or_complement?: string;
+  is_prescription?: 'yes' | 'no';
+  search_keywords?: string;
+  /** brand + " " + product_name + " " + flavor；新增時必填 */
+  display_name?: string;
+  /** 每克熱量 kcal/g（記錄時帶入） */
   kcalPerGram: number;
+  /** 是否來自種子庫（false = 使用者自選加入，紀錄時優先顯示） */
+  fromSeed?: boolean;
+  /** 向後相容舊資料，請用 getFeedDisplayName() */
+  name?: string;
 }
 
 /** 罐頭標籤掃描 API 回傳（後端串接後補齊） */
@@ -54,6 +80,22 @@ export interface CanLabelScanResult {
   name?: string;
   defaultGrams?: number;
   kcalPer100?: number;
+}
+
+/** 罐頭顯示名稱（相容舊 name；新資料用 display_name） */
+export function getCannedDisplayName(item: CannedItem): string {
+  if (item.display_name) return item.display_name;
+  if (item.name) return item.name;
+  const parts = [item.brand, item.product_name, item.flavor].filter(Boolean);
+  return parts.length ? parts.join(' ') : '罐頭';
+}
+
+/** 飼料顯示名稱（相容舊 name；新資料用 display_name） */
+export function getFeedDisplayName(item: FeedLibraryItem): string {
+  if (item.display_name) return item.display_name;
+  if (item.name) return item.name;
+  const parts = [item.brand, item.product_name, item.flavor].filter(Boolean);
+  return parts.length ? parts.join(' ') : '飼料';
 }
 
 /** 自煮食材選項（Spec v3：熱量範圍僅供參考） */
