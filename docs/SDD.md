@@ -1,7 +1,7 @@
 # PAWAWA — Software Design Document (SDD)
 
 > Version: 1.1
-> Last updated: 2026-03-05
+> Last updated: 2026-03-06
 > Platform: React Native (Expo)
 > Language: TypeScript
 
@@ -129,7 +129,11 @@ activeModal: ActiveModal
 cats: CatIdentity[]
 vitalsLogs: VitalsLog[]
 selectedBloodReport: BloodReportRecord | null
+selectedCatForEdit: CatIdentity | null   // 要編輯的貓（個人 tab 點家庭成員時帶入；editCat 時 AddCatModal 用此或 currentCat）
+completeT1VesselId: string | null        // 待補填 T1 的食碗 ID
 ```
+
+**開啟編輯貓咪：** `openEditCat(cat?: CatIdentity)` — 傳入貓則編輯該貓（個人 tab）；不傳則編輯目前看板貓 `currentCat`。關閉 addCat / editCat 時清除 `selectedCatForEdit`。
 
 ### 3.5 衍生數據計算（useMemo）
 
@@ -183,8 +187,10 @@ interface Props {
 **路徑：** `src/components/RecordsContent.tsx`
 
 **功能：**
-- 6 格動作按鈕：飲食 / 飲水 / 排泄 / 體重 / 用藥 / 報告掃描
-- 最近 5 筆紀錄（跨類別統一列表）
+- 「新增記錄」區：食物記錄、補填記錄、飲水、排泄、體重、用藥、症狀、報告掃描等動作按鈕
+- **完整紀錄**區：範圍／類型／日期篩選；標題列右側有「＋ 補填記錄」入口，補填儲存後筆數會加入同一紀錄 list
+- 待補填 T1 時顯示橫幅與「去填寫」入口
+- 紀錄列表可點擊進入 RecordDetailModal
 
 ### 4.3 KnowledgeContent
 
@@ -199,8 +205,9 @@ interface Props {
 **路徑：** `src/components/ProfileContent.tsx`
 
 - 使用者資料卡
-- 家庭成員格（最多 5 隻貓）
-- 快捷功能：訂閱 / 血液報告歷史 / 匯出報告 / 備份 / 通知 / 關於
+- **家庭成員**（最多 5 隻貓）：每隻貓為可點擊卡片，點擊後呼叫 `onEditCat(cat)`，開啟編輯貓咪檔案（AddCatModal，mode=edit，initialData=該貓）
+- 「＋ 新增貓咪」進入 AddCatModal（mode=add）
+- 食碗管理、罐頭庫、飼料設定、快捷功能（訂閱 / 血檢歷史等）
 - App 版本 v1.6
 
 ---
@@ -219,8 +226,9 @@ interface Props {
 - **乾糧一次給一天**、**罐頭**、**自煮**：見下方 ①～⑦（含 T0/T1 或對應表單）。
 
 ```
-① 選擇食物來源（自動餵食器 / 乾糧一次給一天 / 罐頭 / 自煮）
+① 選擇食物來源：**下拉選單**（單選一項：自動餵食器 / 乾糧一次給一天 / 罐頭 / 自煮）
    └─ 自動餵食器：僅表單輸入，無相機
+   └─ 按 X 關閉會重置至初始流程（resetToBlankRecordScreen）
 
 ② 選擇模式（一般 / 精確）— 僅乾糧一次給一天
    └─ 一般：影像估算，誤差 ±20%
@@ -245,12 +253,16 @@ interface Props {
 ⑥ 歸屬設定
    └─ 家庭（共用）或可辨識貓咪（Tag A/B/C）
 
-⑦ 營養 OCR（選填）
-   └─ 掃描飼料標籤 → kcalPerGram / proteinPct / phosphorusPct
-   └─ 30s timeout
+⑦ **成分表／營養標籤 OCR**（選填）：自動餵食器與乾糧流程均有此欄位；掃描飼料標籤 → kcalPerGram / proteinPct / phosphorusPct，30s timeout
 
 ⑧ 儲存 FeedingOwnershipLog
 ```
+
+**罐頭流程：**
+- 無罐頭時顯示「請新增罐頭」與「＋ 新增罐頭」；新增表單內「取消」：若尚無任何罐頭則回到食物類型選擇，否則回到罐頭列表
+- 已選罐頭後可「變更」回到食物類型選擇；按 X 關閉 Modal 會重置至初始流程
+
+**補填記錄：** `initialMode='late_entry'` 時僅顯示參考克數、記錄日期、攝取程度、歸屬，儲存為 `isLateEntry: true`，筆數會加入同一 Feeding 紀錄 list（FEEDING_HISTORY_KEY）。
 
 **克數計算邏輯：**
 
@@ -338,6 +350,10 @@ const consumedGrams = consumedRatio * t0Grams;
 
 **路徑：** `src/components/modals/AddCatModal.tsx`
 
+**進入方式：**
+- **新增**：個人 tab「＋ 新增貓咪」或首頁建立第一隻貓 → `activeModal='addCat'`，`initialData=null`，`mode='add'`
+- **編輯**：個人 tab 點擊家庭成員卡片 → App 設 `selectedCatForEdit=該貓`、`activeModal='editCat'`；或首頁「編輯貓咪」→ 使用 `currentCat`。Modal 的 `initialData` = `selectedCatForEdit ?? currentCat`，`mode='edit'`。關閉 addCat / editCat 時 App 清除 `selectedCatForEdit`。
+
 **欄位：**
 
 | 欄位 | 類型 | 必填 |
@@ -388,6 +404,8 @@ const consumedGrams = consumedRatio * t0Grams;
 - 食碗可選「食碗模式」（一般碗）或「自動餵食器模式」。
 - **自動餵食器模式**：僅需設定每份克數（`defaultPortionGrams`）、每日出糧次數（`dailyPortionCount`），**不需滿量基準校準**；記錄流程依出糧次數與每份克數計算。
 - **滿量基準**（`fullWaterCalibration`）：用於水碗／飲水機；食碗模式（一般碗）若需 T0/T1 視覺換算可選用。自動餵食器模式不使用滿量基準。
+- **編輯食碗**：儲存時不寫入 `fullWaterCalibration`（食碗不需滿量基準）。
+- 水碗／飲水機的滿量基準按鈕（開始設定／重新設定）具 `hitSlop`、`minHeight: 44` 與 `pointerEvents="box-none"`，以確保可點擊。
 
 **自動重新計算：**
 - 側面輪廓模式：當使用者改變數值或重新拍攝時，自動清除 AI 計算結果並提示重新計算
