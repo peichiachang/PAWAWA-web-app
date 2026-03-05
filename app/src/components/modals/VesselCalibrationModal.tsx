@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ActivityIndicator, Alert, Linking, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
 import { VesselCalibration, VesselShape, VesselType, CapturedImage } from '../../types/app';
 import { styles } from '../../styles/common';
@@ -80,6 +80,35 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
         setIsCapturingSide(true);
     };
 
+    // 追蹤前一次的 rimDiameterCm 和 height 值，用於檢測變化
+    const prevRimDiameterRef = useRef<string>('');
+    const prevHeightRef = useRef<string>('');
+
+    // 當側面輪廓模式的輸入值改變時，清除 AI 計算結果
+    useEffect(() => {
+        if (inputMethod !== 'side_profile') {
+            return;
+        }
+
+        // 檢測 rimDiameterCm 變化
+        if (rimDiameterCm !== prevRimDiameterRef.current && prevRimDiameterRef.current !== '') {
+            // 只有在已經有值的情況下改變才清除結果（避免初始化時清除）
+            if (profileAnalysisResult) {
+                setProfileAnalysisResult(null);
+            }
+        }
+        prevRimDiameterRef.current = rimDiameterCm;
+
+        // 檢測 height 變化
+        if (height !== prevHeightRef.current && prevHeightRef.current !== '') {
+            // 只有在已經有值的情況下改變才清除結果（避免初始化時清除）
+            if (profileAnalysisResult) {
+                setProfileAnalysisResult(null);
+            }
+        }
+        prevHeightRef.current = height;
+    }, [rimDiameterCm, height, inputMethod, profileAnalysisResult]);
+
     // 俯視檢查照拍攝（選填，只存圖做檢查與未來可能的幾何校正）
     const handleStartCaptureTopView = () => {
         setIsCapturingTop(true);
@@ -123,7 +152,8 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
         setName(profile?.name || '');
         setVesselType(profile?.vesselType || 'feeding');
         setShape(profile?.shape || 'cylinder');
-        setHeight(profile?.dimensions.height?.toString() || '');
+        const heightStr = profile?.dimensions.height?.toString() || '';
+        setHeight(heightStr);
         setLength(profile?.dimensions.length?.toString() || '');
         setWidth(profile?.dimensions.width?.toString() || '');
         setRadius(profile?.dimensions.radius?.toString() || '');
@@ -132,7 +162,8 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
         setKnownVolumeMl(profile?.volumeMl?.toString() || '');
         // measuredVolumeMl 目前 UI 不再顯示，但保留舊資料，不主動帶回表單
         setMeasuredVolumeMl('');
-        setRimDiameterCm(profile?.rimDiameterCm?.toString() || '');
+        const rimDiameterStr = profile?.rimDiameterCm?.toString() || '';
+        setRimDiameterCm(rimDiameterStr);
         setSideProfileImage(profile?.sideProfileImageBase64 ? {
             uri: '',
             imageBase64: profile.sideProfileImageBase64,
@@ -167,6 +198,11 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
         } else {
             setInputMethod('dimensions');
         }
+        
+        // 初始化追蹤值，避免 useEffect 誤觸發
+        prevRimDiameterRef.current = rimDiameterStr;
+        prevHeightRef.current = heightStr;
+        
         setIsFormOpen(true);
     };
 
@@ -425,6 +461,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                         customOptions={{ showGuide: false }}
                                         onCapture={(image) => {
                                             setSideProfileImage(image);
+                                            // 重新拍攝時清除之前的計算結果
                                             setProfileAnalysisResult(null);
                                             setIsCapturingSide(false);
                                         }}
@@ -554,7 +591,13 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                             <AppIcon name="check-circle" size={16} color="#059669" style={{ marginRight: 6 }} />
                                                             <Text style={{ fontSize: 11, color: '#059669' }}>側面照已拍攝</Text>
                                                         </View>
-                                                        <Pressable onPress={() => { setSideProfileImage(null); setProfileAnalysisResult(null); }}>
+                                                        <Pressable onPress={() => { 
+                                                            setSideProfileImage(null); 
+                                                            setProfileAnalysisResult(null);
+                                                            // 重置追蹤值，避免 useEffect 誤觸發
+                                                            prevRimDiameterRef.current = '';
+                                                            prevHeightRef.current = '';
+                                                        }}>
                                                             <Text style={{ fontSize: 10, color: '#dc2626' }}>重新拍攝</Text>
                                                         </Pressable>
                                                     </View>
@@ -578,13 +621,21 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                             <TextInput
                                                 style={[styles.input, { height: 40 }]}
                                                 value={rimDiameterCm}
-                                                onChangeText={setRimDiameterCm}
+                                                onChangeText={(text) => {
+                                                    setRimDiameterCm(text);
+                                                    // 改變數值時清除計算結果（useEffect 會處理）
+                                                }}
                                                 keyboardType="numeric"
                                                 placeholder="例如: 12"
                                             />
                                             <Text style={{ fontSize: 10, color: '#1e3a8a', marginTop: 4 }}>
                                                 請測量碗口最寬處的直徑（從一邊到另一邊）
                                             </Text>
+                                            {profileAnalysisResult && (
+                                                <Text style={{ fontSize: 10, color: '#dc2626', marginTop: 4, fontStyle: 'italic' }}>
+                                                    ⚠️ 已改變數值，請重新計算輪廓
+                                                </Text>
+                                            )}
                                         </View>
 
                                         {/* ③ 輸入碗高度 */}
@@ -593,13 +644,21 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                             <TextInput
                                                 style={[styles.input, { height: 40 }]}
                                                 value={height}
-                                                onChangeText={setHeight}
+                                                onChangeText={(text) => {
+                                                    setHeight(text);
+                                                    // 改變數值時清除計算結果（useEffect 會處理）
+                                                }}
                                                 keyboardType="numeric"
                                                 placeholder="例如: 5"
                                             />
                                             <Text style={{ fontSize: 10, color: '#1e3a8a', marginTop: 4 }}>
                                                 從碗內部最底部量到碗口邊緣的垂直高度
                                             </Text>
+                                            {profileAnalysisResult && (
+                                                <Text style={{ fontSize: 10, color: '#dc2626', marginTop: 4, fontStyle: 'italic' }}>
+                                                    ⚠️ 已改變數值，請重新計算輪廓
+                                                </Text>
+                                            )}
                                         </View>
                                         
                                         {/* ④（選填）俯視檢查照 */}
@@ -634,11 +693,18 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                         </View>
 
                                         {/* ⑤ 計算輪廓 */}
-                                        {sideProfileImage && rimDiameterCm && parseFloat(rimDiameterCm) > 0 && height && parseFloat(height) > 0 && !profileAnalysisResult && (
+                                        {sideProfileImage && rimDiameterCm && parseFloat(rimDiameterCm) > 0 && height && parseFloat(height) > 0 && (
                                         <View style={{ marginBottom: 12 }}>
-                                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#1e40af', marginBottom: 4 }}>⑤ 計算輪廓</Text>
+                                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#1e40af', marginBottom: 4 }}>
+                                                    {profileAnalysisResult ? '⑤ 重新計算輪廓' : '⑤ 計算輪廓'}
+                                                </Text>
+                                                {!profileAnalysisResult && (
+                                                    <Text style={{ fontSize: 10, color: '#1e3a8a', marginBottom: 8 }}>
+                                                        請點擊下方按鈕進行 AI 計算
+                                                    </Text>
+                                                )}
                                                 <Pressable
-                                                    style={{ padding: 12, backgroundColor: '#3b82f6', borderRadius: 4, alignItems: 'center' }}
+                                                    style={{ padding: 12, backgroundColor: profileAnalysisResult ? '#f59e0b' : '#3b82f6', borderRadius: 4, alignItems: 'center' }}
                                                     onPress={handleAnalyzeSideProfile}
                                                     disabled={isAnalyzingProfile}
                                                 >
@@ -650,7 +716,9 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                     ) : (
                                                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                                             <AppIcon name="calculate" size={18} color="#fff" style={{ marginRight: 6 }} />
-                                                            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>計算輪廓</Text>
+                                                            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
+                                                                {profileAnalysisResult ? '重新計算輪廓' : '計算輪廓'}
+                                                            </Text>
                                                         </View>
                                                     )}
                                                 </Pressable>

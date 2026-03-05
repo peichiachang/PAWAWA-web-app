@@ -195,28 +195,50 @@ export function useHydration(
       let analysisResult: HydrationVisionResult | null = null;
 
       if (hasPixelData) {
-        // 以各自圖片的碗口/碗底標線算比例，避免不同拍攝縮放造成偏差
-        const t0BowlPx = t0.bowl_bottom_y! - t0.bowl_top_y!;
-        const t1BowlPx = storedT1.bowl_bottom_y! - storedT1.bowl_top_y!;
-        if (t0BowlPx <= 0 || t1BowlPx <= 0) {
-          throw new Error('標線無效：碗口與碗底位置錯誤，請重新標記 W0/W1。');
+        // 使用已標記的 waterLevelPct 計算水量
+        // waterLevelPct 定義：0 = 滿（碗口），1 = 空（碗底）
+        // 所以水量 = (1 - waterLevelPct) * volumeMl
+        const t0WaterLevelPct = t0.waterLevelPct ?? 0;
+        const t1WaterLevelPct = storedT1.waterLevelPct ?? 0;
+        
+        // 如果有側面輪廓校準，使用精確的輪廓計算
+        if (vessel?.calibrationMethod === 'side_profile' && vessel.profileContour) {
+          const { calculateVolumeToWaterLevel } = require('../utils/profileVolume');
+          const waterT0Ml = calculateVolumeToWaterLevel(vessel.profileContour, t0WaterLevelPct);
+          const waterT1Ml = calculateVolumeToWaterLevel(vessel.profileContour, t1WaterLevelPct);
+          const envFactorMl = Math.max(0, (waterT0Ml - waterT1Ml) * 0.02); // 簡單估算：2% 蒸發
+          const actualIntakeMl = Math.max(0, waterT0Ml - waterT1Ml - envFactorMl);
+          analysisResult = {
+            waterT0Ml: Math.round(waterT0Ml),
+            waterT1Ml: Math.round(waterT1Ml),
+            tempC: 25,
+            humidityPct: 60,
+            envFactorMl: Math.round(envFactorMl),
+            actualIntakeMl: Math.round(actualIntakeMl),
+            isBowlMatch: true,
+            mismatchReason: '',
+            confidence: 0.95, // 側面輪廓計算的準確度較高
+          };
+        } else {
+          // 使用簡單的線性計算（假設容器是圓柱形）
+          // waterLevelPct = 0 時（滿），水量 = volumeMl
+          // waterLevelPct = 1 時（空），水量 = 0
+          const waterT0Ml = Math.round((1 - Math.max(0, Math.min(1, t0WaterLevelPct))) * volumeMl);
+          const waterT1Ml = Math.round((1 - Math.max(0, Math.min(1, t1WaterLevelPct))) * volumeMl);
+          const envFactorMl = Math.max(0, (waterT0Ml - waterT1Ml) * 0.02); // 簡單估算：2% 蒸發
+          const actualIntakeMl = Math.max(0, waterT0Ml - waterT1Ml - envFactorMl);
+          analysisResult = {
+            waterT0Ml,
+            waterT1Ml,
+            tempC: 25,
+            humidityPct: 60,
+            envFactorMl: Math.round(envFactorMl),
+            actualIntakeMl: Math.round(actualIntakeMl),
+            isBowlMatch: true,
+            mismatchReason: '',
+            confidence: 1,
+          };
         }
-        const w0Ratio = (t0.bowl_bottom_y! - t0.water_y!) / t0BowlPx;
-        const w1Ratio = (storedT1.bowl_bottom_y! - storedT1.water_y!) / t1BowlPx;
-        const waterT0Ml = Math.round(Math.max(0, Math.min(1, w0Ratio)) * volumeMl);
-        const waterT1Ml = Math.round(Math.max(0, Math.min(1, w1Ratio)) * volumeMl);
-        const actualIntakeMl = Math.round(Math.max(0, (w0Ratio - w1Ratio) * volumeMl));
-        analysisResult = {
-          waterT0Ml,
-          waterT1Ml,
-          tempC: 25,
-          humidityPct: 60,
-          envFactorMl: 0,
-          actualIntakeMl,
-          isBowlMatch: true,
-          mismatchReason: '',
-          confidence: 1,
-        };
       } else {
         let lastError: Error | null = null;
         for (let attempt = 1; attempt <= 3; attempt++) {

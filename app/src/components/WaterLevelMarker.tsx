@@ -36,12 +36,33 @@ function getContainedImageRect(containerW: number, containerH: number, imgW: num
 /**
  * 依 rim、bottom、water 三點計算 waterLevelPct
  * waterLevelPct=0 表示滿（水面在碗口），1 表示空（水面在碗底）
+ * 
+ * 計算邏輯：
+ * - rimPct: 碗口位置（圖片上方，y 值較小）
+ * - bottomPct: 碗底位置（圖片下方，y 值較大）
+ * - waterPct: 水位位置（在 rimPct 和 bottomPct 之間）
+ * 
+ * 公式：waterLevelPct = (waterPct - rimPct) / (bottomPct - rimPct)
+ * - 當 waterPct = rimPct（水位在碗口）時，waterLevelPct = 0（滿）
+ * - 當 waterPct = bottomPct（水位在碗底）時，waterLevelPct = 1（空）
  */
 function calcWaterLevelPct(rimPct: number, bottomPct: number, waterPct: number): number {
-  const top = Math.min(rimPct, bottomPct);
-  const bottom = Math.max(rimPct, bottomPct);
-  if (bottom - top < 0.02) return 0.5; //  degenerate
-  return Math.max(0, Math.min(1, (waterPct - top) / (bottom - top)));
+  // 確保 rimPct < bottomPct（碗口在上，碗底在下）
+  // 如果順序錯誤，交換它們
+  const top = rimPct < bottomPct ? rimPct : bottomPct;
+  const bottom = rimPct < bottomPct ? bottomPct : rimPct;
+  
+  // 防止除零錯誤
+  if (bottom - top < 0.02) {
+    console.warn('[WaterLevelMarker] rimPct and bottomPct are too close, using default 0.5');
+    return 0.5;
+  }
+  
+  // 計算 waterLevelPct = (waterLine_y - topLine_y) / (bottomLine_y - topLine_y)
+  const waterLevelPct = (waterPct - top) / (bottom - top);
+  
+  // 限制在 [0, 1] 範圍內
+  return Math.max(0, Math.min(1, waterLevelPct));
 }
 
 type LineType = 'rim' | 'bottom' | 'water';
