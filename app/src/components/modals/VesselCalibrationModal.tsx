@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ActivityIndicator, Alert, Linking, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
 import { VesselCalibration, VesselShape, VesselType, CapturedImage } from '../../types/app';
-import { styles } from '../../styles/common';
+import { styles, palette } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
 import {
   calculateVesselVolume,
@@ -13,6 +13,7 @@ import {
 import { calculateTotalVolumeFromContour } from '../../utils/profileVolume';
 import { AiRecognitionService } from '../../types/ai';
 import { CustomCamera } from '../CustomCamera';
+import { FullWaterCalibrationModal } from './FullWaterCalibrationModal';
 
 interface Props {
     visible: boolean;
@@ -50,6 +51,10 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
     /** 是否正在拍攝側面照（內嵌相機顯示時為 true，拍完/取消後設為 false，照片會帶入同畫面 state） */
     const [isCapturingSide, setIsCapturingSide] = useState(false);
     const [isCapturingTop, setIsCapturingTop] = useState(false);
+    /** 是否顯示滿水校準 Modal */
+    const [showFullWaterCalibration, setShowFullWaterCalibration] = useState(false);
+    /** 飲水用容器模式：水碗（一般碗杯）/ 飲水機（循環式，輸入規格容量）。僅 vesselType === 'hydration' 時使用 */
+    const [hydrationContainerMode, setHydrationContainerMode] = useState<'bowl' | 'fountain' | null>(null);
 
     const handleOpenMeasure = async () => {
         if (Platform.OS !== 'ios') {
@@ -198,6 +203,14 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
         } else {
             setInputMethod('dimensions');
         }
+
+        // 飲水用容器模式：編輯既有資料時依內容推斷
+        if (profile?.vesselType === 'hydration') {
+            const isFountain = profile?.calibrationMethod === 'known_volume' && !profile?.profileContour && !profile?.dimensions?.radius;
+            setHydrationContainerMode(isFountain ? 'fountain' : 'bowl');
+        } else {
+            setHydrationContainerMode(null);
+        }
         
         // 初始化追蹤值，避免 useEffect 誤觸發
         prevRimDiameterRef.current = rimDiameterStr;
@@ -319,7 +332,19 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
             cal.calibrationMethod = 'known_volume';
             cal.calibrationFactor = undefined;
             cal.measuredVolumeMl = undefined;
+            cal.profileContour = undefined; // 清除側面輪廓數據，已知容量模式不需要
+            cal.sideProfileImageBase64 = undefined; // 清除側面照，已知容量模式不需要
             cal.volumeMl = volume;
+            
+            // 如果容量變更且已有滿水校準，保留校準但提示建議重新校準
+            // （不自動清除校準，讓使用者決定是否重新校準）
+            if (editingProfile?.fullWaterCalibration && editingProfile.volumeMl && volume !== editingProfile.volumeMl) {
+                // 保留舊的校準資料，但容量已更新
+                cal.fullWaterCalibration = editingProfile.fullWaterCalibration;
+            } else if (editingProfile?.fullWaterCalibration) {
+                // 容量未變更，保留校準
+                cal.fullWaterCalibration = editingProfile.fullWaterCalibration;
+            }
         } else {
             // 驗證輸入尺寸的合理性
             const validation = validateVesselDimensions(shape, cal.dimensions);
@@ -416,7 +441,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
             }
         }
 
-        // 空碗俯視照（校準參考，供 T0/T1 碗位比對）
+        // 空碗俯視照（校準參考，供 W0/W1 碗位比對）
         if (topViewImage?.imageBase64) {
             cal.topViewImageBase64 = topViewImage.imageBase64;
         }
@@ -430,6 +455,50 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
         onSave(nextProfiles);
         setIsFormOpen(false);
     };
+
+    function handleFullWaterCalibrationComplete(calibration: {
+        fullY: number;
+        bottomY: number;
+        topY: number;
+        imageHeight: number;
+        calibratedAt: number;
+        imageBase64?: string;
+    }) {
+        if (!editingProfile) {
+            // 新建容器（多為飲水機模式從「開始設定」完成校準後建立）
+            const newProfile: VesselCalibration = {
+                id: `vessel_${Date.now()}`,
+                name: name || (vesselType === 'hydration' ? (hydrationContainerMode === 'fountain' ? '未命名飲水機' : '未命名水碗') : '未命名食碗'),
+                vesselType,
+                shape,
+                dimensions: {
+                    height: parseFloat(height) || 0,
+                },
+                calibrationMethod: 'known_volume',
+                volumeMl: parseFloat(knownVolumeMl) || 0,
+                fullWaterCalibration: calibration,
+            };
+            const nextProfiles = [...profiles, newProfile];
+            onSave(nextProfiles);
+            setEditingProfile(newProfile);
+            setShowFullWaterCalibration(false);
+            // 飲水機新建：校準完成即等於建立完成，關閉表單
+            if (vesselType === 'hydration' && hydrationContainerMode === 'fountain') {
+                setIsFormOpen(false);
+            }
+            return;
+        } else {
+            const updatedProfile: VesselCalibration = {
+                ...editingProfile,
+                fullWaterCalibration: calibration,
+            };
+            
+            const nextProfiles = profiles.map(p => p.id === editingProfile.id ? updatedProfile : p);
+            onSave(nextProfiles);
+            setEditingProfile(updatedProfile);
+        }
+        setShowFullWaterCalibration(false);
+    }
 
     const handleDelete = (id: string) => {
         onSave(profiles.filter(p => p.id !== id));
@@ -496,20 +565,56 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                 <View style={styles.choiceRow}>
                                     <Pressable
                                         style={[styles.choiceBtn, vesselType === 'feeding' && styles.choiceBtnActive]}
-                                        onPress={() => setVesselType('feeding')}
+                                        onPress={() => { setVesselType('feeding'); setHydrationContainerMode(null); }}
                                     >
                                         <Text style={[styles.choiceBtnText, vesselType === 'feeding' && styles.choiceBtnTextActive]}>食碗</Text>
                                     </Pressable>
                                     <Pressable
                                         style={[styles.choiceBtn, vesselType === 'hydration' && styles.choiceBtnActive]}
-                                        onPress={() => setVesselType('hydration')}
+                                        onPress={() => { setVesselType('hydration'); setHydrationContainerMode(null); }}
                                     >
                                         <Text style={[styles.choiceBtnText, vesselType === 'hydration' && styles.choiceBtnTextActive]}>水碗</Text>
                                     </Pressable>
                                 </View>
-                                <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>食碗用於飲食記錄，水碗用於飲水記錄</Text>
+                                <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>食碗用於飲食記錄，水碗用於飲水記錄</Text>
                             </View>
 
+                            {/* 飲水：容器類型選擇（水碗模式 / 飲水機模式） */}
+                            {vesselType === 'hydration' && hydrationContainerMode === null && (
+                                <View style={{ marginBottom: 24 }}>
+                                    <Text style={[styles.formLabel, { marginBottom: 12 }]}>容器類型</Text>
+                                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                                        <Pressable
+                                            style={{ flex: 1, borderWidth: 2, borderColor: palette.border, borderRadius: 16, padding: 20, alignItems: 'center', backgroundColor: palette.surface }}
+                                            onPress={() => setHydrationContainerMode('bowl')}
+                                        >
+                                            <Text style={{ fontSize: 32, marginBottom: 8 }}>🥣</Text>
+                                            <Text style={{ fontSize: 15, fontWeight: '700', color: palette.text, marginBottom: 4 }}>水碗模式</Text>
+                                            <Text style={{ fontSize: 12, color: palette.muted, textAlign: 'center' }}>一般碗、杯等容器</Text>
+                                        </Pressable>
+                                        <Pressable
+                                            style={{ flex: 1, borderWidth: 2, borderColor: palette.border, borderRadius: 16, padding: 20, alignItems: 'center', backgroundColor: palette.surface }}
+                                            onPress={() => { setHydrationContainerMode('fountain'); setInputMethod('volume'); }}
+                                        >
+                                            <Text style={{ fontSize: 32, marginBottom: 8 }}>🚰</Text>
+                                            <Text style={{ fontSize: 15, fontWeight: '700', color: palette.text, marginBottom: 4 }}>飲水機模式</Text>
+                                            <Text style={{ fontSize: 12, color: palette.muted, textAlign: 'center' }}>循環式飲水機</Text>
+                                        </Pressable>
+                                    </View>
+                                </View>
+                            )}
+
+                            {vesselType === 'hydration' && hydrationContainerMode !== null && (
+                                <View style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 12, color: palette.muted }}>已選：{hydrationContainerMode === 'bowl' ? '水碗模式' : '飲水機模式'}</Text>
+                                    <Pressable onPress={() => setHydrationContainerMode(null)} style={{ marginLeft: 8 }}>
+                                        <Text style={{ fontSize: 12, color: palette.primary, fontWeight: '600' }}>變更</Text>
+                                    </Pressable>
+                                </View>
+                            )}
+
+                            {/* 碗型選擇（僅食碗 或 水碗模式） */}
+                            {(vesselType === 'feeding' || (vesselType === 'hydration' && hydrationContainerMode === 'bowl')) && (
                             <View style={{ marginBottom: 16 }}>
                                 <Text style={styles.formLabel}>碗型選擇</Text>
                                 <View style={styles.choiceRow}>
@@ -526,7 +631,117 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                     ))}
                                 </View>
                             </View>
+                            )}
 
+                            {/* 飲水機模式：僅輸入容量 + 水位基準 */}
+                            {vesselType === 'hydration' && hydrationContainerMode === 'fountain' && (
+                                <>
+                                    <View style={styles.formGroup}>
+                                        <Text style={styles.formLabel}>飲水機容量 (ml)</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={knownVolumeMl}
+                                            onChangeText={setKnownVolumeMl}
+                                            keyboardType="numeric"
+                                            placeholder="2000"
+                                        />
+                                        <Text style={{ fontSize: 12, color: palette.muted, marginTop: 8 }}>
+                                            請輸入產品規格標示的容量（例：2L = 2000ml）
+                                        </Text>
+                                        <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
+                                            不知道容量？可以查看飲水機底部或包裝盒上的規格標示
+                                        </Text>
+                                    </View>
+                                    {/* 水位基準（飲水機模式，與下方水碗共用同一區塊樣式） */}
+                                    <View style={styles.formGroup}>
+                                        <Text style={styles.formLabel}>水位基準</Text>
+                                        {editingProfile?.fullWaterCalibration ? (
+                                            <View style={{ padding: 12, backgroundColor: palette.surfaceSoft, borderWidth: 1, borderColor: palette.primary, borderRadius: 8 }}>
+                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                        <AppIcon name="check-circle" size={18} color={palette.primary} style={{ marginRight: 6 }} />
+                                                        <Text style={{ fontSize: 12, fontWeight: '700', color: palette.text }}>
+                                                            ✅ 已設定（{new Date(editingProfile.fullWaterCalibration.calibratedAt).toLocaleDateString('zh-TW')}）
+                                                        </Text>
+                                                    </View>
+                                                    <Pressable onPress={() => setShowFullWaterCalibration(true)} style={{ padding: 6, backgroundColor: palette.primary, borderRadius: 6 }}>
+                                                        <Text style={{ fontSize: 11, color: palette.onPrimary, fontWeight: '600' }}>重新設定</Text>
+                                                    </Pressable>
+                                                </View>
+                                                {knownVolumeMl && parseFloat(knownVolumeMl) > 0 && editingProfile?.volumeMl !== undefined && parseFloat(knownVolumeMl) !== editingProfile.volumeMl && (
+                                                    <View style={{ marginTop: 8, padding: 8, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 6 }}>
+                                                        <Text style={{ fontSize: 11, color: '#92400e' }}>容量已變更，建議重新設定水位基準</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        ) : (
+                                            <View style={{ padding: 12, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8 }}>
+                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                        <AppIcon name="warning" size={18} color="#f59e0b" style={{ marginRight: 6 }} />
+                                                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400e' }}>⚠️ 尚未設定</Text>
+                                                    </View>
+                                                    <Pressable
+                                                        onPress={() => {
+                                                            if (!knownVolumeMl || parseFloat(knownVolumeMl) <= 0) {
+                                                                Alert.alert('請先輸入容量', '請先輸入飲水機容量（ml）再設定水位基準。');
+                                                                return;
+                                                            }
+                                                            setShowFullWaterCalibration(true);
+                                                        }}
+                                                        style={{ padding: 6, backgroundColor: '#f59e0b', borderRadius: 6 }}
+                                                    >
+                                                        <Text style={{ fontSize: 11, color: '#fff', fontWeight: '600' }}>開始設定</Text>
+                                                    </Pressable>
+                                                </View>
+                                                <Text style={{ fontSize: 11, color: '#92400e' }}>設定後才能開始記錄飲水量</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                    {/* 編輯飲水機時才顯示儲存（新建則由「開始設定」完成後自動建立並關閉） */}
+                                    {editingProfile && (
+                                    <View style={{ marginTop: 24 }}>
+                                        <Pressable
+                                            style={styles.primaryBtn}
+                                            onPress={() => {
+                                                const volume = parseFloat(knownVolumeMl);
+                                                if (!volume || volume <= 0) {
+                                                    Alert.alert('輸入錯誤', '請輸入有效的飲水機容量（毫升）。', [{ text: '確定', style: 'cancel' }]);
+                                                    return;
+                                                }
+                                                if (volume > 10000) {
+                                                    Alert.alert('容量異常', `容量 ${volume}ml 過大，請確認數值是否正確。`, [{ text: '確定', style: 'cancel' }]);
+                                                    return;
+                                                }
+                                                if (!editingProfile?.fullWaterCalibration) {
+                                                    Alert.alert('請先設定水位基準', '請先完成「水位基準」設定後再儲存。', [{ text: '確定', style: 'cancel' }]);
+                                                    return;
+                                                }
+                                                const cal: VesselCalibration = {
+                                                    ...editingProfile,
+                                                    name: name || editingProfile.name || '未命名飲水機',
+                                                    vesselType: 'hydration',
+                                                    shape: 'cylinder',
+                                                    dimensions: { height: 0 },
+                                                    calibrationMethod: 'known_volume',
+                                                    volumeMl: volume,
+                                                    fullWaterCalibration: editingProfile.fullWaterCalibration,
+                                                };
+                                                const nextProfiles = profiles.map(p => p.id === editingProfile.id ? cal : p);
+                                                onSave(nextProfiles);
+                                                setIsFormOpen(false);
+                                            }}
+                                        >
+                                            <Text style={styles.primaryBtnText}>儲存設定</Text>
+                                        </Pressable>
+                                    </View>
+                                    )}
+                                </>
+                            )}
+
+                            {/* 食碗 或 水碗模式（bowl）時才顯示：輸入方式、尺寸/輪廓/已知容量表單、水位基準、測量小秘訣、儲存 */}
+                            {(vesselType === 'feeding' || (vesselType === 'hydration' && hydrationContainerMode === 'bowl')) && (
+                            <>
                             <View style={{ marginBottom: 16 }}>
                                 <Text style={styles.formLabel}>輸入方式</Text>
                                 <View style={styles.choiceRow}>
@@ -552,6 +767,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                             側面輪廓
                                         </Text>
                                     </Pressable>
+                                    {vesselType === 'feeding' && (
                                     <Pressable
                                         style={[styles.choiceBtn, inputMethod === 'volume' && styles.choiceBtnActive]}
                                         onPress={() => setInputMethod('volume')}
@@ -560,12 +776,13 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                             已知容量
                                         </Text>
                                     </Pressable>
+                                    )}
                                 </View>
-                                <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                                <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
                                     {inputMethod === 'dimensions' 
-                                        ? '透過測量尺寸計算體積（AI 辨識主要方式）。可選填實際測量值進行校準'
+                                        ? '輸入碗的高度與直徑，系統用公式推估容積'
                                         : inputMethod === 'side_profile'
-                                        ? 'AI 側面輪廓重建（最準確，誤差 ±3-5%）。只需拍攝側面照 + 輸入碗口直徑'
+                                        ? '拍攝碗的側面照片，AI 識別輪廓後積分推估容積'
                                         : '直接輸入已知容量（適合飲水機等大型容器）'}
                                 </Text>
                             </View>
@@ -797,33 +1014,84 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                     </View>
                                 </>
                             ) : inputMethod === 'volume' ? (
-                                <View style={styles.formGroup}>
-                                    <Text style={styles.formLabel}>已知容量 (ml)</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={knownVolumeMl}
-                                        onChangeText={setKnownVolumeMl}
-                                        keyboardType="numeric"
-                                        placeholder="例如: 2000 (2公升)"
-                                    />
-                                    <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
-                                        請輸入容器標示的容量（毫升）。例如：2L = 2000ml
-                                    </Text>
-                                    <Text style={{ fontSize: 10, color: '#666', marginTop: 4, fontStyle: 'italic' }}>
-                                        💡 提示：如果實際測量的容量與計算結果有 10-15% 差異，這是正常的幾何計算誤差（實際容器形狀不完全規則）
-                                    </Text>
-                                    {knownVolumeMl && parseFloat(knownVolumeMl) > 0 && shape === 'cylinder' && height && parseFloat(height) > 0 && (
-                                        <View style={{ marginTop: 8, padding: 8, backgroundColor: '#e0f2fe', borderWidth: 1, borderColor: '#0284c7', borderRadius: 4 }}>
-                                            <Text style={{ fontSize: 11, color: '#0c4a6e', fontWeight: '700', marginBottom: 4 }}>
-                                                💡 參考尺寸（基於已知容量）：
-                                            </Text>
-                                            <Text style={{ fontSize: 10, color: '#075985', lineHeight: 16 }}>
-                                                如果容量是 {knownVolumeMl}ml，高度是 {height}cm，{'\n'}
-                                                合理的內徑應該是：{Math.sqrt(parseFloat(knownVolumeMl) / (Math.PI * parseFloat(height))) * 2}cm
-                                            </Text>
+                                <>
+                                    <View style={styles.formGroup}>
+                                        <Text style={styles.formLabel}>已知容量 (ml)</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={knownVolumeMl}
+                                            onChangeText={(text) => {
+                                                setKnownVolumeMl(text);
+                                                // 容量變更時，如果已有校準，提示建議重新校準
+                                                if (editingProfile?.fullWaterCalibration && parseFloat(text) !== editingProfile.volumeMl) {
+                                                    // 標記需要重新校準（在儲存時處理）
+                                                }
+                                            }}
+                                            keyboardType="numeric"
+                                            placeholder="例如: 2000 (2公升)"
+                                        />
+                                        <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                                            請輸入產品規格標示的容量（例：2L = 2000ml）
+                                        </Text>
+                                    </View>
+
+                                    {/* 水位基準（已知容量／飲水機時的水碗用） */}
+                                    {vesselType === 'hydration' && (
+                                        <View style={styles.formGroup}>
+                                            <Text style={styles.formLabel}>水位基準</Text>
+                                            {editingProfile?.fullWaterCalibration ? (
+                                                <View style={{ padding: 12, backgroundColor: palette.surfaceSoft, borderWidth: 1, borderColor: palette.primary, borderRadius: 8 }}>
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                            <AppIcon name="check-circle" size={18} color={palette.primary} style={{ marginRight: 6 }} />
+                                                            <Text style={{ fontSize: 12, fontWeight: '700', color: palette.text }}>
+                                                                ✅ 已設定（{new Date(editingProfile.fullWaterCalibration.calibratedAt).toLocaleDateString('zh-TW')}）
+                                                            </Text>
+                                                        </View>
+                                                        <Pressable onPress={() => setShowFullWaterCalibration(true)} style={{ padding: 6, backgroundColor: palette.primary, borderRadius: 6 }}>
+                                                            <Text style={{ fontSize: 11, color: palette.onPrimary, fontWeight: '600' }}>重新設定</Text>
+                                                        </Pressable>
+                                                    </View>
+                                                    {knownVolumeMl && parseFloat(knownVolumeMl) > 0 && editingProfile?.volumeMl !== undefined && parseFloat(knownVolumeMl) !== editingProfile.volumeMl && (
+                                                        <View style={{ marginTop: 8, padding: 8, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 6 }}>
+                                                            <Text style={{ fontSize: 11, color: '#92400e' }}>容量已變更，建議重新設定水位基準</Text>
+                                                        </View>
+                                                    )}
+                                                </View>
+                                            ) : (
+                                                <View style={{ padding: 12, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8 }}>
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                            <AppIcon name="warning" size={18} color="#f59e0b" style={{ marginRight: 6 }} />
+                                                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400e' }}>⚠️ 尚未設定</Text>
+                                                        </View>
+                                                        <Pressable
+                                                            onPress={() => {
+                                                                let vol = editingProfile?.volumeMl;
+                                                                if (!vol && profileAnalysisResult?.contour) {
+                                                                    vol = Math.round(calculateTotalVolumeFromContour(profileAnalysisResult.contour));
+                                                                }
+                                                                if (!vol && height && radius && parseFloat(height) > 0 && parseFloat(radius) > 0) {
+                                                                    vol = calculateVesselVolume({ id: '', name: '', shape, dimensions: { height: parseFloat(height), radius: parseFloat(radius) } });
+                                                                }
+                                                                if (!vol || vol <= 0) {
+                                                                    Alert.alert('請先完成容量', '請先完成尺寸或側面輪廓計算取得容量後，再設定水位基準。');
+                                                                    return;
+                                                                }
+                                                                setKnownVolumeMl(String(vol));
+                                                                setShowFullWaterCalibration(true);
+                                                            }}
+                                                            style={{ padding: 6, backgroundColor: '#f59e0b', borderRadius: 6 }}
+                                                        >
+                                                            <Text style={{ fontSize: 11, color: '#fff', fontWeight: '600' }}>開始設定</Text>
+                                                        </Pressable>
+                                                    </View>
+                                                    <Text style={{ fontSize: 11, color: '#92400e' }}>設定後才能開始記錄飲水量</Text>
+                                                </View>
+                                            )}
                                         </View>
                                     )}
-                                </View>
+                                </>
                             ) : (
                                 <>
                             <View style={styles.formGroup}>
@@ -980,6 +1248,54 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                 </>
                             )}
 
+                            {/* 水碗模式：水位基準（與已知容量共用同一邏輯，設定後才能記錄飲水） */}
+                            {vesselType === 'hydration' && hydrationContainerMode === 'bowl' && (
+                                <View style={styles.formGroup}>
+                                    <Text style={styles.formLabel}>水位基準</Text>
+                                    {editingProfile?.fullWaterCalibration ? (
+                                        <View style={{ padding: 12, backgroundColor: palette.surfaceSoft, borderWidth: 1, borderColor: palette.primary, borderRadius: 8 }}>
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                    <AppIcon name="check-circle" size={18} color={palette.primary} style={{ marginRight: 6 }} />
+                                                    <Text style={{ fontSize: 12, fontWeight: '700', color: palette.text }}>✅ 已設定（{new Date(editingProfile.fullWaterCalibration.calibratedAt).toLocaleDateString('zh-TW')}）</Text>
+                                                </View>
+                                                <Pressable onPress={() => setShowFullWaterCalibration(true)} style={{ padding: 6, backgroundColor: palette.primary, borderRadius: 6 }}>
+                                                    <Text style={{ fontSize: 11, color: palette.onPrimary, fontWeight: '600' }}>重新設定</Text>
+                                                </Pressable>
+                                            </View>
+                                        </View>
+                                    ) : (
+                                        <View style={{ padding: 12, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8 }}>
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                    <AppIcon name="warning" size={18} color="#f59e0b" style={{ marginRight: 6 }} />
+                                                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400e' }}>⚠️ 尚未設定</Text>
+                                                </View>
+                                                <Pressable
+                                                    onPress={() => {
+                                                        let vol = editingProfile?.volumeMl;
+                                                        if (!vol && profileAnalysisResult?.contour) vol = Math.round(calculateTotalVolumeFromContour(profileAnalysisResult.contour));
+                                                        if (!vol && height && radius && parseFloat(height) > 0 && parseFloat(radius) > 0) {
+                                                            vol = calculateVesselVolume({ id: '', name: '', shape, dimensions: { height: parseFloat(height), radius: parseFloat(radius) } });
+                                                        }
+                                                        if (!vol || vol <= 0) {
+                                                            Alert.alert('請先完成容量', '請先完成尺寸或側面輪廓計算取得容量後，再設定水位基準。');
+                                                            return;
+                                                        }
+                                                        setKnownVolumeMl(String(vol));
+                                                        setShowFullWaterCalibration(true);
+                                                    }}
+                                                    style={{ padding: 6, backgroundColor: '#f59e0b', borderRadius: 6 }}
+                                                >
+                                                    <Text style={{ fontSize: 11, color: '#fff', fontWeight: '600' }}>開始設定</Text>
+                                                </Pressable>
+                                            </View>
+                                            <Text style={{ fontSize: 11, color: '#92400e' }}>設定後才能開始記錄飲水量</Text>
+                                        </View>
+                                    )}
+                                </View>
+                            )}
+
                             <View style={{ marginTop: 24, padding: 12, backgroundColor: '#f3f4f6', borderWidth: 1, borderColor: '#d1d5db', borderRadius: 4 }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="lightbulb" size={14} color="#4b5563" style={{ marginRight: 4 }} /><Text style={{ fontSize: 13, fontWeight: '700', color: '#4b5563' }}>測量小秘訣</Text></View>
                                 <Text style={{ fontSize: 11, color: '#4b5563', lineHeight: 16, marginBottom: 12 }}>
@@ -1046,6 +1362,8 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                     <Text style={styles.primaryBtnText}>儲存設定</Text>
                                 </Pressable>
                             </View>
+                            </>
+                            )}
                         </ScrollView>
                         )}
                     </View>
@@ -1055,6 +1373,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
     }
 
     return (
+        <>
         <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
             <SafeAreaView style={styles.modalBackdrop}>
                 <View style={styles.modalCard}>
@@ -1121,5 +1440,18 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                 </View>
             </SafeAreaView>
         </Modal>
+        )}
+        
+        {/* 滿水校準 Modal */}
+        {showFullWaterCalibration && (
+            <FullWaterCalibrationModal
+                visible={showFullWaterCalibration}
+                volumeMl={parseFloat(knownVolumeMl) || editingProfile?.volumeMl || 0}
+                vesselName={editingProfile?.name || name || '未命名水碗'}
+                onClose={() => setShowFullWaterCalibration(false)}
+                onComplete={handleFullWaterCalibrationComplete}
+            />
+        )}
+    </>
     );
 }

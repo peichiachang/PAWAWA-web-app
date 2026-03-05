@@ -65,15 +65,13 @@ export function RecordDetailModal({ visible, record, cats, onClose }: Props) {
     }
     if (record._type === 'hydration') {
       const l = record as HydrationOwnershipLog & { _type: 'hydration' };
+      const displayMl = Math.round(l.actualWaterMl ?? l.totalMl);
       return (
         <>
           <Row label="日期" value={dateStr} />
           <Row label="時間" value={timeStr} />
-          <Row label="貓咪" value={getCatName(l.selectedTagId)} />
-          <Row label="飲水量" value={`${Math.round(l.totalMl)} ml`} />
-          {l.actualWaterMl !== undefined && l.actualWaterMl !== l.totalMl && (
-            <Row label="實際攝取" value={`${Math.round(l.actualWaterMl)} ml`} />
-          )}
+          <Row label="歸屬" value={getCatName(l.selectedTagId)} />
+          <Row label="飲水量" value={`${displayMl} ml`} />
         </>
       );
     }

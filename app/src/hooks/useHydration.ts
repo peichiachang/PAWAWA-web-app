@@ -4,10 +4,10 @@ import { Alert } from 'react-native';
 import { AiRecognitionService, HydrationVisionResult } from '../types/ai';
 import type { WaterLevelMarkResult } from '../components/WaterLevelMarker';
 import { calculateActualWaterIntakeMl } from '../utils/health';
-import { CapturedImage, StoredHydrationT0, HydrationOwnershipLog } from '../types/app';
+import { CapturedImage, StoredHydrationW0, HydrationOwnershipLog } from '../types/app';
 import {
-  HYDRATION_T0_STORAGE_KEY,
-  HYDRATION_T0_TTL_MS,
+  HYDRATION_W0_STORAGE_KEY,
+  HYDRATION_W0_TTL_MS,
   HYDRATION_HISTORY_KEY
 } from '../constants';
 import { useVessels } from './useVessels';
@@ -24,16 +24,16 @@ export function useHydration(
 ) {
   const vesselsInternal = useVessels();
   const vessels = vesselsFromParent ?? vesselsInternal;
-  const [t1Done, setT1Done] = useState(false);
+  const [w1Done, setW1Done] = useState(false);
   const [result, setResult] = useState<HydrationVisionResult | null>(null);
-  const [t0Map, setT0Map] = useState<Record<string, StoredHydrationT0>>({});
-  const [t1Image, setT1Image] = useState<CapturedImage | null>(null);
+  const [w0Map, setW0Map] = useState<Record<string, StoredHydrationW0>>({});
+  const [w1Image, setW1Image] = useState<CapturedImage | null>(null);
   const [canIdentifyTags, setCanIdentifyTags] = useState<boolean | null>(null);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [ownershipLogs, setOwnershipLogs] = useState<HydrationOwnershipLog[]>([]);
   const [mismatchError, setMismatchError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [markingImage, setMarkingImage] = useState<{ phase: 't0' | 't1', image: CapturedImage } | null>(null);
+  const [markingImage, setMarkingImage] = useState<{ phase: 'w0' | 'w1', image: CapturedImage } | null>(null);
 
   const reloadOwnershipLogs = useCallback(async () => {
     try {
@@ -45,15 +45,19 @@ export function useHydration(
   useEffect(() => {
     async function init() {
       try {
-        const raw = await AsyncStorage.getItem(HYDRATION_T0_STORAGE_KEY);
+        // 先嘗試讀取新的 W0 key，如果沒有則讀取舊的 T0 key（向後相容）
+        let raw = await AsyncStorage.getItem(HYDRATION_W0_STORAGE_KEY);
+        if (!raw) {
+          raw = await AsyncStorage.getItem('carecat:hydration:t0'); // 舊 key
+        }
         if (raw) {
-          const parsed = JSON.parse(raw) as Record<string, StoredHydrationT0>;
+          const parsed = JSON.parse(raw) as Record<string, StoredHydrationW0>;
           const now = Date.now();
-          const validMap: Record<string, StoredHydrationT0> = {};
+          const validMap: Record<string, StoredHydrationW0> = {};
           let changed = false;
 
           Object.entries(parsed).forEach(([id, img]) => {
-            if (now - img.capturedAt <= HYDRATION_T0_TTL_MS) {
+            if (now - img.capturedAt <= HYDRATION_W0_TTL_MS) {
               validMap[id] = img;
             } else {
               changed = true;
@@ -61,9 +65,9 @@ export function useHydration(
           });
 
           if (changed) {
-            await AsyncStorage.setItem(HYDRATION_T0_STORAGE_KEY, JSON.stringify(validMap));
+            await AsyncStorage.setItem(HYDRATION_W0_STORAGE_KEY, JSON.stringify(validMap));
           }
-          setT0Map(validMap);
+          setW0Map(validMap);
         }
         await reloadOwnershipLogs();
       } catch (_e) { }
@@ -71,44 +75,44 @@ export function useHydration(
     void init();
   }, [reloadOwnershipLogs]);
 
-  async function persistT0Map(map: Record<string, StoredHydrationT0>) {
-    await AsyncStorage.setItem(HYDRATION_T0_STORAGE_KEY, JSON.stringify(map));
+  async function persistW0Map(map: Record<string, StoredHydrationW0>) {
+    await AsyncStorage.setItem(HYDRATION_W0_STORAGE_KEY, JSON.stringify(map));
   }
 
-  const currentT0 = vessels.selectedVesselId ? t0Map[vessels.selectedVesselId] : null;
-  const t0Done = Boolean(currentT0 && (Date.now() - currentT0.capturedAt <= HYDRATION_T0_TTL_MS));
+  const currentW0 = vessels.selectedVesselId ? w0Map[vessels.selectedVesselId] : null;
+  const w0Done = Boolean(currentW0 && (Date.now() - currentW0.capturedAt <= HYDRATION_W0_TTL_MS));
 
   useEffect(() => {
-    // Reset T1 state when vessel changes
-    setT1Done(false);
-    setT1Image(null);
+    // Reset W1 state when vessel changes
+    setW1Done(false);
+    setW1Image(null);
     setResult(null);
     setMismatchError(null);
     setMarkingImage(null);
   }, [vessels.selectedVesselId]);
 
   function getRemainingMinutes(): number {
-    if (!currentT0) return 0;
-    const remaining = HYDRATION_T0_TTL_MS - (Date.now() - currentT0.capturedAt);
+    if (!currentW0) return 0;
+    const remaining = HYDRATION_W0_TTL_MS - (Date.now() - currentW0.capturedAt);
     return Math.max(0, Math.floor(remaining / 60000));
   }
 
-  function resetT0() {
+  function resetW0() {
     if (vessels.selectedVesselId) {
-      const nextMap = { ...t0Map };
+      const nextMap = { ...w0Map };
       delete nextMap[vessels.selectedVesselId];
-      setT0Map(nextMap);
-      void persistT0Map(nextMap);
+      setW0Map(nextMap);
+      void persistW0Map(nextMap);
     }
-    setT1Done(false);
+    setW1Done(false);
     setResult(null);
     setMismatchError(null);
   }
 
   function openReset() {
-    setT1Done(false);
+    setW1Done(false);
     setResult(null);
-    setT1Image(null);
+    setW1Image(null);
     setCanIdentifyTags(null);
     setSelectedTagId(null);
     setMismatchError(null);
@@ -117,8 +121,8 @@ export function useHydration(
 
   /** 清除 W1 照片與分析結果（可再重拍） */
   function clearW1() {
-    setT1Image(null);
-    setT1Done(false);
+    setW1Image(null);
+    setW1Done(false);
     setResult(null);
     setCanIdentifyTags(null);
     setSelectedTagId(null);
@@ -126,8 +130,8 @@ export function useHydration(
   }
 
   // 由 HydrationModal 內嵌相機拍照後呼叫，這裡只負責進入「標記水位」階段
-  function startMarking(phase: 't0' | 't1', image: CapturedImage) {
-    if (phase === 't1' && (!currentT0 || Date.now() - currentT0.capturedAt > HYDRATION_T0_TTL_MS)) {
+  function startMarking(phase: 'w0' | 'w1', image: CapturedImage) {
+    if (phase === 'w1' && (!currentW0 || Date.now() - currentW0.capturedAt > HYDRATION_W0_TTL_MS)) {
       Alert.alert('缺少有效 W0', '請先拍攝並標記給水期 (W0) 的水位，W0 會保留 24 小時。');
       return;
     }
@@ -141,8 +145,8 @@ export function useHydration(
     const { phase, image } = markingImage;
     setMarkingImage(null);
 
-    if (phase === 't0') {
-      const stored: StoredHydrationT0 = {
+    if (phase === 'w0') {
+      const stored: StoredHydrationW0 = {
         ...image,
         capturedAt: Date.now(),
         waterLevelPct,
@@ -152,18 +156,18 @@ export function useHydration(
         water_y: result.water_y,
         image_height: result.image_height,
       };
-      const nextMap = { ...t0Map, [vessels.selectedVesselId!]: stored };
-      setT0Map(nextMap);
-      await persistT0Map(nextMap);
-      setT1Done(false);
+      const nextMap = { ...w0Map, [vessels.selectedVesselId!]: stored };
+      setW0Map(nextMap);
+      await persistW0Map(nextMap);
+      setW1Done(false);
       setResult(null);
       setMismatchError(null);
       setIsAnalyzing(false);
       return;
     }
 
-    // Phase T1
-    const storedT1 = {
+    // Phase W1
+    const storedW1 = {
       ...image,
       capturedAt: Date.now(),
       waterLevelPct,
@@ -172,80 +176,134 @@ export function useHydration(
       water_y: result.water_y,
       image_height: result.image_height,
     };
-    setT1Image(storedT1);
+    setW1Image(storedW1);
 
     try {
       setIsAnalyzing(true);
-      const t0 = currentT0!;
+      const w0 = currentW0!;
       const vessel = vessels.currentVessel;
       const volumeMl = vessel?.volumeMl;
       if (!volumeMl || volumeMl <= 0) {
         throw new Error('此水碗尚未設定容量，請先到「食碗管理」完成水碗容量校準。');
       }
 
+      // 飲水記錄需先完成水位基準設定（spec v4 邊緣案例：兩種模式共用）
+      if (vessel?.vesselType === 'hydration' && !vessel?.fullWaterCalibration) {
+        Alert.alert(
+          '請先完成滿水基準設定',
+          '請至「個人」→ 食碗管理 → 選擇此水碗／飲水機 → 完成「水位基準」設定後再記錄飲水。',
+          [{ text: '確定', style: 'cancel' }]
+        );
+        setIsAnalyzing(false);
+        return;
+      }
+
       // 純數學計算：兩張都有像素座標時，不呼叫 AI
       const hasPixelData =
-        t0.bowl_top_y != null &&
-        t0.bowl_bottom_y != null &&
-        t0.water_y != null &&
-        storedT1.bowl_top_y != null &&
-        storedT1.bowl_bottom_y != null &&
-        storedT1.water_y != null;
+        w0.bowl_top_y != null &&
+        w0.bowl_bottom_y != null &&
+        w0.water_y != null &&
+        storedW1.bowl_top_y != null &&
+        storedW1.bowl_bottom_y != null &&
+        storedW1.water_y != null;
 
       let analysisResult: HydrationVisionResult | null = null;
 
       if (hasPixelData) {
-        // 使用已標記的 waterLevelPct 計算水量
-        // waterLevelPct 定義：0 = 滿（碗口），1 = 空（碗底）
-        // 所以水量 = (1 - waterLevelPct) * volumeMl
-        const t0WaterLevelPct = t0.waterLevelPct ?? 0;
-        const t1WaterLevelPct = storedT1.waterLevelPct ?? 0;
+        const w0WaterLevelPct = w0.waterLevelPct ?? 0;
+        const w1WaterLevelPct = storedW1.waterLevelPct ?? 0;
         
-        // 如果有側面輪廓校準，使用精確的輪廓計算
-        if (vessel?.calibrationMethod === 'side_profile' && vessel.profileContour) {
+        // Debug log：追蹤所有相關變數
+        console.log('[calibrationMethod]', vessel?.calibrationMethod);
+        console.log('[profileContour]', vessel?.profileContour);
+        console.log('[profileContour is null?]', vessel?.profileContour === null);
+        console.log('[profileContour is undefined?]', vessel?.profileContour === undefined);
+        console.log('[profileContour type]', vessel?.profileContour === null ? 'null' : vessel?.profileContour === undefined ? 'undefined' : typeof vessel?.profileContour);
+        console.log('[volumeMl]', volumeMl);
+        console.log('[w0WaterLevelPct]', w0WaterLevelPct);
+        console.log('[fullWaterCalibration]', vessel?.fullWaterCalibration);
+        
+        let waterW0Ml: number;
+        let waterW1Ml: number;
+        
+        // 已知容量模式 + 滿水校準：使用滿水校準基準計算
+        if (vessel?.calibrationMethod === 'known_volume' && vessel.fullWaterCalibration) {
+          const cal = vessel.fullWaterCalibration;
+          // 使用滿水校準的基準：fullY 作為 0%（滿），bottomY 作為參考底線
+          // waterLevelPct = (waterY - fullY) / (bottomY - fullY)
+          const w0LevelPct = Math.max(0, Math.min(1, (w0.water_y! - cal.fullY) / (cal.bottomY - cal.fullY)));
+          const w1LevelPct = Math.max(0, Math.min(1, (storedW1.water_y! - cal.fullY) / (cal.bottomY - cal.fullY)));
+          // 水量 = (1 - waterLevelPct) × volumeMl
+          waterW0Ml = Math.round((1 - w0LevelPct) * volumeMl);
+          waterW1Ml = Math.round((1 - w1LevelPct) * volumeMl);
+          console.log('[mode]', 'Mode B (known_volume with full water calibration)');
+          console.log('[w0LevelPct]', w0LevelPct);
+          console.log('[w1LevelPct]', w1LevelPct);
+        }
+        // 已知容量模式（無滿水校準，向後相容）：使用線性計算
+        else if (vessel?.calibrationMethod === 'known_volume') {
+          waterW0Ml = Math.round((1 - Math.max(0, Math.min(1, w0WaterLevelPct))) * volumeMl);
+          waterW1Ml = Math.round((1 - Math.max(0, Math.min(1, w1WaterLevelPct))) * volumeMl);
+          console.log('[mode]', 'Mode B (known_volume, linear, no calibration)');
+        }
+        // 如果有側面輪廓校準，使用精確的輪廓計算（Mode A）
+        else if (vessel?.calibrationMethod === 'side_profile' && vessel.profileContour) {
           const { calculateVolumeToWaterLevel } = require('../utils/profileVolume');
-          const waterT0Ml = calculateVolumeToWaterLevel(vessel.profileContour, t0WaterLevelPct);
-          const waterT1Ml = calculateVolumeToWaterLevel(vessel.profileContour, t1WaterLevelPct);
-          const envFactorMl = Math.max(0, (waterT0Ml - waterT1Ml) * 0.02); // 簡單估算：2% 蒸發
-          const actualIntakeMl = Math.max(0, waterT0Ml - waterT1Ml - envFactorMl);
-          analysisResult = {
-            waterT0Ml: Math.round(waterT0Ml),
-            waterT1Ml: Math.round(waterT1Ml),
-            tempC: 25,
-            humidityPct: 60,
-            envFactorMl: Math.round(envFactorMl),
-            actualIntakeMl: Math.round(actualIntakeMl),
-            isBowlMatch: true,
-            mismatchReason: '',
-            confidence: 0.95, // 側面輪廓計算的準確度較高
-          };
-        } else {
-          // 使用簡單的線性計算（假設容器是圓柱形）
+          waterW0Ml = calculateVolumeToWaterLevel(vessel.profileContour, w0WaterLevelPct);
+          waterW1Ml = calculateVolumeToWaterLevel(vessel.profileContour, w1WaterLevelPct);
+          console.log('[mode]', 'Mode A (side_profile, contour integration)');
+        }
+        // 其他情況：使用簡單的線性計算（假設容器是圓柱形，Mode B）
+        else {
           // waterLevelPct = 0 時（滿），水量 = volumeMl
           // waterLevelPct = 1 時（空），水量 = 0
-          const waterT0Ml = Math.round((1 - Math.max(0, Math.min(1, t0WaterLevelPct))) * volumeMl);
-          const waterT1Ml = Math.round((1 - Math.max(0, Math.min(1, t1WaterLevelPct))) * volumeMl);
-          const envFactorMl = Math.max(0, (waterT0Ml - waterT1Ml) * 0.02); // 簡單估算：2% 蒸發
-          const actualIntakeMl = Math.max(0, waterT0Ml - waterT1Ml - envFactorMl);
-          analysisResult = {
-            waterT0Ml,
-            waterT1Ml,
-            tempC: 25,
-            humidityPct: 60,
-            envFactorMl: Math.round(envFactorMl),
-            actualIntakeMl: Math.round(actualIntakeMl),
-            isBowlMatch: true,
-            mismatchReason: '',
-            confidence: 1,
-          };
+          waterW0Ml = Math.round((1 - Math.max(0, Math.min(1, w0WaterLevelPct))) * volumeMl);
+          waterW1Ml = Math.round((1 - Math.max(0, Math.min(1, w1WaterLevelPct))) * volumeMl);
+          console.log('[mode]', 'Mode B (linear, default)');
         }
+        
+        // 邊緣案例：計算結果超過容器容量 → 強制重拍（spec v4）
+        if (waterW0Ml > volumeMl || waterW1Ml > volumeMl) {
+          setResult(null);
+          setW1Done(false);
+          setW1Image(null);
+          setCanIdentifyTags(null);
+          setSelectedTagId(null);
+          setMismatchError(null);
+          const msg = '計算結果超過容器容量，請重新標記水位線。';
+          Alert.alert('請重新標記', `⚠️ ${msg}`);
+          setIsAnalyzing(false);
+          return;
+        }
+
+        // 上限保護：結果不可超過 volumeMl（spec 六）
+        waterW0Ml = Math.min(waterW0Ml, volumeMl);
+        waterW1Ml = Math.min(waterW1Ml, volumeMl);
+
+        console.log('[waterW0Ml]', waterW0Ml);
+        console.log('[waterW1Ml]', waterW1Ml);
+
+        const envFactorMl = Math.max(0, (waterW0Ml - waterW1Ml) * 0.02); // 簡單估算：2% 蒸發
+        // W1 水位高於 W0 時 actualIntakeMl = 0，不顯示負值（spec 七）
+        const actualIntakeMl = Math.max(0, waterW0Ml - waterW1Ml - envFactorMl);
+        analysisResult = {
+          waterT0Ml: Math.round(waterW0Ml),
+          waterT1Ml: Math.round(waterW1Ml),
+          tempC: 25,
+          humidityPct: 60,
+          envFactorMl: Math.round(envFactorMl),
+          actualIntakeMl: Math.round(actualIntakeMl),
+          isBowlMatch: true,
+          mismatchReason: '',
+          confidence: vessel?.calibrationMethod === 'side_profile' ? 0.95 : 1,
+        };
       } else {
         let lastError: Error | null = null;
         for (let attempt = 1; attempt <= 3; attempt++) {
           try {
             analysisResult = await ai.analyzeHydrationImages({
-              t0: currentT0!,
-              t1: storedT1,
+              t0: currentW0!, // AI 介面仍使用 t0/t1 命名（向後相容）
+              t1: storedW1,
               vessel: vessels.currentVessel || undefined
             });
 
@@ -265,15 +323,15 @@ export function useHydration(
 
       if (!analysisResult.isBowlMatch) {
         setResult(null);
-        setT1Done(false);
+        setW1Done(false);
         setCanIdentifyTags(null);
         setSelectedTagId(null);
-        setMismatchError(analysisResult.mismatchReason || 'T0 與 T1 的碗位辨識不一致，請重拍 T1。');
-        Alert.alert('碗位不一致', analysisResult.mismatchReason || '請重拍 T1 或重新拍攝 T0。');
+        setMismatchError(analysisResult.mismatchReason || 'W0 與 W1 的碗位辨識不一致，請重拍 W1。');
+        Alert.alert('碗位不一致', analysisResult.mismatchReason || '請重拍 W1 或重新拍攝 W0。');
         return;
       }
       setResult(analysisResult);
-      setT1Done(true);
+      setW1Done(true);
       setMismatchError(null);
       setCanIdentifyTags(true);
       setSelectedTagId(null); // 預設由 Modal 依 cats 設定
@@ -290,13 +348,14 @@ export function useHydration(
   }
 
 
-  function saveOwnershipLog(onClose: () => void) {
+  /** onSaved(addAnother): addAnother true = 留在畫面並可再記一筆，false = 關閉 modal */
+  function saveOwnershipLog(onSaved: (addAnother: boolean) => void) {
     if (!result) {
-      Alert.alert('無法儲存', '請先完成 T1 分析再儲存。');
+      Alert.alert('無法儲存', '請先完成 W1 分析再儲存。');
       return;
     }
     if (mismatchError) {
-      Alert.alert('無法儲存', 'T0/T1 碗位不一致，請先重拍 T1。');
+      Alert.alert('無法儲存', 'W0/W1 碗位不一致，請先重拍 W1。');
       return;
     }
     if (canIdentifyTags === null) {
@@ -325,33 +384,33 @@ export function useHydration(
 
     // 儲存後清空 W0/W1 照片與分析結果，下次開啟可重新拍攝
     setResult(null);
-    setT1Image(null);
-    setT1Done(false);
+    setW1Image(null);
+    setW1Done(false);
     setCanIdentifyTags(null);
     setSelectedTagId(null);
     setMismatchError(null);
     setMarkingImage(null);
     if (vessels.selectedVesselId) {
-      const nextMap = { ...t0Map };
+      const nextMap = { ...w0Map };
       delete nextMap[vessels.selectedVesselId];
-      setT0Map(nextMap);
-      void persistT0Map(nextMap);
+      setW0Map(nextMap);
+      void persistW0Map(nextMap);
     }
-
-    onClose();
 
     const catName = cats?.find((c) => c.id === newLog.selectedTagId)?.name ?? newLog.selectedTagId;
-    if (newLog.ownershipType === 'household_only') {
-      Alert.alert('儲存完成', '飲水紀錄已寫入家庭看板（全家共用範圍），不隸屬單一貓咪。');
-    } else {
-      Alert.alert('儲存完成', `飲水紀錄已寫入家庭看板，並歸屬至 ${catName}。`);
-    }
+    const message = newLog.ownershipType === 'household_only'
+      ? '飲水紀錄已寫入家庭看板（全家共用範圍），不隸屬單一貓咪。'
+      : `飲水紀錄已寫入家庭看板，並歸屬至 ${catName}。`;
+    Alert.alert('儲存完成', message, [
+      { text: '再記一筆', onPress: () => onSaved(true) },
+      { text: '完成', onPress: () => onSaved(false) },
+    ]);
   }
 
-  function saveManualLog(ml: number, tagId: string | null, onClose: () => void) {
+  /** onSaved(addAnother): addAnother true = 留在畫面並可再記一筆，false = 關閉 modal */
+  function saveManualLog(ml: number, tagId: string | null, onSaved: (addAnother: boolean) => void) {
     if (!ml || ml <= 0) {
-      Alert.alert('請輸入飲水量', '飲水量必須大於 0。');
-      return;
+      return; // 驗證由 Modal 處理，此處僅防呆
     }
     const newLog: HydrationOwnershipLog = {
       id: `hydration_${Date.now()}`,
@@ -366,16 +425,23 @@ export function useHydration(
       void AsyncStorage.setItem(HYDRATION_HISTORY_KEY, JSON.stringify(updated));
       return updated;
     });
-    onClose();
+    Alert.alert('儲存完成', '飲水紀錄已寫入。', [
+      { text: '再記一筆', onPress: () => onSaved(true) },
+      { text: '完成', onPress: () => onSaved(false) },
+    ]);
   }
 
   return {
     ai, // AI 服務（用於側面輪廓識別等）
-    t0Done,
-    t1Done,
+    w0Done, // 向後相容：保留 t0Done 別名
+    t0Done: w0Done,
+    w1Done, // 向後相容：保留 t1Done 別名
+    t1Done: w1Done,
     result,
-    t0Image: currentT0,
-    t1Image,
+    w0Image: currentW0, // 向後相容：保留 t0Image 別名
+    t0Image: currentW0,
+    w1Image, // 向後相容：保留 t1Image 別名
+    t1Image: w1Image,
     canIdentifyTags,
     setCanIdentifyTags,
     selectedTagId,
@@ -385,7 +451,8 @@ export function useHydration(
     markingImage,
     isAnalyzing,
     getRemainingMinutes,
-    resetT0,
+    resetW0, // 向後相容：保留 resetT0 別名
+    resetT0: resetW0,
     clearW1,
     openReset,
     startMarking,

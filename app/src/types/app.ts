@@ -14,7 +14,9 @@ export type StoredHydrationImage = CapturedImage & {
   water_y?: number;
   image_height?: number;
 };
-export type StoredHydrationT0 = StoredHydrationImage & { vesselId?: string };
+export type StoredHydrationW0 = StoredHydrationImage & { vesselId?: string };
+// 向後相容：保留舊的類型名稱
+export type StoredHydrationT0 = StoredHydrationW0;
 export type FeedingOwnershipType = 'household_only' | 'household_and_tag';
 
 export type FeedingPrecisionMode = 'standard' | 'precise';
@@ -60,8 +62,23 @@ export interface VesselCalibration {
   sideProfileImageBase64?: string; // 側面照（base64）
   rimDiameterCm?: number; // 碗口直徑（側面輪廓方式的唯一輸入）
   profileContour?: ProfileContour; // 輪廓數據
-  /** 空碗俯視照（校準參考，供 T0/T1 碗位比對使用；側面輪廓時為俯視檢查照，其他輸入方式亦可拍攝） */
+  /** 空碗俯視照（校準參考，供 W0/W1 碗位比對使用；側面輪廓時為俯視檢查照，其他輸入方式亦可拍攝） */
   topViewImageBase64?: string;
+  /** 滿水校準資料（僅用於已知容量模式） */
+  fullWaterCalibration?: {
+    /** 校準時的水位 Y 座標（像素） */
+    fullY: number;
+    /** 校準時的底線 Y 座標（像素） */
+    bottomY: number;
+    /** 校準時的頂線 Y 座標（像素） */
+    topY: number;
+    /** 圖片高度（像素） */
+    imageHeight: number;
+    /** 校準時間戳 */
+    calibratedAt: number;
+    /** 校準時的照片（base64） */
+    imageBase64?: string;
+  };
   /** 食物類型：乾飼料（可設預設份量）／罐頭濕食（每次必填克數） */
   foodType?: FoodType;
   /** 乾飼料預設份量（克），設定後沿用，不用每次輸入 */

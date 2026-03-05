@@ -140,9 +140,10 @@ export function RecordsContent({
       descStr = `${Math.round(l.kcal ?? l.totalGram * 3)} kcal` + (l.note ? ` • ${l.note}` : '');
     } else if (record._type === 'hydration') {
       const l = record as HydrationOwnershipLog & { _type: 'hydration' };
-      title = `飲水記錄${l.selectedTagId ? ` - ${getCatName(cats, l.selectedTagId)}` : ''}`;
-      dataStr = `總計：${Math.round(l.totalMl)} ml`;
-      descStr = '估算攝取';
+      const ml = Math.round(l.actualWaterMl ?? l.totalMl);
+      title = `飲水記錄${l.selectedTagId ? ` · ${getCatName(cats, l.selectedTagId)}` : ' · 家庭'}`;
+      dataStr = `${ml} ml`;
+      descStr = '飲水攝取';
     } else if (record._type === 'elimination') {
       const l = record as EliminationOwnershipLog & { _type: 'elimination' };
       const bristolDesc: Record<number, string> = { 1: '硬塊狀', 2: '香腸狀有裂縫', 3: '香腸狀有裂縫', 4: '香腸狀或蛇形', 5: '軟塊有清晰邊緣', 6: '糊狀', 7: '水狀' };

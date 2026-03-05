@@ -18,6 +18,8 @@ interface Props {
   imageUri: string;
   onConfirm: (result: WaterLevelMarkResult) => void;
   onCancel: () => void;
+  title?: string; // 可選的自訂標題
+  subtitle?: string; // 可選的自訂說明
 }
 
 /**
@@ -73,7 +75,7 @@ const LINE_CONFIG: Record<LineType, { label: string; color: string; bgColor: str
   water: { label: '水面', color: '#3b82f6', bgColor: '#1d4ed8' },
 };
 
-export function WaterLevelMarker({ imageUri, onConfirm, onCancel }: Props) {
+export function WaterLevelMarker({ imageUri, onConfirm, onCancel, title, subtitle }: Props) {
   const [rimY, setRimY] = useState(0.15);
   const [bottomY, setBottomY] = useState(0.85);
   const [waterY, setWaterY] = useState(0.5);
@@ -215,8 +217,10 @@ export function WaterLevelMarker({ imageUri, onConfirm, onCancel }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>標記水位</Text>
-        <Text style={styles.subtitle}>拖曳三條線分別對齊碗口、碗底、水面</Text>
+        <Text style={styles.title}>{title || '標記水位'}</Text>
+        <Text style={styles.subtitle}>
+          {subtitle || '拖曳三條線分別對齊：\n• 頂線：水位觀察窗的上緣\n• 底線：水位觀察窗的下緣\n• 水位線：目前的水面位置'}
+        </Text>
       </View>
 
       <View
