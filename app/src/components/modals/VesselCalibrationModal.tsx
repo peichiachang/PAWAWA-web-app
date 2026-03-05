@@ -461,6 +461,11 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
             cal.topViewImageBase64 = topViewImage.imageBase64;
         }
 
+        // 食碗（含食碗模式、自動餵食器）不需滿量基準，儲存時不寫入
+        if (vesselType === 'feeding') {
+            cal.fullWaterCalibration = undefined;
+        }
+
         let nextProfiles: VesselCalibration[];
         if (editingProfile) {
             nextProfiles = profiles.map(p => p.id === editingProfile.id ? cal : p);
@@ -676,7 +681,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                 </View>
                             )}
 
-                            {/* 自動餵食器模式：每份克數、每日次數、滿量基準（c3 實作） */}
+                            {/* 自動餵食器模式：每份克數、每日次數（不需滿量基準校準） */}
                             {vesselType === 'feeding' && feedingContainerMode === 'auto_feeder' && (
                                 <>
                                     <View style={styles.formGroup}>
@@ -702,51 +707,8 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                             placeholder="例如: 3"
                                         />
                                         <Text style={{ fontSize: 12, color: palette.muted, marginTop: 4 }}>
-                                            一天會出糧幾次（用於計算每日總量與 T0/T1 換算）
+                                            一天會出糧幾次（用於計算每日總量與記錄流程）
                                         </Text>
-                                    </View>
-                                    {/* 滿量基準區塊：c3 接 FullWaterCalibrationModal，此處先佔位 */}
-                                    <View style={styles.formGroup}>
-                                        <Text style={styles.formLabel}>滿量基準</Text>
-                                        {editingProfile?.fullWaterCalibration ? (
-                                            <View style={{ padding: 12, backgroundColor: palette.surfaceSoft, borderWidth: 1, borderColor: palette.primary, borderRadius: 8 }}>
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                        <AppIcon name="check-circle" size={18} color={palette.primary} style={{ marginRight: 6 }} />
-                                                        <Text style={{ fontSize: 12, fontWeight: '700', color: palette.text }}>
-                                                            ✅ 已設定（{new Date(editingProfile.fullWaterCalibration.calibratedAt).toLocaleDateString('zh-TW')}）
-                                                        </Text>
-                                                    </View>
-                                                    <Pressable onPress={() => setShowFullWaterCalibration(true)} style={{ padding: 6, backgroundColor: palette.primary, borderRadius: 6 }}>
-                                                        <Text style={{ fontSize: 11, color: palette.onPrimary, fontWeight: '600' }}>重新設定</Text>
-                                                    </Pressable>
-                                                </View>
-                                            </View>
-                                        ) : (
-                                            <View style={{ padding: 12, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8 }}>
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                        <AppIcon name="warning" size={18} color="#f59e0b" style={{ marginRight: 6 }} />
-                                                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400e' }}>⚠️ 尚未設定</Text>
-                                                    </View>
-                                                    <Pressable
-                                                        onPress={() => {
-                                                            const grams = parseFloat(portionGrams);
-                                                            if (!grams || grams <= 0) {
-                                                                Alert.alert('請先輸入每份克數', '請先輸入每份克數（g）再設定滿量基準。');
-                                                                return;
-                                                            }
-                                                            setKnownVolumeMl(String(grams));
-                                                            setShowFullWaterCalibration(true);
-                                                        }}
-                                                        style={{ padding: 6, backgroundColor: '#f59e0b', borderRadius: 6 }}
-                                                    >
-                                                        <Text style={{ fontSize: 11, color: '#fff', fontWeight: '600' }}>開始設定</Text>
-                                                    </Pressable>
-                                                </View>
-                                                <Text style={{ fontSize: 11, color: '#92400e' }}>拍攝滿碗狀態，供 T0/T1 換算使用</Text>
-                                            </View>
-                                        )}
                                     </View>
                                     <View style={{ marginTop: 24 }}>
                                         <Pressable
@@ -772,7 +734,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                     defaultPortionGrams: grams,
                                                     dailyPortionCount: count,
                                                     feedingContainerMode: 'auto_feeder',
-                                                    fullWaterCalibration: editingProfile?.fullWaterCalibration,
+                                                    // 自動餵食器模式不需滿量基準校準
                                                 };
                                                 const nextProfiles = editingProfile
                                                     ? profiles.map(p => p.id === editingProfile.id ? cal : p)
@@ -827,7 +789,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                         </Text>
                                     </View>
                                     {/* 滿量基準（飲水機模式，與下方水碗共用同一區塊樣式） */}
-                                    <View style={styles.formGroup}>
+                                    <View style={styles.formGroup} pointerEvents="box-none">
                                         <Text style={styles.formLabel}>滿量基準</Text>
                                         {editingProfile?.fullWaterCalibration ? (
                                             <View style={{ padding: 12, backgroundColor: palette.surfaceSoft, borderWidth: 1, borderColor: palette.primary, borderRadius: 8 }}>
@@ -838,7 +800,11 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                             ✅ 已設定（{new Date(editingProfile.fullWaterCalibration.calibratedAt).toLocaleDateString('zh-TW')}）
                                                         </Text>
                                                     </View>
-                                                    <Pressable onPress={() => setShowFullWaterCalibration(true)} style={{ padding: 6, backgroundColor: palette.primary, borderRadius: 6 }}>
+                                                    <Pressable
+                                                        onPress={() => setShowFullWaterCalibration(true)}
+                                                        hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                                                        style={{ padding: 10, minHeight: 44, justifyContent: 'center', backgroundColor: palette.primary, borderRadius: 6 }}
+                                                    >
                                                         <Text style={{ fontSize: 11, color: palette.onPrimary, fontWeight: '600' }}>重新設定</Text>
                                                     </Pressable>
                                                 </View>
@@ -863,7 +829,8 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                             }
                                                             setShowFullWaterCalibration(true);
                                                         }}
-                                                        style={{ padding: 6, backgroundColor: '#f59e0b', borderRadius: 6 }}
+                                                        hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                                                        style={{ padding: 10, minHeight: 44, justifyContent: 'center', backgroundColor: '#f59e0b', borderRadius: 6 }}
                                                     >
                                                         <Text style={{ fontSize: 11, color: '#fff', fontWeight: '600' }}>開始設定</Text>
                                                     </Pressable>
@@ -1213,7 +1180,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
 
                                     {/* 滿量基準（已知容量／飲水機時的水碗用） */}
                                     {vesselType === 'hydration' && (
-                                        <View style={styles.formGroup}>
+                                        <View style={styles.formGroup} pointerEvents="box-none">
                                             <Text style={styles.formLabel}>滿量基準</Text>
                                             {editingProfile?.fullWaterCalibration ? (
                                                 <View style={{ padding: 12, backgroundColor: palette.surfaceSoft, borderWidth: 1, borderColor: palette.primary, borderRadius: 8 }}>
@@ -1224,7 +1191,11 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                 ✅ 已設定（{new Date(editingProfile.fullWaterCalibration.calibratedAt).toLocaleDateString('zh-TW')}）
                                                             </Text>
                                                         </View>
-                                                        <Pressable onPress={() => setShowFullWaterCalibration(true)} style={{ padding: 6, backgroundColor: palette.primary, borderRadius: 6 }}>
+                                                        <Pressable
+                                                            onPress={() => setShowFullWaterCalibration(true)}
+                                                            hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                                                            style={{ padding: 10, minHeight: 44, justifyContent: 'center', backgroundColor: palette.primary, borderRadius: 6 }}
+                                                        >
                                                             <Text style={{ fontSize: 11, color: palette.onPrimary, fontWeight: '600' }}>重新設定</Text>
                                                         </Pressable>
                                                     </View>
@@ -1257,7 +1228,8 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                 setKnownVolumeMl(String(vol));
                                                                 setShowFullWaterCalibration(true);
                                                             }}
-                                                            style={{ padding: 6, backgroundColor: '#f59e0b', borderRadius: 6 }}
+                                                            hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                                                            style={{ padding: 10, minHeight: 44, justifyContent: 'center', backgroundColor: '#f59e0b', borderRadius: 6 }}
                                                         >
                                                             <Text style={{ fontSize: 11, color: '#fff', fontWeight: '600' }}>開始設定</Text>
                                                         </Pressable>
@@ -1430,7 +1402,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
 
                             {/* 水碗模式：滿量基準（與已知容量共用同一邏輯，設定後才能記錄飲水） */}
                             {vesselType === 'hydration' && hydrationContainerMode === 'bowl' && (
-                                <View style={styles.formGroup}>
+                                <View style={styles.formGroup} pointerEvents="box-none">
                                     <Text style={styles.formLabel}>滿量基準</Text>
                                     {editingProfile?.fullWaterCalibration ? (
                                         <View style={{ padding: 12, backgroundColor: palette.surfaceSoft, borderWidth: 1, borderColor: palette.primary, borderRadius: 8 }}>
@@ -1439,7 +1411,11 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                     <AppIcon name="check-circle" size={18} color={palette.primary} style={{ marginRight: 6 }} />
                                                     <Text style={{ fontSize: 12, fontWeight: '700', color: palette.text }}>✅ 已設定（{new Date(editingProfile.fullWaterCalibration.calibratedAt).toLocaleDateString('zh-TW')}）</Text>
                                                 </View>
-                                                <Pressable onPress={() => setShowFullWaterCalibration(true)} style={{ padding: 6, backgroundColor: palette.primary, borderRadius: 6 }}>
+                                                <Pressable
+                                                    onPress={() => setShowFullWaterCalibration(true)}
+                                                    hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                                                    style={{ padding: 10, minHeight: 44, justifyContent: 'center', backgroundColor: palette.primary, borderRadius: 6 }}
+                                                >
                                                     <Text style={{ fontSize: 11, color: palette.onPrimary, fontWeight: '600' }}>重新設定</Text>
                                                 </Pressable>
                                             </View>
@@ -1465,7 +1441,8 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                         setKnownVolumeMl(String(vol));
                                                         setShowFullWaterCalibration(true);
                                                     }}
-                                                    style={{ padding: 6, backgroundColor: '#f59e0b', borderRadius: 6 }}
+                                                    hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                                                    style={{ padding: 10, minHeight: 44, justifyContent: 'center', backgroundColor: '#f59e0b', borderRadius: 6 }}
                                                 >
                                                     <Text style={{ fontSize: 11, color: '#fff', fontWeight: '600' }}>開始設定</Text>
                                                 </Pressable>

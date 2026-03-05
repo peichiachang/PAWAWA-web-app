@@ -331,9 +331,14 @@ export function RecordsContent({
       </View>
 
       <View style={{ marginTop: 32, borderWidth: 2, borderColor: '#000', padding: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-          <AppIcon name="history" size={20} color="#000" style={{ marginRight: 8 }} />
-          <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>完整紀錄</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <AppIcon name="history" size={20} color="#000" style={{ marginRight: 8 }} />
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>完整紀錄</Text>
+          </View>
+          <Pressable style={{ paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: '#3b82f6', borderRadius: 8 }} onPress={() => onOpenModal('feedingLateEntry')}>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#1e40af' }}>＋ 補填記錄</Text>
+          </Pressable>
         </View>
 
         {filterRow('範圍', scopeLabel, () => setFilterSheet('scope'))}

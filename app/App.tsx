@@ -61,6 +61,8 @@ function AppMain() {
   const [vesselCalibrationVisible, setVesselCalibrationVisible] = useState(false);
   /** 待補填：從紀錄頁點「去填寫」時帶入要完成 T1 的食碗 ID */
   const [completeT1VesselId, setCompleteT1VesselId] = useState<string | null>(null);
+  /** 要編輯的貓咪（個人 tab 點擊家庭成員時帶入；未設時編輯 modal 用 currentCat） */
+  const [selectedCatForEdit, setSelectedCatForEdit] = useState<CatIdentity | null>(null);
 
   // 共享的 vessels hook（用於 VesselCalibrationModal）
   const sharedVessels = useVessels();
@@ -209,8 +211,15 @@ function AppMain() {
     setActiveModal(modal);
   }
 
+  /** 開啟編輯貓咪檔案：可傳入要編輯的貓（個人 tab 點擊時）；不傳則編輯目前看板貓 currentCat */
+  function openEditCat(cat?: CatIdentity) {
+    setSelectedCatForEdit(cat ?? currentCat ?? null);
+    setActiveModal('editCat');
+  }
+
   function closeModal() {
     if (activeModal === 'feeding' || activeModal === 'feedingLateEntry') setCompleteT1VesselId(null);
+    if (activeModal === 'addCat' || activeModal === 'editCat') setSelectedCatForEdit(null);
     setActiveModal(null);
   }
 
@@ -338,7 +347,7 @@ function AppMain() {
               medicationHistory={medication.logs}
               symptomHistory={symptoms.logs}
               vesselProfiles={sharedVessels.vesselProfiles}
-              onEditCat={() => openModal('editCat')}
+              onEditCat={() => openEditCat()}
               onRecordPress={(record) => { setSelectedRecord(record); openModal('recordDetail'); }}
             />
           )}
@@ -361,6 +370,7 @@ function AppMain() {
             <ProfileContent
               cats={indexedCats}
               onOpenModal={openModal}
+              onEditCat={openEditCat}
               onOpenVesselCalibration={handleOpenVesselCalibration}
             />
           )}
@@ -454,7 +464,7 @@ function AppMain() {
         visible={activeModal === 'addCat' || activeModal === 'editCat'}
         onClose={closeModal}
         onSave={handleSaveCat}
-        initialData={activeModal === 'editCat' ? currentCat : null}
+        initialData={activeModal === 'editCat' ? (selectedCatForEdit ?? currentCat) : null}
         mode={activeModal === 'editCat' ? 'edit' : 'add'}
       />
       <MedicationModal

@@ -1,0 +1,21 @@
+---
+description: 從 .pen 設計稿實作時，必須先用 Pencil MCP 讀取設計再寫程式
+globs: "**/*.{tsx,jsx,ts,js,css,*.pen}"
+alwaysApply: false
+---
+
+# 從 .pen 設計稿實作 UI 的流程
+
+當使用者要求「依照 .pen 設計稿實作」、「照設計稿寫」、或提到某個 .pen 檔案時：
+
+1. **務必先用 Pencil MCP 讀取設計**：.pen 檔案內容為加密，無法用一般讀檔取得。必須透過 MCP 工具：
+   - `get_editor_state()`：取得目前編輯器中的 .pen 與選取範圍
+   - `open_document(filePath)`：若需開啟特定 .pen 檔
+   - `batch_get(patterns, nodeIds)`：依節點或樣式取得設計結構與屬性
+   - `snapshot_layout`：取得版面矩形，方便對應到程式版面
+
+2. **再依讀到的結構與樣式寫程式**：根據節點樹、尺寸、顏色、文字等，在對應的 React/TSX 或樣式檔中實作，並註明對應的設計節點或畫面區塊。
+
+3. **若使用者說「Cursor 沒照設計做」**：先確認是否已用上述 MCP 工具讀取過該 .pen；若沒有，先執行讀取再重新實作。
+
+不要假設 .pen 的內容或跳過讀取步驟；未經 MCP 讀取就實作會與設計稿不一致。

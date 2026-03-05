@@ -8,10 +8,12 @@ import { AppIcon } from './AppIcon';
 interface Props {
     cats: CatIdentity[];
     onOpenModal: (modal: ActiveModal) => void;
+    /** 點擊家庭成員時開啟該貓咪的編輯檔案 */
+    onEditCat?: (cat: CatIdentity) => void;
     onOpenVesselCalibration?: () => void;
 }
 
-export function ProfileContent({ cats, onOpenModal, onOpenVesselCalibration }: Props) {
+export function ProfileContent({ cats, onOpenModal, onEditCat, onOpenVesselCalibration }: Props) {
     return (
         <ScrollView>
             {/* Header with System Button */}
@@ -46,11 +48,27 @@ export function ProfileContent({ cats, onOpenModal, onOpenVesselCalibration }: P
 
                     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                         {cats.map(cat => (
-                            <View key={cat.id} style={{ width: '48%', padding: 12, borderWidth: 1, borderColor: '#000', alignItems: 'center', marginBottom: 8 }}>
+                            <Pressable
+                                key={cat.id}
+                                onPress={() => onEditCat?.(cat)}
+                                style={({ pressed }) => ({
+                                    width: '48%',
+                                    padding: 12,
+                                    borderWidth: 1,
+                                    borderColor: '#000',
+                                    alignItems: 'center',
+                                    marginBottom: 8,
+                                    backgroundColor: pressed ? '#f0f0f0' : '#fff',
+                                    borderRadius: 8,
+                                })}
+                            >
                                 <AppIcon name="pets" size={24} color="#000" style={{ marginBottom: 4 }} />
                                 <Text style={{ fontSize: 13, fontWeight: '700' }}>{cat.name}</Text>
                                 <Text style={{ fontSize: 11, color: '#666' }}>{cat.currentWeightKg}kg • {cat.gender === 'male' ? '公' : '母'}</Text>
-                            </View>
+                                {onEditCat && (
+                                    <Text style={{ fontSize: 10, color: '#666', marginTop: 4 }}>點擊可編輯檔案</Text>
+                                )}
+                            </Pressable>
                         ))}
                         {cats.length < 5 && (
                             <Pressable
