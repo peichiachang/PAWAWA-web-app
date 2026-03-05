@@ -234,6 +234,8 @@ export function HomeContent({
         hasRecord: dayLogs.length > 0,
       };
     });
+    const kcalRecordsComplete = kcalData.filter(d => d.hasRecord).length;
+    const waterRecordsComplete = waterData.filter(d => d.hasRecord).length;
     const appetiteRecordsComplete = appetiteData.filter(d => d.hasRecord).length;
 
     return { kcalData, waterData, appetiteData, kcalRecordsComplete, waterRecordsComplete, appetiteRecordsComplete };

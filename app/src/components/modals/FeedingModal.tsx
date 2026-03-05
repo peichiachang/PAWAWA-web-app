@@ -84,8 +84,6 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
 
   // 食物記錄只顯示「食碗」
   const feedingVessels = vesselProfiles.filter(p => (p.vesselType || 'feeding') === 'feeding');
-  /** 待補填進入時直接視為已選乾糧一次給一天，避免先顯示食物類型選擇 */
-  const effectiveSessionFoodSource = (initialMode === 'complete_t1' && initialVesselIdForT1) ? 'dry_once' as const : sessionFoodSource;
 
   /** 自動餵食器流程（T0 設定 + T1 攝取記錄），從主 JSX 抽出以降低巢狀複雜度 */
   const renderAutoFeederFlow = () => {
@@ -221,6 +219,8 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
   const [capturePhase, setCapturePhase] = useState<'t0' | 't1' | 'nutrition' | null>(null);
   const [manualBoundaryLevel, setManualBoundaryLevel] = useState<ConsumptionLevel | null>(null);
   const [sessionFoodSource, setSessionFoodSource] = useState<FoodSourceType | null>(null);
+  /** 待補填進入時直接視為已選乾糧一次給一天，避免先顯示食物類型選擇 */
+  const effectiveSessionFoodSource = (initialMode === 'complete_t1' && initialVesselIdForT1) ? 'dry_once' as const : sessionFoodSource;
   const [selectedIntakeLevel, setSelectedIntakeLevel] = useState<IntakeLevel | null>(null);
   const [autoFeederDailyGram, setAutoFeederDailyGram] = useState('');
   const [intakeOnlyTagId, setIntakeOnlyTagId] = useState<string | null>(null);

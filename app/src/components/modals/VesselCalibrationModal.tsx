@@ -1619,7 +1619,6 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                 </View>
             </SafeAreaView>
         </Modal>
-        )}
         
         {/* 滿量基準校準 Modal（水碗用 ml、自動餵食器用 g 顯示） */}
         {showFullWaterCalibration && (
