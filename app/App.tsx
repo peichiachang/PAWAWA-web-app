@@ -37,6 +37,9 @@ import { GlobalCameraProvider, useGlobalCamera } from './src/components/GlobalCa
 import { styles } from './src/styles/common';
 import { VesselCalibrationModal } from './src/components/modals/VesselCalibrationModal';
 import { WeightRecordModal } from './src/components/modals/WeightRecordModal';
+import { CanLibraryModal } from './src/components/modals/CanLibraryModal';
+import { FeedLibraryModal } from './src/components/modals/FeedLibraryModal';
+import { scanCanLabel } from './src/services/canLabelScanApi';
 import { useVessels } from './src/hooks/useVessels';
 import { useRecordReminders } from './src/hooks/useRecordReminders';
 
@@ -56,7 +59,9 @@ function AppMain() {
   const [selectedBloodReport, setSelectedBloodReport] = useState<BloodReportRecord | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<DetailRecord | null>(null);
   const [vesselCalibrationVisible, setVesselCalibrationVisible] = useState(false);
-  
+  /** 待補填：從紀錄頁點「去填寫」時帶入要完成 T1 的食碗 ID */
+  const [completeT1VesselId, setCompleteT1VesselId] = useState<string | null>(null);
+
   // 共享的 vessels hook（用於 VesselCalibrationModal）
   const sharedVessels = useVessels();
   
@@ -71,6 +76,7 @@ function AppMain() {
   const [feedingLogs, setFeedingLogs] = useState<FeedingLog[]>([]);
 
   const feeding = useFeeding(ai, launchCamera, sharedVessels, cats);
+  const pendingT1VesselIds = useMemo(() => feeding.getPendingT1VesselIds(), [feeding]);
   const hydration = useHydration(ai, launchCamera, sharedVessels, cats);
   const elimination = useElimination(ai, launchCamera);
   const medication = useMedication();
@@ -204,6 +210,7 @@ function AppMain() {
   }
 
   function closeModal() {
+    if (activeModal === 'feeding' || activeModal === 'feedingLateEntry') setCompleteT1VesselId(null);
     setActiveModal(null);
   }
 
@@ -345,6 +352,8 @@ function AppMain() {
               symptomHistory={symptoms.logs}
               cats={indexedCats}
               onRecordPress={(record) => { setSelectedRecord(record); openModal('recordDetail'); }}
+              pendingT1Count={pendingT1VesselIds.length}
+              onOpenPendingT1={pendingT1VesselIds.length > 0 ? () => { setCompleteT1VesselId(pendingT1VesselIds[0]); openModal('feeding'); } : undefined}
             />
           )}
           {bottomTab === 'knowledge' && <KnowledgeContent />}
@@ -361,11 +370,13 @@ function AppMain() {
       <StatusBar style="dark" />
 
       {/* 調整：即使相機開啟也保留這些 Modal 在背景，由 GlobalCameraProvider 的相機視圖疊在最上層 */}
-      <FeedingModal 
-        visible={activeModal === 'feeding'} 
-        feeding={feeding} 
-              cats={indexedCats}
+      <FeedingModal
+        visible={activeModal === 'feeding' || activeModal === 'feedingLateEntry'}
+        feeding={feeding}
+        cats={indexedCats}
         onClose={closeModal}
+        initialMode={completeT1VesselId ? 'complete_t1' : activeModal === 'feedingLateEntry' ? 'late_entry' : 'normal'}
+        initialVesselIdForT1={completeT1VesselId ?? undefined}
       />
       <HydrationModal 
         visible={activeModal === 'water'} 
@@ -470,6 +481,22 @@ function AppMain() {
         vitalsLogs={vitalsLogs}
         onClose={closeModal}
         onSave={handleSaveWeightRecord}
+      />
+      <CanLibraryModal
+        visible={activeModal === 'canLibrary'}
+        canLibrary={feeding.canLibrary}
+        onAdd={(item) => { feeding.addCanLibraryItem(item); }}
+        onRemove={feeding.removeCanLibraryItem}
+        onClose={closeModal}
+        launchCamera={launchCamera}
+        scanCanLabel={scanCanLabel}
+      />
+      <FeedLibraryModal
+        visible={activeModal === 'feedLibrary'}
+        feedLibrary={feeding.feedLibrary}
+        onAdd={(item) => { feeding.addFeedLibraryItem(item); }}
+        onRemove={feeding.removeFeedLibraryItem}
+        onClose={closeModal}
       />
       <VesselCalibrationModal
         visible={vesselCalibrationVisible}

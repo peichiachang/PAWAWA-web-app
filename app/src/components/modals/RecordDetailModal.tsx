@@ -1,5 +1,5 @@
 import { Modal, Pressable, SafeAreaView, ScrollView, Text, View } from 'react-native';
-import { FeedingOwnershipLog, HydrationOwnershipLog } from '../../types/app';
+import { FeedingOwnershipLog, HydrationOwnershipLog, INTAKE_LEVEL_LABEL } from '../../types/app';
 import { EliminationOwnershipLog } from '../../hooks/useElimination';
 import { CatIdentity, MedicationLog, SymptomLog } from '../../types/domain';
 import { styles } from '../../styles/common';
@@ -48,12 +48,21 @@ export function RecordDetailModal({ visible, record, cats, onClose }: Props) {
       const l = record as FeedingOwnershipLog & { _type: 'feeding' };
       return (
         <>
+          {l.isLateEntry && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}>
+              <Text style={{ fontSize: 12, color: '#666', flex: 1 }}>類型</Text>
+              <View style={{ paddingHorizontal: 8, paddingVertical: 4, backgroundColor: '#fef3c7', borderRadius: 4 }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#92400e' }}>補填記錄</Text>
+              </View>
+            </View>
+          )}
           <Row label="日期" value={dateStr} />
           <Row label="時間" value={timeStr} />
-          <Row label="貓咪" value={getCatName(l.selectedTagId)} />
-          <Row label="提供克數" value={`${l.totalGram} g`} />
+          <Row label="歸屬" value={getCatName(l.selectedTagId)} />
+          {l.intakeLevel != null && <Row label="攝取程度" value={INTAKE_LEVEL_LABEL[l.intakeLevel]} />}
+          <Row label={l.intakeLevel != null ? '預估攝取' : '提供克數'} value={`${l.totalGram} g`} />
           <Row label="熱量" value={`${Math.round(l.kcal ?? l.totalGram * 3.5)} kcal`} />
-          <Row label="記錄模式" value={l.mode === 'precise' ? '精確模式' : '標準模式'} />
+          {l.mode && <Row label="記錄模式" value={l.mode === 'precise' ? '精確模式' : '標準模式'} />}
           {l.note && (
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}>
               <Text style={{ fontSize: 12, color: '#666', flex: 1 }}>備註</Text>
@@ -129,7 +138,7 @@ export function RecordDetailModal({ visible, record, cats, onClose }: Props) {
   };
 
   const iconNames: Record<string, string> = { feeding: 'restaurant', hydration: 'opacity', elimination: 'sanitizer', medication: 'medication', symptom: 'healing' };
-  const titles: Record<string, string> = { feeding: '飲食記錄', hydration: '飲水記錄', elimination: '排泄記錄', medication: '投藥記錄', symptom: '異常症狀記錄' };
+  const titles: Record<string, string> = { feeding: '食物記錄', hydration: '飲水記錄', elimination: '排泄記錄', medication: '投藥記錄', symptom: '異常症狀記錄' };
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">

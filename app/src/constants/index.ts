@@ -17,6 +17,10 @@ export const MEDICATION_HISTORY_KEY = 'carecat:medication_v1';
 export const SYMPTOM_HISTORY_KEY = 'carecat:symptom_v1';
 export const VESSEL_PROFILES_KEY = 'carecat:vessel_profiles_v1';
 export const FOOD_NUTRITION_KEY = 'carecat:food:nutrition';
+/** 罐頭庫（掃描後儲存，重複使用） */
+export const CAN_LIBRARY_KEY = 'carecat:can_library_v1';
+/** 飼料／成份表庫（掃描一次永久儲存，記錄時可選） */
+export const FEEDING_FOOD_LIBRARY_KEY = 'carecat:feeding:food_library_v1';
 
 export const FEEDING_TAG_OPTIONS = [
   { id: 'A', label: 'Tag A' },

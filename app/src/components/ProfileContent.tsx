@@ -81,6 +81,32 @@ export function ProfileContent({ cats, onOpenModal, onOpenVesselCalibration }: P
                     </View>
                 )}
 
+                {/* 罐頭庫／飼料設定 */}
+                <View style={{ marginBottom: 16 }}>
+                    <Pressable
+                        onPress={() => onOpenModal('canLibrary')}
+                        style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderWidth: 2, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff', marginBottom: 8 }}
+                    >
+                        <AppIcon name="list" size={24} color="#000" style={{ marginRight: 12 }} />
+                        <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 15, fontWeight: '700' }}>罐頭庫</Text>
+                            <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>管理罐頭清單，記錄時直接選取</Text>
+                        </View>
+                        <AppIcon name="chevron-right" size={20} color="#666" />
+                    </Pressable>
+                    <Pressable
+                        onPress={() => onOpenModal('feedLibrary')}
+                        style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderWidth: 2, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff' }}
+                    >
+                        <AppIcon name="restaurant" size={24} color="#000" style={{ marginRight: 12 }} />
+                        <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 15, fontWeight: '700' }}>飼料設定</Text>
+                            <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>儲存飼料成份熱量，記錄時帶入</Text>
+                        </View>
+                        <AppIcon name="chevron-right" size={20} color="#666" />
+                    </Pressable>
+                </View>
+
                 {/* Quick Actions */}
                 <Text style={styles.sectionTitle}>快捷功能</Text>
                 <View style={styles.actionGrid}>

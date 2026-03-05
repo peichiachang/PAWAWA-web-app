@@ -334,6 +334,9 @@ export function HydrationModal({ visible, hydration, cats, onClose }: Props) {
                             實際飲水量：{result.actualIntakeMl} ml
                           </Text>
                         </View>
+                        {(vessels.currentVessel?.calibrationMethod === 'dimensions' || vessels.currentVessel?.calibrationMethod === 'side_profile') && (
+                          <Text style={{ fontSize: 11, color: palette.muted, fontStyle: 'italic', marginTop: 8 }}>僅供參考（此容器為測量尺寸／側面輪廓推估，非滿量基準校準）</Text>
+                        )}
 
                         {/* Data Attribution */}
                         <View style={{ marginTop: 20 }}>

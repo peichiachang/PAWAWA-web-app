@@ -56,7 +56,7 @@ export function SettingsModal({ visible, cats, onClose, onSwitchDevDataMode }: P
                       if (currentMode === 'mock') return;
                       Alert.alert(
                         '切換至假資料',
-                        '將寫入約 90+ 筆飲食、60+ 筆飲水、50 筆排泄、40 筆投藥紀錄，以及 3 隻貓咪與體重紀錄。現有資料會被覆蓋。',
+                        '將寫入約 90+ 筆食物、60+ 筆飲水、50 筆排泄、40 筆投藥紀錄，以及 3 隻貓咪與體重紀錄。現有資料會被覆蓋。',
                         [
                           { text: '取消', style: 'cancel' },
                           {
@@ -88,7 +88,7 @@ export function SettingsModal({ visible, cats, onClose, onSwitchDevDataMode }: P
                       if (currentMode === 'empty') return;
                       Alert.alert(
                         '切換至空狀態',
-                        '將清除所有飲食、飲水、排泄、投藥、貓咪與體重紀錄。此操作無法復原。',
+                        '將清除所有食物、飲水、排泄、投藥、貓咪與體重紀錄。此操作無法復原。',
                         [
                           { text: '取消', style: 'cancel' },
                           {

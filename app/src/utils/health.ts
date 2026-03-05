@@ -129,3 +129,21 @@ export function calculateTotalWaterIntakeMl(
 ): number {
   return pureWaterMl + wetFoodAddedWaterMl * bowlFoodRatio;
 }
+
+/** 低胃口提醒：連續 2 天都有「幾乎沒吃」或「吃了一些」的記錄時回傳 true */
+export function checkLowAppetiteAlert(logs: Array<{ createdAt: number; intakeLevel?: string | null }>): boolean {
+  const lowLevels = ['almost_none', 'some'];
+  const dayMs = 24 * 60 * 60 * 1000;
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+  const yesterday = new Date(now.getTime() - dayMs);
+  const yesterdayKey = `${yesterday.getFullYear()}-${yesterday.getMonth()}-${yesterday.getDate()}`;
+  const daysWithLow = new Set<string>();
+  logs.forEach(log => {
+    if (!log.intakeLevel || !lowLevels.includes(log.intakeLevel)) return;
+    const d = new Date(log.createdAt);
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    if (key === todayKey || key === yesterdayKey) daysWithLow.add(key);
+  });
+  return daysWithLow.has(todayKey) && daysWithLow.has(yesterdayKey);
+}

@@ -1,11 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ActiveModal, Level, FeedingOwnershipLog, HydrationOwnershipLog, VesselCalibration } from '../types/app';
+import { ActiveModal, Level, FeedingOwnershipLog, HydrationOwnershipLog, VesselCalibration, INTAKE_LEVEL_RATIO } from '../types/app';
 import { EliminationOwnershipLog } from '../hooks/useElimination';
 import { CatIdentity, ClinicalSummary, MedicationLog, SymptomLog } from '../types/domain';
 import { styles } from '../styles/common';
-import { calculateAdaptiveDailyWaterGoal, calculateDailyKcalGoal, calculateDailyWaterGoalRange } from '../utils/health';
+import { calculateAdaptiveDailyWaterGoal, calculateDailyKcalGoal, calculateDailyWaterGoalRange, checkLowAppetiteAlert } from '../utils/health';
 import { TrendChart } from './TrendChart';
 import { DetailRecord } from './modals/RecordDetailModal';
 import { AppIcon } from './AppIcon';
@@ -220,12 +220,31 @@ export function HomeContent({
       };
     });
 
-    // 計算記錄完整性
-    const kcalRecordsComplete = kcalData.filter(d => d.hasRecord).length;
-    const waterRecordsComplete = waterData.filter(d => d.hasRecord).length;
+    // 胃口趨勢：僅納入有 intakeLevel 的記錄（有 T1／攝取程度），每日平均攝取程度 0–100%
+    const appetiteData = days.map(day => {
+      const dayLogs = filteredFeedings.filter(
+        log => log.intakeLevel != null && new Date(log.createdAt).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) === day
+      );
+      const avgRatio = dayLogs.length > 0
+        ? dayLogs.reduce((sum, log) => sum + INTAKE_LEVEL_RATIO[log.intakeLevel!], 0) / dayLogs.length
+        : 0;
+      return {
+        label: day,
+        value: Math.round(avgRatio * 100),
+        hasRecord: dayLogs.length > 0,
+      };
+    });
+    const appetiteRecordsComplete = appetiteData.filter(d => d.hasRecord).length;
 
-    return { kcalData, waterData, kcalRecordsComplete, waterRecordsComplete };
+    return { kcalData, waterData, appetiteData, kcalRecordsComplete, waterRecordsComplete, appetiteRecordsComplete };
   }, [feedingHistory, hydrationHistory, level, vesselProfiles, householdDivisor]);
+
+  const showLowAppetiteBanner = useMemo(() => {
+    const filtered = level === 'household'
+      ? feedingHistory
+      : feedingHistory.filter(l => matchesCatSeries(l.selectedTagId, level));
+    return checkLowAppetiteAlert(filtered);
+  }, [feedingHistory, level]);
 
   const recentRecords = useMemo(() => {
     const allFeedings = feedingHistory.filter(f => level === 'household' ? (f.ownershipType === 'household_only' || f.selectedTagId === 'household') : matchesCatSeries(f.selectedTagId, level));
@@ -308,7 +327,7 @@ export function HomeContent({
                   : 'healing';
           if (record._type === 'feeding') {
             const l = record as FeedingOwnershipLog;
-            title = `飲食記錄${l.selectedTagId ? ` - ${getCatName(l.selectedTagId)}` : ''}`;
+            title = `食物記錄${l.selectedTagId ? ` · ${getCatName(l.selectedTagId)}` : ''}`;
             dataStr = `提供熱量：${Math.round(l.totalGram * 3)} kcal (${l.totalGram}g)`;
             descStr = l.note ? `${l.mode === 'precise' ? '進階' : '標準'} • ${l.note.length > 20 ? l.note.slice(0, 20) + '…' : l.note}` : `使用模式：${l.mode === 'precise' ? '進階' : '標準'}`;
           } else if (record._type === 'hydration') {
@@ -438,6 +457,12 @@ export function HomeContent({
         </View>
 
         {renderAlerts(Object.values(summaryByCatId).flatMap(s => s.alerts))}
+        {showLowAppetiteBanner && (
+          <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#fef3c7', borderWidth: 2, borderColor: '#f59e0b', borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
+            <AppIcon name="warning" size={22} color="#92400e" style={{ marginRight: 10 }} />
+            <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#92400e' }}>貓咪最近胃口偏低，建議觀察或就醫</Text>
+          </View>
+        )}
 
         <View style={styles.section}>
 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
@@ -460,6 +485,19 @@ export function HomeContent({
           color="#3b82f6"
           recordsComplete={chartData.waterRecordsComplete}
         />
+        <TrendChart
+          title="胃口趨勢（攝取程度）"
+          data={chartData.appetiteData}
+          goal={100}
+          unit="%"
+          color="#166534"
+          recordsComplete={chartData.appetiteRecordsComplete}
+        />
+        {chartData.appetiteRecordsComplete < 4 && (
+          <View style={{ marginTop: -8, marginBottom: 16, padding: 10, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 4 }}>
+            <Text style={{ fontSize: 11, color: '#92400e', textAlign: 'center' }}>近期記錄不完整，趨勢僅供參考</Text>
+          </View>
+        )}
         </View>
 
         {renderRecentRecords()}
@@ -626,6 +664,12 @@ export function HomeContent({
       </View>
 
       {currentSummary?.alerts && renderAlerts(currentSummary.alerts)}
+      {showLowAppetiteBanner && (
+        <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#fef3c7', borderWidth: 2, borderColor: '#f59e0b', borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
+          <AppIcon name="warning" size={22} color="#92400e" style={{ marginRight: 10 }} />
+          <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#92400e' }}>貓咪最近胃口偏低，建議觀察或就醫</Text>
+        </View>
+      )}
 
       <View style={styles.section}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
@@ -648,21 +692,34 @@ export function HomeContent({
           color="#3b82f6"
           recordsComplete={chartData.waterRecordsComplete}
         />
+        <TrendChart
+          title="胃口趨勢（攝取程度）"
+          data={chartData.appetiteData}
+          goal={100}
+          unit="%"
+          color="#166534"
+          recordsComplete={chartData.appetiteRecordsComplete}
+        />
+        {chartData.appetiteRecordsComplete < 4 && (
+          <View style={{ marginTop: -8, marginBottom: 16, padding: 10, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 4 }}>
+            <Text style={{ fontSize: 11, color: '#92400e', textAlign: 'center' }}>近期記錄不完整，趨勢僅供參考</Text>
+          </View>
+        )}
       </View>
 
       <View style={[styles.section, { maxWidth: 320, alignSelf: 'center', width: '100%' }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
           <AppIcon name="restaurant" size={18} color="#000" style={{ marginRight: 6 }} />
-          <Text style={styles.sectionTitle}>飲食記錄</Text>
+          <Text style={styles.sectionTitle}>食物記錄</Text>
         </View>
         {recordLists.feedings.length === 0 ? (
-          <Text style={{ fontSize: 13, color: '#666' }}>尚無飲食紀錄</Text>
+          <Text style={{ fontSize: 13, color: '#666' }}>尚無食物紀錄</Text>
         ) : (
           recordLists.feedings.map((l) => (
             <Pressable key={l.id} style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'feeding' })}>
               <View style={styles.recordHeader}>
                 <AppIcon name="restaurant" size={16} color="#000" style={{ marginRight: 6 }} />
-                <Text style={[styles.recordTitle, { flex: 1 }]}>飲食記錄</Text>
+                <Text style={[styles.recordTitle, { flex: 1 }]}>食物記錄</Text>
                 <Text style={styles.recordTime}>{new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
               </View>
               <Text style={styles.recordData}>{l.note || '飼料'} - {l.totalGram}g</Text>

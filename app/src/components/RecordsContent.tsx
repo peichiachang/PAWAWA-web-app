@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
-import { ActiveModal, FeedingOwnershipLog, HydrationOwnershipLog } from '../types/app';
+import { ActiveModal, FeedingOwnershipLog, HydrationOwnershipLog, INTAKE_LEVEL_LABEL } from '../types/app';
 import { EliminationOwnershipLog } from '../hooks/useElimination';
 import { CatIdentity, MedicationLog, SymptomLog } from '../types/domain';
 import { styles } from '../styles/common';
 import { DetailRecord } from './modals/RecordDetailModal';
 import { AppIcon } from './AppIcon';
 import { extractCatSeries, getCatNameBySeries, getScopedCats, matchesCatSeries } from '../utils/catScope';
+import { checkLowAppetiteAlert } from '../utils/health';
 
 type RecordScope = 'household' | string;
 type RecordTypeFilter = 'all' | 'feeding' | 'hydration' | 'elimination' | 'medication' | 'symptom';
@@ -21,6 +22,10 @@ interface Props {
   symptomHistory: SymptomLog[];
   cats: CatIdentity[];
   onRecordPress?: (record: DetailRecord) => void;
+  /** 有 T0 尚未填 T1 的筆數（待補填）；若 > 0 顯示提示與入口 */
+  pendingT1Count?: number;
+  /** 點擊「去填寫」時呼叫，由 App 開啟食物記錄並聚焦該食碗的 T1 步驟 */
+  onOpenPendingT1?: () => void;
 }
 
 function getCatName(cats: CatIdentity[], id: string | null): string {
@@ -36,11 +41,20 @@ export function RecordsContent({
   symptomHistory,
   cats,
   onRecordPress,
+  pendingT1Count = 0,
+  onOpenPendingT1,
 }: Props) {
   const [scope, setScope] = useState<RecordScope>('household');
   const [typeFilter, setTypeFilter] = useState<RecordTypeFilter>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [filterSheet, setFilterSheet] = useState<'scope' | 'type' | 'date' | null>(null);
+
+  const showLowAppetiteBanner = useMemo(() => {
+    const filtered = scope === 'household'
+      ? feedingHistory.filter(f => f.ownershipType === 'household_only')
+      : feedingHistory.filter(f => matchesCatSeries(f.selectedTagId, scope));
+    return checkLowAppetiteAlert(filtered);
+  }, [feedingHistory, scope]);
 
   const filteredRecords = useMemo(() => {
     const now = Date.now();
@@ -135,9 +149,9 @@ export function RecordsContent({
 
     if (record._type === 'feeding') {
       const l = record as FeedingOwnershipLog & { _type: 'feeding' };
-      title = `飲食記錄${l.selectedTagId ? ` - ${getCatName(cats, l.selectedTagId)}` : ''}`;
-      dataStr = `${l.note || '飼料'} - ${l.totalGram}g`;
-      descStr = `${Math.round(l.kcal ?? l.totalGram * 3)} kcal` + (l.note ? ` • ${l.note}` : '');
+      title = `食物記錄${l.selectedTagId ? ` · ${getCatName(cats, l.selectedTagId)}` : ''}${l.isLateEntry ? ' · 補填' : ''}`;
+      dataStr = l.intakeLevel != null ? `${INTAKE_LEVEL_LABEL[l.intakeLevel]} · ${l.totalGram}g` : `${l.note || '飼料'} · ${l.totalGram}g`;
+      descStr = `${Math.round(l.kcal ?? l.totalGram * 3.5)} kcal` + (l.intakeLevel != null ? ` · ${INTAKE_LEVEL_LABEL[l.intakeLevel]}` : '') + (l.isLateEntry ? ' · 補填' : '') + (l.note ? ` • ${l.note}` : '');
     } else if (record._type === 'hydration') {
       const l = record as HydrationOwnershipLog & { _type: 'hydration' };
       const ml = Math.round(l.actualWaterMl ?? l.totalMl);
@@ -181,7 +195,7 @@ export function RecordsContent({
   };
 
   const scopeLabel = scope === 'household' ? '家庭' : getCatName(cats, scope);
-  const typeLabels: Record<RecordTypeFilter, string> = { all: '全部', feeding: '飲食記錄', hydration: '飲水紀錄', elimination: '排泄紀錄', medication: '用藥紀錄', symptom: '異常症狀' };
+  const typeLabels: Record<RecordTypeFilter, string> = { all: '全部', feeding: '食物記錄', hydration: '飲水紀錄', elimination: '排泄紀錄', medication: '用藥紀錄', symptom: '異常症狀' };
   const dateLabels: Record<DateFilter, string> = { all: '全部', '7d': '最近 7 天', '30d': '最近 30 天' };
 
   const sheetOptionStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, paddingVertical: 14, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#eee' };
@@ -209,7 +223,7 @@ export function RecordsContent({
     if (filterSheet === 'type') {
       const opts: { value: RecordTypeFilter; label: string }[] = [
         { value: 'all', label: '全部' },
-        { value: 'feeding', label: '飲食記錄' },
+        { value: 'feeding', label: '食物記錄' },
         { value: 'hydration', label: '飲水紀錄' },
         { value: 'elimination', label: '排泄紀錄' },
         { value: 'medication', label: '用藥紀錄' },
@@ -263,12 +277,31 @@ export function RecordsContent({
 
   return (
     <View>
+      {showLowAppetiteBanner && (
+        <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#fef3c7', borderWidth: 2, borderColor: '#f59e0b', borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
+          <AppIcon name="warning" size={22} color="#92400e" style={{ marginRight: 10 }} />
+          <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#92400e' }}>貓咪最近胃口偏低，建議觀察或就醫</Text>
+        </View>
+      )}
+      {pendingT1Count > 0 && onOpenPendingT1 && (
+        <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#3b82f6', borderRadius: 8 }}>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: '#1e40af', marginBottom: 6 }}>您有 {pendingT1Count} 筆放飯記錄尚未填寫收碗（待補填）</Text>
+          <Text style={{ fontSize: 12, color: '#1e3a8a', marginBottom: 10 }}>填寫收碗狀態與攝取程度後，該筆記錄才會納入胃口趨勢</Text>
+          <Pressable onPress={onOpenPendingT1} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, backgroundColor: '#3b82f6', borderRadius: 8 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>去填寫</Text>
+          </Pressable>
+        </View>
+      )}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { fontSize: 18, marginBottom: 20 }]}>新增記錄</Text>
         <View style={styles.actionGrid}>
           <Pressable style={styles.actionBtn} onPress={() => onOpenModal('feeding')}>
             <AppIcon name="restaurant" size={24} color="#000" style={styles.actionIcon} />
-            <Text style={styles.actionLabel}>飲食記錄</Text>
+            <Text style={styles.actionLabel}>食物記錄</Text>
+          </Pressable>
+          <Pressable style={styles.actionBtn} onPress={() => onOpenModal('feedingLateEntry')}>
+            <AppIcon name="schedule" size={24} color="#000" style={styles.actionIcon} />
+            <Text style={styles.actionLabel}>補填記錄</Text>
           </Pressable>
           <Pressable style={styles.actionBtn} onPress={() => onOpenModal('water')}>
             <AppIcon name="opacity" size={24} color="#000" style={styles.actionIcon} />

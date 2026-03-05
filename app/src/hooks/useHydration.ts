@@ -190,8 +190,8 @@ export function useHydration(
       // 飲水記錄需先完成水位基準設定（spec v4 邊緣案例：兩種模式共用）
       if (vessel?.vesselType === 'hydration' && !vessel?.fullWaterCalibration) {
         Alert.alert(
-          '請先完成滿水基準設定',
-          '請至「個人」→ 食碗管理 → 選擇此水碗／飲水機 → 完成「水位基準」設定後再記錄飲水。',
+          '請先完成滿量基準設定',
+          '請至「個人」→ 食碗管理 → 選擇此水碗／飲水機 → 完成「滿量基準」設定後再記錄飲水。',
           [{ text: '確定', style: 'cancel' }]
         );
         setIsAnalyzing(false);

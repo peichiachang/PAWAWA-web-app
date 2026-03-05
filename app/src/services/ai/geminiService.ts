@@ -295,7 +295,7 @@ Return JSON:
       t1FillRatio?: number;
     }>(response.text());
 
-    // 從飲食紀錄的食物類型取得密度
+    // 從食物記錄的食物類型取得密度
     const foodType = input.vessel?.foodType;
     const density = foodType === 'wet' ? 0.95 : 0.45; // 乾飼料用 0.45，罐頭用 0.95
 

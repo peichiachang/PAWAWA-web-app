@@ -15,14 +15,20 @@ import {
   StoredFeedingT0,
   FeedingOwnershipLog,
   FeedingPrecisionMode,
-  VesselCalibration
+  VesselCalibration,
+  FoodSourceType,
+  IntakeLevel,
+  INTAKE_LEVEL_RATIO,
+  CannedItem,
+  FeedLibraryItem,
 } from '../types/app';
 import {
   FEEDING_T0_STORAGE_KEY,
   FEEDING_T0_TTL_MS,
   FEEDING_HISTORY_KEY,
-  VESSEL_PROFILES_KEY,
-  FOOD_NUTRITION_KEY
+  FOOD_NUTRITION_KEY,
+  CAN_LIBRARY_KEY,
+  FEEDING_FOOD_LIBRARY_KEY,
 } from '../constants';
 import type { CatIdentity } from '../types/domain';
 
@@ -49,9 +55,65 @@ export function useFeeding(
   const [ownershipLogs, setOwnershipLogs] = useState<FeedingOwnershipLog[]>([]);
   const [mismatchError, setMismatchError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [canLibrary, setCanLibrary] = useState<CannedItem[]>([]);
+  const [feedLibrary, setFeedLibrary] = useState<FeedLibraryItem[]>([]);
 
   // SDD 2.2 Calibration & Settings
   const [precisionMode, setPrecisionMode] = useState<FeedingPrecisionMode>('standard');
+
+  useEffect(() => {
+    async function loadCanLibrary() {
+      try {
+        const raw = await AsyncStorage.getItem(CAN_LIBRARY_KEY);
+        if (raw) setCanLibrary(JSON.parse(raw));
+      } catch (_e) { }
+    }
+    void loadCanLibrary();
+  }, []);
+
+  useEffect(() => {
+    async function loadFeedLibrary() {
+      try {
+        const raw = await AsyncStorage.getItem(FEEDING_FOOD_LIBRARY_KEY);
+        if (raw) setFeedLibrary(JSON.parse(raw));
+      } catch (_e) { }
+    }
+    void loadFeedLibrary();
+  }, []);
+
+  async function persistCanLibrary(list: CannedItem[]) {
+    await AsyncStorage.setItem(CAN_LIBRARY_KEY, JSON.stringify(list));
+    setCanLibrary(list);
+  }
+
+  function addCanLibraryItem(item: Omit<CannedItem, 'id'>) {
+    const newItem: CannedItem = { ...item, id: `can_${Date.now()}` };
+    const next = [newItem, ...canLibrary];
+    void persistCanLibrary(next);
+    return newItem.id;
+  }
+
+  function removeCanLibraryItem(id: string) {
+    const next = canLibrary.filter(c => c.id !== id);
+    void persistCanLibrary(next);
+  }
+
+  async function persistFeedLibrary(list: FeedLibraryItem[]) {
+    await AsyncStorage.setItem(FEEDING_FOOD_LIBRARY_KEY, JSON.stringify(list));
+    setFeedLibrary(list);
+  }
+
+  function addFeedLibraryItem(item: Omit<FeedLibraryItem, 'id'>) {
+    const newItem: FeedLibraryItem = { ...item, id: `feed_${Date.now()}` };
+    const next = [newItem, ...feedLibrary];
+    void persistFeedLibrary(next);
+    return newItem.id;
+  }
+
+  function removeFeedLibraryItem(id: string) {
+    const next = feedLibrary.filter(f => f.id !== id);
+    void persistFeedLibrary(next);
+  }
 
   const reloadOwnershipLogs = useCallback(async () => {
     try {
@@ -109,6 +171,14 @@ export function useFeeding(
   const currentT0 = vessels.selectedVesselId ? t0Map[vessels.selectedVesselId] : null;
   const t0Done = Boolean(currentT0 && (Date.now() - currentT0.capturedAt <= FEEDING_T0_TTL_MS));
 
+  /** 有有效 T0 但尚未填 T1 的食碗 ID 列表（用於待補填提示與入口） */
+  function getPendingT1VesselIds(): string[] {
+    const now = Date.now();
+    return Object.entries(t0Map)
+      .filter(([, v]) => now - v.capturedAt <= FEEDING_T0_TTL_MS)
+      .map(([id]) => id);
+  }
+
   useEffect(() => {
     // Reset T1 state when vessel changes
     setT1Done(false);
@@ -159,6 +229,16 @@ export function useFeeding(
   function clearNutrition() {
     setNutritionImage(null);
     setNutritionResult(null);
+  }
+
+  /** 從飼料庫選一筆帶入本次記錄的熱量（乾糧／自動餵食器流程用） */
+  function setNutritionFromFeedLibraryItem(item: FeedLibraryItem) {
+    setNutritionResult({
+      kcalPerGram: item.kcalPerGram,
+      proteinPct: 0,
+      phosphorusPct: 0,
+      rawText: item.name,
+    });
   }
 
   /** 由 Modal 內嵌相機拍完 T0 後呼叫，不經過全域 launchCamera */
@@ -268,7 +348,12 @@ export function useFeeding(
     }
   }
 
-  function saveOwnershipLog(onClose: () => void, note?: string, overrideTotalGram?: number) {
+  function saveOwnershipLog(
+    onClose: () => void,
+    note?: string,
+    overrideTotalGram?: number,
+    opts?: { foodSourceType?: FoodSourceType; intakeLevel?: IntakeLevel; isLateEntry?: boolean; refGramForIntake?: number }
+  ) {
     if (!result) {
       Alert.alert('無法儲存', '請先完成 T1 分析再儲存。');
       return;
@@ -286,9 +371,12 @@ export function useFeeding(
       return;
     }
 
-    const totalGram = overrideTotalGram && overrideTotalGram > 0
-      ? overrideTotalGram
-      : result.householdTotalGram;
+    const intakeLevel = opts?.intakeLevel;
+    const refGram = opts?.refGramForIntake ?? overrideTotalGram ?? result.householdTotalGram;
+    const totalGram =
+      intakeLevel != null && refGram > 0
+        ? Math.round(refGram * INTAKE_LEVEL_RATIO[intakeLevel])
+        : (overrideTotalGram && overrideTotalGram > 0 ? overrideTotalGram : result.householdTotalGram);
 
     const newLog: FeedingOwnershipLog = {
       id: `feeding_${Date.now()}`,
@@ -301,6 +389,9 @@ export function useFeeding(
       confidence: result.confidence,
       vesselId: vessels.selectedVesselId || undefined,
       note: note?.trim() || undefined,
+      foodSourceType: opts?.foodSourceType ?? 'dry_once',
+      intakeLevel,
+      isLateEntry: opts?.isLateEntry,
     };
 
     setOwnershipLogs((prev) => {
@@ -333,20 +424,136 @@ export function useFeeding(
     }
   }
 
-  function saveManualLog(grams: number, tagId: string | null, onClose: () => void, note?: string) {
+  function saveManualLog(
+    grams: number,
+    tagId: string | null,
+    onClose: () => void,
+    note?: string,
+    opts?: { foodSourceType?: FoodSourceType; intakeLevel?: IntakeLevel; canId?: string; ingredients?: string[] }
+  ) {
     if (!grams || grams <= 0) {
       Alert.alert('請輸入克數', '克數必須大於 0。');
       return;
     }
+    const intakeLevel = opts?.intakeLevel;
+    const totalGram = intakeLevel != null ? Math.round(grams * INTAKE_LEVEL_RATIO[intakeLevel]) : grams;
     const newLog: FeedingOwnershipLog = {
       id: `feeding_${Date.now()}`,
       createdAt: Date.now(),
-      totalGram: grams,
-      kcal: calculateDailyKcalIntake(grams, nutritionResult?.kcalPerGram || 3.5),
+      totalGram,
+      kcal: calculateDailyKcalIntake(totalGram, nutritionResult?.kcalPerGram || 3.5),
       ownershipType: tagId ? 'household_and_tag' : 'household_only',
       selectedTagId: tagId,
       mode: 'standard',
       note: note?.trim() || undefined,
+      foodSourceType: opts?.foodSourceType,
+      intakeLevel,
+      canId: opts?.canId,
+      ingredients: opts?.ingredients,
+    };
+    setOwnershipLogs((prev) => {
+      const updated = [newLog, ...prev].slice(0, 50);
+      void AsyncStorage.setItem(FEEDING_HISTORY_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    onClose();
+  }
+
+  /** Spec v1：僅選攝取程度（自動餵食器／自煮等無 T0/T1） */
+  function saveIntakeOnlyLog(
+    dailyGram: number,
+    intakeLevel: IntakeLevel,
+    foodSourceType: 'auto_feeder' | 'homemade',
+    tagId: string | null,
+    onClose: () => void,
+    note?: string,
+    ingredients?: string[]
+  ) {
+    if (!dailyGram || dailyGram <= 0) {
+      Alert.alert('請輸入今日份量', '克數必須大於 0。');
+      return;
+    }
+    const totalGram = Math.round(dailyGram * INTAKE_LEVEL_RATIO[intakeLevel]);
+    const newLog: FeedingOwnershipLog = {
+      id: `feeding_${Date.now()}`,
+      createdAt: Date.now(),
+      totalGram,
+      kcal: calculateDailyKcalIntake(totalGram, nutritionResult?.kcalPerGram || 3.5),
+      ownershipType: tagId ? 'household_and_tag' : 'household_only',
+      selectedTagId: tagId,
+      mode: 'standard',
+      foodSourceType,
+      intakeLevel,
+      ingredients,
+    };
+    setOwnershipLogs((prev) => {
+      const updated = [newLog, ...prev].slice(0, 50);
+      void AsyncStorage.setItem(FEEDING_HISTORY_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    onClose();
+  }
+
+  /** Spec v3：罐頭記錄（T0 選罐頭+克數，T1 依攝取程度換算） */
+  function saveCannedLog(
+    canId: string,
+    grams: number,
+    intakeLevel: IntakeLevel,
+    tagId: string | null,
+    onClose: () => void,
+    kcalPer100?: number
+  ) {
+    if (!grams || grams <= 0) {
+      Alert.alert('請輸入克數', '克數必須大於 0。');
+      return;
+    }
+    const totalGram = Math.round(grams * INTAKE_LEVEL_RATIO[intakeLevel]);
+    const kcal = kcalPer100 != null ? (totalGram * kcalPer100) / 100 : calculateDailyKcalIntake(totalGram, nutritionResult?.kcalPerGram || 1.2);
+    const newLog: FeedingOwnershipLog = {
+      id: `feeding_${Date.now()}`,
+      createdAt: Date.now(),
+      totalGram,
+      kcal,
+      ownershipType: tagId ? 'household_and_tag' : 'household_only',
+      selectedTagId: tagId,
+      mode: 'standard',
+      foodSourceType: 'canned',
+      intakeLevel,
+      canId,
+    };
+    setOwnershipLogs((prev) => {
+      const updated = [newLog, ...prev].slice(0, 50);
+      void AsyncStorage.setItem(FEEDING_HISTORY_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    onClose();
+  }
+
+  /** 補填記錄：事後補登攝取程度，儲存為 isLateEntry: true（不納入 T0/T1 流程） */
+  function saveLateEntryLog(
+    gramsRef: number,
+    intakeLevel: IntakeLevel,
+    tagId: string | null,
+    onClose: () => void,
+    createdAt?: number
+  ) {
+    if (!gramsRef || gramsRef <= 0) {
+      Alert.alert('請輸入參考克數', '用於換算預估攝取，克數必須大於 0。');
+      return;
+    }
+    const totalGram = Math.round(gramsRef * INTAKE_LEVEL_RATIO[intakeLevel]);
+    const ts = createdAt ?? Date.now();
+    const newLog: FeedingOwnershipLog = {
+      id: `feeding_${ts}`,
+      createdAt: ts,
+      totalGram,
+      kcal: calculateDailyKcalIntake(totalGram, nutritionResult?.kcalPerGram || 3.5),
+      ownershipType: tagId ? 'household_and_tag' : 'household_only',
+      selectedTagId: tagId,
+      mode: 'standard',
+      foodSourceType: 'dry_once',
+      intakeLevel,
+      isLateEntry: true,
     };
     setOwnershipLogs((prev) => {
       const updated = [newLog, ...prev].slice(0, 50);
@@ -385,6 +592,18 @@ export function useFeeding(
     submitNutritionImage,
     saveOwnershipLog,
     saveManualLog,
+    saveIntakeOnlyLog,
+    saveCannedLog,
+    saveLateEntryLog,
     reloadOwnershipLogs,
+    canLibrary,
+    addCanLibraryItem,
+    removeCanLibraryItem,
+    persistCanLibrary,
+    feedLibrary,
+    addFeedLibraryItem,
+    removeFeedLibraryItem,
+    setNutritionFromFeedLibraryItem,
+    getPendingT1VesselIds,
   };
 }
