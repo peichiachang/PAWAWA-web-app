@@ -214,6 +214,20 @@ export function HomeContent({
     return { feedings, hydrations, eliminations, medications, symptoms };
   }, [feedingHistory, hydrationHistory, eliminationHistory, medicationHistory, symptomHistory, level]);
 
+  // 今日攝取（僅當日紀錄，非累積）- 必須在 early return 之前，避免違反 React Rules of Hooks
+  const currentKcal = useMemo(
+    () => feedingHistory
+      .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
+      .reduce((sum, log) => sum + (log.kcal ?? log.totalGram * 3), 0),
+    [feedingHistory, level]
+  );
+  const currentWater = useMemo(
+    () => hydrationHistory
+      .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
+      .reduce((sum, log) => sum + (log.actualWaterMl ?? log.totalMl ?? 0), 0),
+    [hydrationHistory, level]
+  );
+
   const renderRecentRecords = () => (
     <View style={styles.section}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
@@ -463,19 +477,6 @@ export function HomeContent({
     currentCat?.chronicConditions.includes('diabetes') ? '50–70ml / kg（觀察區間）' :
       currentCat?.chronicConditions.includes('flutd') ? '50–65ml / kg（觀察區間）' :
         '50ml / kg (標準)';
-  // 今日攝取（僅當日紀錄，非累積）
-  const currentKcal = useMemo(
-    () => feedingHistory
-      .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
-      .reduce((sum, log) => sum + (log.kcal ?? log.totalGram * 3), 0),
-    [feedingHistory, level]
-  );
-  const currentWater = useMemo(
-    () => hydrationHistory
-      .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
-      .reduce((sum, log) => sum + (log.actualWaterMl ?? log.totalMl ?? 0), 0),
-    [hydrationHistory, level]
-  );
   const waterProgressBase = isWaterObservationMode ? Math.max(waterRange.max, 1) : Math.max(individualWaterGoal, 1);
   const waterProgressPct = Math.round((currentWater / waterProgressBase) * 100);
 
