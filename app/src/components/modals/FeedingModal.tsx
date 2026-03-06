@@ -262,6 +262,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
   const [inputMode, setInputMode] = useState<'camera' | 'manual'>('camera');
   const [manualGrams, setManualGrams] = useState('');
   const [manualTagId, setManualTagId] = useState<string | null>(null);
+  const [manualFoodType, setManualFoodType] = useState('');
   const [note, setNote] = useState('');
   const [sessionFoodType, setSessionFoodType] = useState<FoodType>('dry');
   const [capturePhase, setCapturePhase] = useState<'t0' | 't1' | 'nutrition' | null>(null);
@@ -301,6 +302,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
     setManualWeight('');
     setManualGrams('');
     setManualTagId(null);
+    setManualFoodType('');
     setManualBoundaryLevel(null);
     setNote('');
     setSessionFoodSource(null);
@@ -474,6 +476,15 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                   <Text style={{ fontSize: 13, color: palette.primary, fontWeight: '600' }}>← 返回選擇食物類型</Text>
                 </Pressable>
                 <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>食物類型（可自由填寫）</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="例：混飼料、罐頭+乾糧、鮮食"
+                    value={manualFoodType}
+                    onChangeText={setManualFoodType}
+                  />
+                </View>
+                <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>提供克數 (g)</Text>
                   <TextInput
                     style={styles.input}
@@ -518,7 +529,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                   onPress={() => {
                     const g = parseFloat(manualGrams);
                     if (!g || g <= 0) { Alert.alert('請輸入克數', '克數必須大於 0。'); return; }
-                    saveManualLog(g, manualTagId, resetToBlankRecordScreen, note);
+                    saveManualLog(g, manualTagId, resetToBlankRecordScreen, note, { manualFoodType: manualFoodType || undefined });
                   }}
                 >
                   <Text style={styles.primaryBtnText}>儲存記錄</Text>

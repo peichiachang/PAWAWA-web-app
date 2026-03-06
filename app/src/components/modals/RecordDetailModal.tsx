@@ -63,6 +63,7 @@ export function RecordDetailModal({ visible, record, cats, onClose }: Props) {
           <Row label={l.intakeLevel != null ? '預估攝取' : '提供克數'} value={`${l.totalGram} g`} />
           <Row label="熱量" value={`${Math.round(l.kcal ?? l.totalGram * 3.5)} kcal`} />
           {l.mode && <Row label="記錄模式" value={l.mode === 'precise' ? '精確模式' : '標準模式'} />}
+          {l.manualFoodType && <Row label="食物類型" value={l.manualFoodType} />}
           {l.note && (
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}>
               <Text style={{ fontSize: 12, color: '#666', flex: 1 }}>備註</Text>
