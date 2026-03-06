@@ -1275,14 +1275,20 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                   <View style={[styles.resultErrorBox, { backgroundColor: '#fef2f2', borderColor: '#dc2626' }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                       <AppIcon name="warning" size={18} color="#dc2626" style={{ marginRight: 6 }} />
-                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#dc2626' }}>碗型或碗的顏色不一致</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#dc2626' }}>分析未完成</Text>
                     </View>
                     <Text style={{ fontSize: 13, color: '#991b1b', lineHeight: 20 }}>
                       {mismatchError}
                     </Text>
                     <Text style={{ fontSize: 12, color: '#991b1b', marginTop: 6 }}>
-                      請確認 T0、T1 拍攝同一只碗後重拍。
+                      請確認 T0、T1 為同一只碗、光線充足後重拍 T1，或檢查網路連線。
                     </Text>
+                  </View>
+                )}
+
+                {t1Image && !t1Done && !isAnalyzing && !mismatchError && (
+                  <View style={{ padding: 12, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8, marginBottom: 12 }}>
+                    <Text style={{ fontSize: 13, color: '#92400e' }}>T1 已拍攝，但尚未取得分析結果。請檢查上方是否有錯誤訊息，或重拍 T1。</Text>
                   </View>
                 )}
 

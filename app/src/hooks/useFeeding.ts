@@ -247,9 +247,9 @@ export function useFeeding(
     setT1Image(null);
     setT1Done(false);
     setResult(null);
+    setMismatchError(null);
     setCanIdentifyTags(null);
     setSelectedTagId(null);
-    setMismatchError(null);
   }
 
   /** 清除營養標籤照片與 OCR 結果 */
@@ -355,7 +355,11 @@ export function useFeeding(
       setCanIdentifyTags(canIdentify);
       setSelectedTagId(null); // 預設由 Modal 依 cats 設定
     } catch (error) {
-      Alert.alert('AI 分析失敗', (error as Error).message);
+      const msg = (error as Error).message;
+      setMismatchError(msg);
+      setResult(null);
+      setT1Done(false);
+      Alert.alert('AI 分析失敗', msg);
     } finally {
       setIsAnalyzing(false);
       setAnalyzingPhase(null);
