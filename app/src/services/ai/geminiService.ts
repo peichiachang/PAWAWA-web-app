@@ -254,7 +254,7 @@ Hard rules:
 6. Calculate consumedRatio = t0FillRatio - t1FillRatio.
 7. If bowl mismatch between T0 and T1, set isBowlMatch=false.
 8. If uncertain near boundaries, set uncertain=true and explain briefly in reason.
-9. Slow-feeder inserts, puzzle feeders, or colored dividers visible in T1 are NOT empty space. Judge food volume around and within them carefully.
+9. Bowl bottom decorations or colored ornaments becoming visible in T1 indicate food level has dropped — they do NOT mean the bowl is empty. Estimate fill level based on actual food volume.
 
 ${shallowBowlSection}
 ${deepBowlSection}
@@ -290,7 +290,7 @@ Hard rules:
 4. Use T0 as the only meal baseline.
 5. If bowl mismatch between T0 and T1, set isBowlMatch=false.
 6. If uncertain near boundaries, set uncertain=true and explain briefly in reason.
-7. Slow-feeder inserts, puzzle feeders, or colored dividers visible in T1 are NOT empty space. Judge food volume around and within them carefully.
+7. Bowl bottom decorations or colored ornaments becoming visible in T1 indicate food level has dropped — they do NOT mean the bowl is empty. Estimate consumption based on actual food volume.
 
 ${shallowBowlSection}
 ${deepBowlSection}

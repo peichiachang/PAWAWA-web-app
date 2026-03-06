@@ -124,8 +124,8 @@ ${calibrationNote}
 
 IMPORTANT RULES:
 - "consumedRatio" = fraction of T0 that was EATEN (0.0=nothing eaten, 1.0=everything eaten).
-- Slow-feeder inserts, puzzle feeders, or dividers visible in T1 are NOT empty space. If a yellow/colored insert is visible in T1, judge food volume around and within it carefully — do not treat visible insert as missing food.
-- Compare only the food volume, ignoring bowl accessories.
+- Bowl bottom decorations, patterns, or colored ornaments becoming visible in T1 simply indicate food level has dropped — they do NOT mean the bowl is empty. Estimate remaining food volume carefully.
+- Compare only the food volume remaining, not bowl appearance.
 
 Return:
 {
