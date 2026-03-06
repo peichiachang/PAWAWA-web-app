@@ -21,6 +21,7 @@ export type FeedingOwnershipType = 'household_only' | 'household_and_tag';
 
 export type FeedingPrecisionMode = 'standard' | 'precise';
 export type VesselShape = 'cylinder' | 'trapezoid' | 'sphere';
+export type DepthCategory = 'shallow' | 'normal' | 'deep';
 
 /** 容器用途：食碗（食物記錄用）、水碗（飲水記錄用） */
 export type VesselType = 'feeding' | 'hydration';
@@ -153,11 +154,18 @@ export interface VesselCalibration {
   volumeMl?: number;
   calibrationFactor?: number; // 校準係數：實際容量 / 計算容量（用於修正幾何計算誤差）
   measuredVolumeMl?: number; // 實際測量的容量（用於計算校準係數）
-  
+
   // 校準方式：幾何尺寸 / 側面輪廓 / 直接已知容量
   calibrationMethod?: 'dimensions' | 'side_profile' | 'known_volume';
   sideProfileImageBase64?: string; // 側面照（base64）
   rimDiameterCm?: number; // 碗口直徑（側面輪廓方式的唯一輸入）
+
+  // 深度分類與淺/深碗判定
+  depthCategory?: DepthCategory;
+  isShallow?: boolean;
+  isDeep?: boolean;
+  rimToBottomDistanceCm?: number; // 碗口到碗底的精確深度
+
   profileContour?: ProfileContour; // 輪廓數據
   /** 空碗俯視照（校準參考，供 W0/W1 碗位比對使用；側面輪廓時為俯視檢查照，其他輸入方式亦可拍攝） */
   topViewImageBase64?: string;

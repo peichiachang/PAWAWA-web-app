@@ -100,9 +100,9 @@ export interface SideProfileAnalysisResult {
 }
 
 export interface AiRecognitionService {
-  analyzeFeedingImages(input: { t0: AiImageInput; t1: AiImageInput; vessel?: VesselCalibration }): Promise<FeedingVisionResult>;
+  analyzeFeedingImages(input: { t0: AiImageInput; t1: AiImageInput; vessel?: VesselCalibration; isShallow?: boolean; isDeep?: boolean }): Promise<FeedingVisionResult>;
   /** 可選：3 次並行分析後 Majority Vote，提升穩定性 */
-  analyzeWithMajorityVote?(input: { t0: AiImageInput; t1: AiImageInput; vessel?: VesselCalibration }): Promise<FeedingMajorityVoteResult>;
+  analyzeWithMajorityVote?(input: { t0: AiImageInput; t1: AiImageInput; vessel?: VesselCalibration; isShallow?: boolean; isDeep?: boolean }): Promise<FeedingMajorityVoteResult>;
   extractNutritionLabel(input: AiImageInput): Promise<NutritionOCRResult>;
   analyzeHydrationImages(input: { t0: AiImageInput; t1: AiImageInput; vessel?: VesselCalibration }): Promise<HydrationVisionResult>;
   analyzeEliminationImage(input: AiImageInput): Promise<EliminationVisionResult>;

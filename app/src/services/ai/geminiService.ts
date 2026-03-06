@@ -164,7 +164,8 @@ export const geminiService: AiRecognitionService = {
       : (vesselVolumeMl ? vesselVolumeMl * 0.8 * 0.45 : 500); // 無校準時假設 500g 參考
 
     const vesselHeightCm = input.vessel?.dimensions?.height;
-    const isShallowBowl = vesselHeightCm !== undefined && vesselHeightCm < 5;
+    const isShallowBowl = input.isShallow || input.vessel?.isShallow || (vesselHeightCm !== undefined && vesselHeightCm < 5);
+    const isDeepBowl = input.isDeep || input.vessel?.isDeep || (vesselHeightCm !== undefined && vesselHeightCm >= 10);
 
     const imageRolesSection = hasEmptyBowl
       ? `
@@ -205,6 +206,17 @@ For shallow bowls, food height difference is minimal. Focus on:
 `
       : '';
 
+    const deepBowlSection = isDeepBowl
+      ? `
+## DEEP BOWL RULE（深碗 — 高度 >= 10cm）
+
+For deep bowls, shadows and perspective distortion can hide the bottom. Focus on:
+- Food pile height relative to the wall
+- Ignore shadows at the very bottom
+- Check for food residue stuck on the walls
+`
+      : '';
+
     const prompt = hasEmptyBowl
       ? `
 You are a production vision model for cat feeding analysis.
@@ -231,6 +243,7 @@ Hard rules:
 8. If uncertain near boundaries, set uncertain=true and explain briefly in reason.
 
 ${shallowBowlSection}
+${deepBowlSection}
 
 Return JSON:
 {
@@ -264,6 +277,7 @@ Hard rules:
 6. If uncertain near boundaries, set uncertain=true and explain briefly in reason.
 
 ${shallowBowlSection}
+${deepBowlSection}
 
 Return JSON:
 {
@@ -306,12 +320,17 @@ Return JSON:
       // 版本 A：有空碗照片，使用絕對填充比例計算
       const t0FillRatio = clamp(parsed.t0FillRatio ?? 0.8, 0, 1);
       const t1FillRatio = clamp(parsed.t1FillRatio ?? 0, 0, 1);
-      
+
       // 如果 AI 有回傳 consumedRatio，優先使用；否則計算
       if (parsed.consumedRatio !== undefined && Number.isFinite(parsed.consumedRatio)) {
         consumedRatio = clamp(parsed.consumedRatio, 0, 1);
       } else {
         consumedRatio = clamp(t0FillRatio - t1FillRatio, 0, 1);
+      }
+
+      // Shallow bowl sensitivity boosting
+      if (isShallowBowl && consumedRatio > 0 && consumedRatio < 0.9) {
+        consumedRatio = Math.pow(consumedRatio, 0.6);
       }
 
       // 計算克數：使用絕對填充比例和容器容量
@@ -334,6 +353,12 @@ Return JSON:
       };
 
       consumedRatio = inferConsumedRatio(parsed, t0RefGrams);
+
+      // Shallow bowl sensitivity boosting
+      if (isShallowBowl && consumedRatio > 0 && consumedRatio < 0.9) {
+        consumedRatio = Math.pow(consumedRatio, 0.6);
+      }
+
       const baseLevel = ratioToBaseLevel(consumedRatio);
       const hysteresisKey = buildFeedingHysteresisKey(input.t0.imageBase64, input.t1.imageBase64, t0RefGrams);
       let normalizedLevel = applyFeedingHysteresis(hysteresisKey, consumedRatio, baseLevel);
@@ -366,6 +391,8 @@ Return JSON:
     t0: AiImageInput;
     t1: AiImageInput;
     vessel?: import('../../types/app').VesselCalibration;
+    isShallow?: boolean;
+    isDeep?: boolean;
   }): Promise<FeedingMajorityVoteResult> {
     ensureGeminiKey();
     const [run1, run2, run3] = await Promise.all([
@@ -463,20 +490,20 @@ JSON schema:
     }
 
     // 如果使用側面輪廓校準且提供了水位百分比，使用精確計算
-    if (input.vessel?.calibrationMethod === 'side_profile' && 
-        input.vessel.profileContour &&
-        input.t0.waterLevelPct !== undefined && 
-        input.t1.waterLevelPct !== undefined) {
+    if (input.vessel?.calibrationMethod === 'side_profile' &&
+      input.vessel.profileContour &&
+      input.t0.waterLevelPct !== undefined &&
+      input.t1.waterLevelPct !== undefined) {
       const { calculateVolumeToWaterLevel } = require('../../utils/profileVolume');
       const waterT0Ml = calculateVolumeToWaterLevel(input.vessel.profileContour, input.t0.waterLevelPct);
       const waterT1Ml = calculateVolumeToWaterLevel(input.vessel.profileContour, input.t1.waterLevelPct);
-      
+
       // 估算環境因素（蒸發等）
       const tempC = 25; // 預設溫度
       const humidityPct = 60; // 預設濕度
       const envFactorMl = Math.max(0, (waterT0Ml - waterT1Ml) * 0.02); // 簡單估算：2% 蒸發
       const actualIntakeMl = Math.max(0, waterT0Ml - waterT1Ml - envFactorMl);
-      
+
       return {
         waterT0Ml: Math.round(waterT0Ml),
         waterT1Ml: Math.round(waterT1Ml),
@@ -714,14 +741,14 @@ JSON schema:
       labName: String(parsed.labName || ''),
       markers: Array.isArray(parsed.markers)
         ? parsed.markers
-            .map((m) => ({
-              code: String(m.code || '').toUpperCase(),
-              value: Number(m.value ?? 0),
-              unit: String(m.unit || ''),
-              refLow: m.refLow == null ? null : Number(m.refLow),
-              refHigh: m.refHigh == null ? null : Number(m.refHigh),
-            }))
-            .filter((m) => m.code.length > 0)
+          .map((m) => ({
+            code: String(m.code || '').toUpperCase(),
+            value: Number(m.value ?? 0),
+            unit: String(m.unit || ''),
+            refLow: m.refLow == null ? null : Number(m.refLow),
+            refHigh: m.refHigh == null ? null : Number(m.refHigh),
+          }))
+          .filter((m) => m.code.length > 0)
         : [],
       confidence: clamp(Number(parsed.confidence ?? 0.5), 0, 1),
     } as BloodReportOCRResult;

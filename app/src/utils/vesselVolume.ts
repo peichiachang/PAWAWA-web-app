@@ -41,12 +41,12 @@ export function calculateTrapezoidVolume(lengthCm: number, widthCm: number, heig
 export function calculateFrustumVolume(topDiameterCm: number, bottomDiameterCm: number, heightCm: number): number {
   const topRadiusCm = topDiameterCm / 2;
   const bottomRadiusCm = bottomDiameterCm / 2;
-  
+
   // 圓台體積公式：V = (π × h / 3) × (R² + R×r + r²)
   // 其中 R 是頂半徑，r 是底半徑，h 是高度
   return (Math.PI * heightCm / 3) * (
-    Math.pow(topRadiusCm, 2) + 
-    topRadiusCm * bottomRadiusCm + 
+    Math.pow(topRadiusCm, 2) +
+    topRadiusCm * bottomRadiusCm +
     Math.pow(bottomRadiusCm, 2)
   );
 }
@@ -110,11 +110,11 @@ export function calculateVesselVolume(vessel: VesselCalibration): number | undef
       // topRadius 和 bottomRadius 欄位實際存儲的是「直徑」
       const topD = topRadius || 0;
       const bottomD = bottomRadius || 0;
-      
+
       if (topD <= 0 && bottomD <= 0) {
         return undefined;
       }
-      
+
       // 如果只有一個直徑，假設為圓柱體
       if (topD <= 0) {
         geometricVolume = calculateCylinderVolume(bottomD, height);
@@ -241,3 +241,58 @@ export function calculateCalibrationFactor(geometricVolume: number, measuredVolu
   // 限制在合理範圍內（0.7-1.0）
   return Math.max(0.7, Math.min(1.0, factor));
 }
+
+/**
+ * 根據容器幾何形狀，計算在特定填充比例（0.0~1.0）時的體積。
+ * 這解決了圓台（Frustum）等非直筒容器「高度比 ≠ 體積比」的問題。
+ */
+export function calculateVolumeAtHeight(vessel: VesselCalibration, heightRatio: number): number {
+  if (heightRatio <= 0) return 0;
+  if (heightRatio >= 1) return vessel.volumeMl || 0;
+
+  const { shape, dimensions } = vessel;
+  const H = dimensions.height;
+
+  if (!H || H <= 0) return (vessel.volumeMl || 0) * heightRatio;
+
+  const h = H * heightRatio;
+
+  if (shape === 'cylinder' || shape === 'trapezoid') {
+    // 直筒幾何，體積變化是線性的
+    return (vessel.volumeMl || 0) * heightRatio;
+  }
+
+  if (shape === 'sphere') {
+    // 圓台 (Frustum)
+    const R_top = (dimensions.topRadius || 0) / 2;
+    const R_bottom = (dimensions.bottomRadius || 0) / 2;
+
+    if (R_top <= 0 || R_bottom <= 0) {
+      return (vessel.volumeMl || 0) * heightRatio;
+    }
+
+    // 圓台特定高度的半徑 (線性插值)
+    // 註：從底部往上填滿，所以 y=0 是底部，y=H 是頂部。heightRatio 為從底部算起。
+    const r_h = R_bottom + (R_top - R_bottom) * heightRatio;
+
+    const v_h = (Math.PI * h / 3) * (
+      Math.pow(R_bottom, 2) +
+      R_bottom * r_h +
+      Math.pow(r_h, 2)
+    );
+
+    const factor = vessel.calibrationFactor || 1;
+    return v_h * factor;
+  }
+
+  return (vessel.volumeMl || 0) * heightRatio;
+}
+
+/**
+ * 根據體積與食物種類預估重量
+ */
+export function estimateFoodWeight(volumeMl: number, foodType?: import('../types/app').FoodType): number {
+  const density = foodType === 'wet' ? 0.95 : 0.45;
+  return volumeMl * density;
+}
+

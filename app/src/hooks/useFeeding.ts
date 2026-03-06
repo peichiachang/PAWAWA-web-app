@@ -285,7 +285,9 @@ export function useFeeding(
           analysisResult = await analyzeFn.call(ai, {
             t0: currentT0!,
             t1,
-            vessel: vessels.currentVessel || undefined
+            vessel: vessels.currentVessel || undefined,
+            isShallow: vessels.currentVessel?.isShallow || undefined,
+            isDeep: vessels.currentVessel?.isDeep || undefined,
           });
           if (!analysisResult) throw new Error('AI 回傳空值');
 
