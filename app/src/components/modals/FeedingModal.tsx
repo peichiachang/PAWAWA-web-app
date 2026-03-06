@@ -1275,13 +1275,21 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                   <View style={[styles.resultErrorBox, { backgroundColor: '#fef2f2', borderColor: '#dc2626' }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                       <AppIcon name="warning" size={18} color="#dc2626" style={{ marginRight: 6 }} />
-                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#dc2626' }}>分析未完成</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#dc2626' }}>
+                        {mismatchError.includes('404') || mismatchError.includes('500') || mismatchError.includes('502') || mismatchError.includes('503') ? '後端服務錯誤' : mismatchError.includes('碗') || mismatchError.includes('不一致') ? '碗位辨識不一致' : '分析未完成'}
+                      </Text>
                     </View>
                     <Text style={{ fontSize: 13, color: '#991b1b', lineHeight: 20 }}>
                       {mismatchError}
                     </Text>
                     <Text style={{ fontSize: 12, color: '#991b1b', marginTop: 6 }}>
-                      請確認 T0、T1 為同一只碗、光線充足後重拍 T1，或檢查網路連線。
+                      {mismatchError.includes('404') || mismatchError.includes('500') || mismatchError.includes('502') || mismatchError.includes('503')
+                        ? '後端 AI 服務暫時無法使用（404/5xx），請稍後再試或確認 API 已正確部署。'
+                        : mismatchError.includes('timeout') || mismatchError.includes('超時')
+                          ? '連線逾時，請檢查網路後重試。'
+                          : mismatchError.includes('碗') || mismatchError.includes('不一致')
+                            ? '請確認 T0、T1 為同一只碗、光線與角度相近後重拍 T1。'
+                            : '請確認 T0、T1 為同一只碗、光線充足後重拍 T1，或檢查網路連線。'}
                     </Text>
                   </View>
                 )}
