@@ -52,6 +52,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
     ownershipLogs,
     mismatchError,
     isAnalyzing,
+    analyzingPhase,
     getRemainingMinutes,
     resetT0,
     clearT1,
@@ -176,15 +177,16 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
         </View>
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>成分表 OCR（選填）</Text>
+          <Text style={{ fontSize: 11, color: palette.muted, marginBottom: 8 }}>只有點擊下方按鈕並「拍攝／上傳標籤照片」後才會進行 AI 辨識；僅選擇已存飼料不會觸發 OCR。</Text>
           <Pressable style={styles.cameraUpload} onPress={() => setCapturePhase('nutrition')}>
             <AppIcon name="receipt" size={28} color="#000" style={styles.cameraIcon} />
             <Text style={styles.cameraText}>掃描成分表／飼料標籤</Text>
           </Pressable>
-          {nutritionResult != null && (
+          {nutritionResult != null && nutritionImage != null && (
             <View style={[styles.aiResult, { marginTop: 8 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                 <AppIcon name="receipt" size={18} color="#000" style={{ marginRight: 6 }} />
-                <Text style={styles.aiResultTitle}>OCR 結果</Text>
+                <Text style={styles.aiResultTitle}>成分表 OCR 結果</Text>
               </View>
               <View style={styles.aiTags}>
                 <Text style={[styles.aiTag, styles.aiTagHighlight]}>熱量：{nutritionResult.kcalPerGram} kcal/g</Text>
@@ -196,7 +198,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                   <Text style={{ fontSize: 11, color: '#166534' }}>重新拍攝</Text>
                 </Pressable>
                 <Pressable onPress={clearNutrition} style={{ padding: 6, borderWidth: 1, borderRadius: 4, borderColor: '#dc2626' }}>
-                  <Text style={{ fontSize: 11, color: '#dc2626' }}>清除</Text>
+                  <Text style={{ fontSize: 11, color: '#dc2626' }}>刪除照片</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => {
@@ -214,6 +216,16 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                   <Text style={{ fontSize: 11, color: '#2563eb' }}>存進飼料庫</Text>
                 </Pressable>
               </View>
+            </View>
+          )}
+          {nutritionResult != null && nutritionImage == null && (
+            <View style={[styles.aiResult, { marginTop: 8, opacity: 0.9 }]}>
+              <Text style={styles.aiResultTitle}>目前熱量來源：已選飼料</Text>
+              <Text style={[styles.aiTag, styles.aiTagHighlight]}>熱量：{nutritionResult.kcalPerGram} kcal/g</Text>
+              <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>蛋白／磷未辨識（僅來自已選飼料）。若要由 AI 辨識標籤，請點上方「掃描成分表／飼料標籤」並拍照。</Text>
+              <Pressable onPress={clearNutrition} style={{ alignSelf: 'flex-start', padding: 6, borderWidth: 1, borderRadius: 4, borderColor: '#dc2626', marginTop: 6 }}>
+                <Text style={{ fontSize: 11, color: '#dc2626' }}>清除已選飼料</Text>
+              </Pressable>
             </View>
           )}
         </View>
@@ -853,8 +865,15 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                 <>
                 <View style={styles.infoBox}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="home" size={18} color="#000" style={{ marginRight: 6 }} /><Text style={styles.infoTitle}>N-Bowl 拍照記錄</Text></View>
-                  <Text style={{ fontSize: 12 }}>拍攝食碗前後對比，AI 將計算消耗量</Text>
+                  <Text style={{ fontSize: 12 }}>① 拍 T0（裝滿）→ ② 拍 T1（收碗）→ AI 會自動計算消耗量</Text>
+                  <Text style={{ fontSize: 12, marginTop: 4 }}>③ 可再拍成分表，帶入標籤熱量（下方熱量會自動更新）</Text>
                 </View>
+                {analyzingPhase === 't1' && (
+                  <View style={{ padding: 12, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#3b82f6', borderRadius: 8, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color="#2563eb" style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#1e40af' }}>AI 分析中… 正在計算消耗量</Text>
+                  </View>
+                )}
 
                 <View style={styles.formGroup}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -1110,7 +1129,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                             </Text>
                             <Text style={styles.aiTag}>
                               kcal/g：{kcalPerGram}
-                              {!nutritionResult ? '（預設）' : ''}
+                              {!nutritionResult ? '（預設）' : nutritionImage ? '（來自成分表 OCR）' : '（來自已選飼料）'}
                             </Text>
                             <Text style={[styles.aiTag, styles.aiTagHighlight]}>
                               熱量：{kcal} kcal
@@ -1315,13 +1334,20 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
 
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>④ 成分表／營養標籤 OCR（選填）</Text>
-                  <Pressable style={styles.cameraUpload} onPress={() => setCapturePhase('nutrition')}>
+                  <Text style={{ fontSize: 11, color: palette.muted, marginBottom: 8 }}>拍攝標籤後會自動辨識熱量／蛋白／磷，並更新下方「AI 分析結果」的熱量。</Text>
+                  {analyzingPhase === 'nutrition' && (
+                    <View style={{ padding: 12, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#3b82f6', borderRadius: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
+                      <ActivityIndicator size="small" color="#2563eb" style={{ marginRight: 8 }} />
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#1e40af' }}>成分表 OCR 辨識中…</Text>
+                    </View>
+                  )}
+                  <Pressable style={[styles.cameraUpload, analyzingPhase === 'nutrition' && { opacity: 0.7 }]} onPress={() => setCapturePhase('nutrition')} disabled={analyzingPhase === 'nutrition'}>
                     <AppIcon name="receipt" size={28} color="#000" style={styles.cameraIcon} />
                     <Text style={styles.cameraText}>掃描成分表／飼料標籤</Text>
                   </Pressable>
                 </View>
 
-                {nutritionResult && (
+                {nutritionResult != null && nutritionImage != null && (
                   <View style={styles.aiResult}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}><AppIcon name="receipt" size={18} color="#000" style={{ marginRight: 6 }} /><Text style={styles.aiResultTitle}>成分表 OCR 結果</Text></View>
@@ -1360,6 +1386,16 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                       <Text style={styles.aiTag}>蛋白：{nutritionResult.proteinPct}%</Text>
                       <Text style={styles.aiTag}>磷：{nutritionResult.phosphorusPct}%</Text>
                     </View>
+                  </View>
+                )}
+                {nutritionResult != null && nutritionImage == null && (
+                  <View style={[styles.aiResult, { opacity: 0.9 }]}>
+                    <Text style={styles.aiResultTitle}>目前熱量來源：已選飼料</Text>
+                    <Text style={[styles.aiTag, styles.aiTagHighlight]}>熱量：{nutritionResult.kcalPerGram} kcal/g</Text>
+                    <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>蛋白／磷未辨識（僅來自已選飼料）。若要由 AI 辨識標籤，請點上方「掃描成分表／飼料標籤」並拍照。</Text>
+                    <Pressable onPress={clearNutrition} style={{ alignSelf: 'flex-start', padding: 6, borderWidth: 1, borderRadius: 4, borderColor: '#dc2626', marginTop: 6 }}>
+                      <Text style={{ fontSize: 11, color: '#dc2626' }}>清除已選飼料</Text>
+                    </Pressable>
                   </View>
                 )}
 

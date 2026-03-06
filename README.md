@@ -1,6 +1,9 @@
-# Carecat App
+# PAWAWA（Project Cat）
 
-跨平台 App 專案（iOS + Android）建議採用 `React Native + Expo + TypeScript`。
+**PAWAWA** 為 **Project Cat** 底下的貓咪照護 App 專案，本 repo 為其 Web / iOS / Android 應用程式。
+
+- 專案說明與範圍：見 [docs/PROJECT.md](docs/PROJECT.md)
+- 跨平台：React Native + Expo + TypeScript
 
 ## 建議技術選型
 

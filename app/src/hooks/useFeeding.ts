@@ -57,6 +57,8 @@ export function useFeeding(
   const [ownershipLogs, setOwnershipLogs] = useState<FeedingOwnershipLog[]>([]);
   const [mismatchError, setMismatchError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  /** 目前正在進行的辨識：T1 進食量分析 或 成分表 OCR，供 UI 顯示對應「分析中」文案 */
+  const [analyzingPhase, setAnalyzingPhase] = useState<'t1' | 'nutrition' | null>(null);
   const [canLibrary, setCanLibrary] = useState<CannedItem[]>([]);
   const [feedLibrary, setFeedLibrary] = useState<FeedLibraryItem[]>([]);
 
@@ -293,6 +295,7 @@ export function useFeeding(
     setT1Image(t1);
     try {
       setIsAnalyzing(true);
+      setAnalyzingPhase('t1');
       let analysisResult = null;
       let lastError = null;
 
@@ -355,14 +358,16 @@ export function useFeeding(
       Alert.alert('AI 分析失敗', (error as Error).message);
     } finally {
       setIsAnalyzing(false);
+      setAnalyzingPhase(null);
     }
   }
 
   /** 由 Modal 內嵌相機拍完營養標籤後呼叫，接著跑 OCR */
   async function submitNutritionImage(image: CapturedImage) {
+    setNutritionImage(image);
     try {
       setIsAnalyzing(true);
-      setNutritionImage(image);
+      setAnalyzingPhase('nutrition');
       const ocrTask = ai.extractNutritionLabel(image);
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('AI 回應超時，請檢查網路連線')), 30000)
@@ -373,6 +378,7 @@ export function useFeeding(
       Alert.alert('OCR 失敗', (error as Error).message);
     } finally {
       setIsAnalyzing(false);
+      setAnalyzingPhase(null);
     }
   }
 
@@ -608,6 +614,7 @@ export function useFeeding(
     ownershipLogs,
     mismatchError,
     isAnalyzing,
+    analyzingPhase,
     precisionMode,
     setPrecisionMode,
     vessels,
