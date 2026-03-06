@@ -630,7 +630,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                               {cannedSelectedCanId
                                 ? (() => {
                                     const can = canLibrary.find(c => c.id === cannedSelectedCanId);
-                                    return can ? `${getCannedDisplayName(can)}（${cannedGrams || can.defaultGrams ?? 80}g）` : '請選擇一項';
+                                    return can ? `${getCannedDisplayName(can)}（${cannedGrams || (can.defaultGrams ?? 80)}g）` : '請選擇一項';
                                   })()
                                 : '請選擇一項'}
                             </Text>

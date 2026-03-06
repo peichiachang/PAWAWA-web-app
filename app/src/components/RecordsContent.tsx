@@ -112,7 +112,7 @@ export function RecordsContent({
       .filter(s => filterByDate(s.createdAt))
       .map(l => ({ ...l, _type: 'symptom' as const }));
 
-    let unified: Array<{ id: string; createdAt: number; _type: 'feeding' | 'hydration' | 'elimination' | 'medication' | 'symptom' }> = [];
+    let unified: DetailRecord[] = [];
     if (typeFilter === 'all') {
       unified = [...feedings, ...hydrations, ...eliminations, ...medications, ...symptoms];
     } else if (typeFilter === 'feeding') {
