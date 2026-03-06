@@ -106,26 +106,46 @@ async function handleFeedingGemini(body) {
   const t0Part = buildInlineImagePart(body.t0ImageBase64, body.t0MimeType);
   const t1Part = buildInlineImagePart(body.t1ImageBase64, body.t1MimeType);
   const imageParts = [t0Part, t1Part].filter(Boolean);
+
+  const vesselVolumeMl = normalizeNumber(body.vesselVolumeMl, 0);
+  const foodType = body.foodType === 'wet' ? 'wet' : 'dry';
+  const density = foodType === 'wet' ? 0.95 : 0.45;
+  const manualWeight = normalizeNumber(body.manualWeight, 0);
+  const t0RefGrams = manualWeight > 0 ? manualWeight : (vesselVolumeMl > 0 ? Math.round(vesselVolumeMl * 0.8 * density) : 0);
+
+  const calibrationNote = t0RefGrams > 0
+    ? `Bowl: ${vesselVolumeMl > 0 ? vesselVolumeMl + 'ml' : 'unknown volume'}, food: ${foodType} (~${density}g/ml). T0 reference weight: ~${t0RefGrams}g.`
+    : 'Bowl capacity unknown — estimate consumedRatio visually.';
+
   const prompt = `
 You are a cat feeding vision analyzer. Return JSON only.
 Compare T0 (full bowl) and T1 (after eating) food amount in the same bowl.
-Important: "consumedGram" = estimated amount EATEN (T0 minus T1), NOT the total amount in the bowl.
+${calibrationNote}
+
+IMPORTANT RULES:
+- "consumedRatio" = fraction of T0 that was EATEN (0.0=nothing eaten, 1.0=everything eaten).
+- Slow-feeder inserts, puzzle feeders, or dividers visible in T1 are NOT empty space. If a yellow/colored insert is visible in T1, judge food volume around and within it carefully — do not treat visible insert as missing food.
+- Compare only the food volume, ignoring bowl accessories.
+
 Return:
 {
-  "consumedGram": number (grams eaten, 0 if almost none, about half of T0 if half eaten),
-  "consumedRatio": number (0-1, fraction eaten),
+  "consumedRatio": number (0.0-1.0, fraction of T0 eaten),
   "isBowlMatch": boolean,
   "mismatchReason": string,
   "confidence": number
 }
 `;
   const raw = await callGeminiForJson(prompt, imageParts);
-  const grams = Math.max(0, Math.round(normalizeNumber(raw.consumedGram ?? raw.householdTotalGram, 0)));
+  const consumedRatio = Math.max(0, Math.min(1, normalizeNumber(raw.consumedRatio, 0.5)));
+  // Compute grams using physics-based calibration when available; fall back to AI gram estimate
+  const grams = t0RefGrams > 0
+    ? Math.max(0, Math.round(consumedRatio * t0RefGrams))
+    : Math.max(0, Math.round(normalizeNumber(raw.consumedGram ?? raw.householdTotalGram, 0)));
   return {
     bowlsDetected: 1,
     assignments: [{ bowlId: 'A', tag: 'Household', estimatedIntakeGram: grams }],
     householdTotalGram: grams,
-    consumedRatio: Number(Math.max(0, Math.min(1, normalizeNumber(raw.consumedRatio, 0.5))).toFixed(2)),
+    consumedRatio: Number(consumedRatio.toFixed(2)),
     isBowlMatch: normalizeBoolean(raw.isBowlMatch, true),
     mismatchReason: String(raw.mismatchReason || ''),
     confidence: Number(normalizeNumber(raw.confidence, 0.8).toFixed(2)),

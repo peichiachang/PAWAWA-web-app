@@ -102,6 +102,9 @@ function createHttpAiService(baseUrl: string): AiRecognitionService {
         t1ImageRef: input.t1.imageRef || input.t1.uri || '',
         t1ImageBase64: input.t1.imageBase64 || null,
         t1MimeType: input.t1.mimeType || 'image/jpeg',
+        vesselVolumeMl: input.vessel?.volumeMl ?? null,
+        foodType: input.t0.foodType || input.vessel?.foodType || 'dry',
+        manualWeight: input.t0.manualWeight ?? null,
       }),
     extractNutritionLabel: (input) =>
       post('/ai/nutrition-ocr', mapImage(input)),

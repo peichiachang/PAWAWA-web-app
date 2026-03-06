@@ -330,7 +330,8 @@ export function useFeeding(
       if (!analysisResult) throw lastError || new Error('分析失敗');
 
       // SDD 2.5 Reasonableness Check
-      const maxPossibleGrams = currentT0!.manualWeight || (vessels.currentVessel?.volumeMl ? vessels.currentVessel.volumeMl * 0.8 : 1000);
+      const _density = (currentT0?.foodType === 'wet' || vessels.currentVessel?.foodType === 'wet') ? 0.95 : 0.45;
+      const maxPossibleGrams = currentT0!.manualWeight || (vessels.currentVessel?.volumeMl ? vessels.currentVessel.volumeMl * 0.8 * _density : 1000);
       if (analysisResult.householdTotalGram > maxPossibleGrams * 1.1) {
         setMismatchError(`進食量 (${analysisResult.householdTotalGram}g) 不合理地大於預估限制 (${Math.round(maxPossibleGrams)}g)，請確認圖片是否正確。`);
         Alert.alert('異常提示', '辨識出的進食量大於碗內可能容量，請重拍。');

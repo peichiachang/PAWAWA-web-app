@@ -1101,9 +1101,10 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                     {(() => {
                       const kcalPerGram = nutritionResult?.kcalPerGram || 3.5;
                       const kcal = calculateDailyKcalIntake(result.householdTotalGram, kcalPerGram);
+                      const _density = sessionFoodType === 'wet' ? 0.95 : 0.45;
                       const maxPossibleGrams =
                         t0Image?.manualWeight ||
-                        (currentVessel?.volumeMl ? currentVessel.volumeMl * 0.8 : 1000);
+                        (currentVessel?.volumeMl ? currentVessel.volumeMl * 0.8 * _density : 1000);
                       const confidence = result.confidence ?? 1;
                       const shouldWarn =
                         confidence < 0.7 ||

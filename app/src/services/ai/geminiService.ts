@@ -254,6 +254,7 @@ Hard rules:
 6. Calculate consumedRatio = t0FillRatio - t1FillRatio.
 7. If bowl mismatch between T0 and T1, set isBowlMatch=false.
 8. If uncertain near boundaries, set uncertain=true and explain briefly in reason.
+9. Slow-feeder inserts, puzzle feeders, or colored dividers visible in T1 are NOT empty space. Judge food volume around and within them carefully.
 
 ${shallowBowlSection}
 ${deepBowlSection}
@@ -289,6 +290,7 @@ Hard rules:
 4. Use T0 as the only meal baseline.
 5. If bowl mismatch between T0 and T1, set isBowlMatch=false.
 6. If uncertain near boundaries, set uncertain=true and explain briefly in reason.
+7. Slow-feeder inserts, puzzle feeders, or colored dividers visible in T1 are NOT empty space. Judge food volume around and within them carefully.
 
 ${shallowBowlSection}
 ${deepBowlSection}
@@ -348,14 +350,17 @@ Return JSON:
         consumedRatio = Math.pow(consumedRatio, 0.6);
       }
 
-      // 計算克數：使用絕對填充比例和容器容量
+      // 計算克數：consumedRatio = t0FillRatio - t1FillRatio（碗容積的絕對比例）
+      // 正確公式：consumed = consumedRatio × 容積 × 密度，不能乘 t0FillRatio（否則重複計算）
       if (vesselVolumeMl && vesselVolumeMl > 0) {
-        const t0Grams = t0FillRatio * vesselVolumeMl * density;
-        householdTotalGram = Math.round(consumedRatio * t0Grams);
+        householdTotalGram = Math.round(consumedRatio * vesselVolumeMl * density);
+      } else if (hasManualWeight && t0FillRatio > 0) {
+        // 沒有容積時，manualWeight 是 T0 實際克數；consumed = (t0-t1)/t0 × manualWeight
+        const fractionOfT0 = clamp(consumedRatio / t0FillRatio, 0, 1);
+        householdTotalGram = Math.round(fractionOfT0 * input.t0.manualWeight!);
       } else {
-        // 沒有容器容量時，使用 fallback 計算
-        const t0Grams = t0FillRatio * (hasManualWeight ? input.t0.manualWeight! : 500);
-        householdTotalGram = Math.round(consumedRatio * t0Grams);
+        // fallback：以碗容積未知估算
+        householdTotalGram = Math.round(consumedRatio * 500);
       }
     } else {
       // 版本 B：沒有空碗照片，使用相對比例（保留原有邏輯）
