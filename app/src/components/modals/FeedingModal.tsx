@@ -266,8 +266,6 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
   const [addCanMode, setAddCanMode] = useState(false);
   const [newCanName, setNewCanName] = useState('');
   const [newCanGrams, setNewCanGrams] = useState('');
-  /** 食物類型下拉選單是否展開 */
-  const [foodTypeDropdownOpen, setFoodTypeDropdownOpen] = useState(false);
   /** 罐頭 T1 收碗照（選填，目前僅供記錄不跑 AI） */
   const [cannedT1Image, setCannedT1Image] = useState<CapturedImage | null>(null);
   /** 補填記錄：參考克數、記錄日期（今天/昨天/前天） */
@@ -296,7 +294,6 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
     setAddCanMode(false);
     setNewCanName('');
     setNewCanGrams('');
-    setFoodTypeDropdownOpen(false);
     setCannedT1Image(null);
     setLateEntryGrams('');
     setLateEntryDateOption('today');
@@ -519,36 +516,22 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
             ) : effectiveSessionFoodSource === null ? (
               <>
                 <Text style={[styles.formLabel, { marginBottom: 8 }]}>食物類型</Text>
-                <View style={{ position: 'relative', zIndex: 10 }}>
-                  <Pressable
-                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surface }}
-                    onPress={() => setFoodTypeDropdownOpen((v) => !v)}
-                  >
-                    <Text style={{ fontSize: 14, color: palette.text }}>請選擇一項</Text>
-                    <Text style={{ fontSize: 14, color: palette.muted }}>{foodTypeDropdownOpen ? '▲' : '▼'}</Text>
-                  </Pressable>
-                  {foodTypeDropdownOpen && (
-                    <>
-                      <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -300, zIndex: 1 }} onPress={() => setFoodTypeDropdownOpen(false)} />
-                      <View style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.surface, borderRadius: 8, zIndex: 2, overflow: 'hidden' }}>
-                        {(['auto_feeder', 'dry_once', 'canned', 'homemade'] as FoodSourceType[]).map((src) => (
-                          <Pressable
-                            key={src}
-                            style={{ paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: src === 'homemade' ? 0 : 1, borderBottomColor: palette.border }}
-                            onPress={() => { setSessionFoodSource(src); setFoodTypeDropdownOpen(false); }}
-                          >
-                            <Text style={{ fontSize: 14, fontWeight: '600', color: palette.text }}>{FOOD_SOURCE_LABEL[src]}</Text>
-                            <Text style={{ fontSize: 11, color: palette.muted, marginTop: 2 }}>
-                              {src === 'auto_feeder' && '不需拍照，手動輸入克數與攝取程度'}
-                              {src === 'dry_once' && '放飯拍照 + 收碗拍照 + 攝取程度'}
-                              {src === 'canned' && '選罐頭 + 克數 + 收碗攝取程度'}
-                              {src === 'homemade' && '選食材 + 攝取程度'}
-                            </Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    </>
-                  )}
+                <View style={{ gap: 8 }}>
+                  {(['auto_feeder', 'dry_once', 'canned', 'homemade'] as FoodSourceType[]).map((src) => (
+                    <Pressable
+                      key={src}
+                      style={{ paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surface }}
+                      onPress={() => setSessionFoodSource(src)}
+                    >
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: palette.text }}>{FOOD_SOURCE_LABEL[src]}</Text>
+                      <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
+                        {src === 'auto_feeder' && '不需拍照，手動輸入克數與攝取程度'}
+                        {src === 'dry_once' && '放飯拍照 + 收碗拍照 + 攝取程度'}
+                        {src === 'canned' && '選罐頭 + 克數 + 收碗攝取程度'}
+                        {src === 'homemade' && '選食材 + 攝取程度'}
+                      </Text>
+                    </Pressable>
+                  ))}
                 </View>
               </>
             ) : effectiveSessionFoodSource === 'auto_feeder' ? (
@@ -565,7 +548,6 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                       setCannedT0Saved(false);
                       setCannedSelectedCanId(null);
                       setCannedGrams('');
-                      setFoodTypeDropdownOpen(false);
                     }}
                     style={{ marginLeft: 8 }}
                   >
