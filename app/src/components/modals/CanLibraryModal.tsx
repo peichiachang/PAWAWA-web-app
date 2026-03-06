@@ -136,11 +136,11 @@ export function CanLibraryModal({ visible, canLibrary, onAdd, onRemove, onClose,
           </View>
           <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
             <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 16 }}>
-              輸入關鍵字從罐頭庫搜尋並加入，或手動新增。記錄時會優先顯示您已加入的罐頭。
+              內建罐頭庫（擴充後可搜尋），輸入關鍵字搜尋後點擊項目即加入「我常用的罐頭」；記錄時會優先顯示我常用的罐頭。
             </Text>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>從罐頭庫搜尋並加入</Text>
+              <Text style={styles.formLabel}>從罐頭庫搜尋並加入我常用的罐頭</Text>
               <TextInput
                 style={styles.input}
                 placeholder="輸入品牌、品名或關鍵字（罐頭種子庫擴充後可用）"
@@ -157,7 +157,7 @@ export function CanLibraryModal({ visible, canLibrary, onAdd, onRemove, onClose,
                         onPress={() => handleSelectSeed(item)}
                       >
                         <Text style={{ fontSize: 14, fontWeight: '600' }}>{item.display_name ?? [item.brand, item.product_name, item.flavor].filter(Boolean).join(' ')}</Text>
-                        <Text style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>{(item.defaultGrams ?? 80)}g · 點擊加入罐頭庫</Text>
+                        <Text style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>{(item.defaultGrams ?? 80)}g · 點擊加入「我常用的罐頭」</Text>
                       </Pressable>
                     ))}
                   </ScrollView>
@@ -166,7 +166,7 @@ export function CanLibraryModal({ visible, canLibrary, onAdd, onRemove, onClose,
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>或手動新增罐頭</Text>
+              <Text style={styles.formLabel}>或手動新增至我常用的罐頭</Text>
               {launchCamera && scanCanLabel ? (
                 <Pressable style={[styles.cameraUpload, { marginBottom: 12 }]} onPress={handleScanLabel} disabled={isScanning}>
                   {isScanning ? <ActivityIndicator size="small" color="#000" /> : <AppIcon name="camera-alt" size={28} color="#000" style={styles.cameraIcon} />}
@@ -191,14 +191,14 @@ export function CanLibraryModal({ visible, canLibrary, onAdd, onRemove, onClose,
                 onChangeText={setKcalPer100}
               />
               <Pressable style={[styles.primaryBtn, { marginTop: 12 }]} onPress={handleAdd}>
-                <Text style={styles.primaryBtnText}>加入罐頭庫</Text>
+                <Text style={styles.primaryBtnText}>加入我常用的罐頭</Text>
               </Pressable>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>已儲存的罐頭（{canLibrary.length}）</Text>
+              <Text style={styles.formLabel}>我常用的罐頭（{canLibrary.length}）</Text>
               {canLibrary.length === 0 ? (
-                <Text style={{ fontSize: 13, color: palette.muted }}>尚無罐頭，請上方新增</Text>
+                <Text style={{ fontSize: 13, color: palette.muted }}>尚無項目。請在上方從罐頭庫搜尋並點擊加入，或手動新增／掃描標籤；記錄時可快速選取</Text>
               ) : (
                 canLibrary.map((can) => (
                   <View

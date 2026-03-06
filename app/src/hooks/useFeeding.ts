@@ -67,8 +67,15 @@ export function useFeeding(
     async function loadCanLibrary() {
       try {
         const raw = await AsyncStorage.getItem(CAN_LIBRARY_KEY);
-        if (raw) setCanLibrary(JSON.parse(raw));
-      } catch (_e) { }
+        if (raw) {
+          const list = (JSON.parse(raw) as CannedItem[]) ?? [];
+          setCanLibrary(list);
+        } else {
+          setCanLibrary([]);
+        }
+      } catch (_e) {
+        setCanLibrary([]);
+      }
     }
     void loadCanLibrary();
   }, []);
