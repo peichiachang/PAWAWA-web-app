@@ -1120,11 +1120,14 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                             </View>
                           )}
                           <View style={styles.aiTags}>
-                            {result.assignments.map((item) => (
+                            {t0RefGramsForBoundary > 0 && (
+                              <Text style={styles.aiTag}>放飯量（參考）：約 {Math.round(t0RefGramsForBoundary)}g</Text>
+                            )}
+                            {result.assignments.length > 1 ? result.assignments.map((item) => (
                               <Text key={item.bowlId} style={styles.aiTag}>
                                 {item.tag}：{item.estimatedIntakeGram}g
                               </Text>
-                            ))}
+                            )) : null}
                             <Text style={[styles.aiTag, styles.aiTagHighlight]}>
                               AI 估算攝取：{result.householdTotalGram}g
                             </Text>

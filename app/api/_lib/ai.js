@@ -108,18 +108,19 @@ async function handleFeedingGemini(body) {
   const imageParts = [t0Part, t1Part].filter(Boolean);
   const prompt = `
 You are a cat feeding vision analyzer. Return JSON only.
-Compare T0 and T1 food amount in same bowl.
+Compare T0 (full bowl) and T1 (after eating) food amount in the same bowl.
+Important: "consumedGram" = estimated amount EATEN (T0 minus T1), NOT the total amount in the bowl.
 Return:
 {
-  "householdTotalGram": number,
-  "consumedRatio": number,
+  "consumedGram": number (grams eaten, 0 if almost none, about half of T0 if half eaten),
+  "consumedRatio": number (0-1, fraction eaten),
   "isBowlMatch": boolean,
   "mismatchReason": string,
   "confidence": number
 }
 `;
   const raw = await callGeminiForJson(prompt, imageParts);
-  const grams = Math.max(0, Math.round(normalizeNumber(raw.householdTotalGram, 0)));
+  const grams = Math.max(0, Math.round(normalizeNumber(raw.consumedGram ?? raw.householdTotalGram, 0)));
   return {
     bowlsDetected: 1,
     assignments: [{ bowlId: 'A', tag: 'Household', estimatedIntakeGram: grams }],
