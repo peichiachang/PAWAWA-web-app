@@ -201,12 +201,12 @@ export function RecordsContent({
   const filterCell = (label: string, value: string, onPress: () => void) => (
     <Pressable
       onPress={onPress}
-      style={{ flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 6, borderWidth: 1, borderColor: '#000', marginRight: 6, marginBottom: 8 }}
+      style={{ flex: 1, minWidth: 0, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 4, borderWidth: 1, borderColor: '#000', marginBottom: 8 }}
     >
-      <Text style={{ fontSize: 11, color: '#666', marginBottom: 2 }}>{label}</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Text style={{ fontSize: 12, fontWeight: '600', marginRight: 2 }} numberOfLines={1}>{value}</Text>
-        <AppIcon name="expand-more" size={14} color="#000" />
+      <Text style={{ fontSize: 10, color: '#666', marginBottom: 2 }} numberOfLines={1}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', maxWidth: '100%' }}>
+        <Text style={{ fontSize: 11, fontWeight: '600', marginRight: 2 }} numberOfLines={1} ellipsizeMode="tail">{value}</Text>
+        <AppIcon name="expand-more" size={12} color="#000" />
       </View>
     </Pressable>
   );
@@ -241,7 +241,7 @@ export function RecordsContent({
           {addRecordDropdownOpen && (
             <>
               <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -260, zIndex: 1 }} onPress={() => setAddRecordDropdownOpen(false)} />
-              <View style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, zIndex: 2, overflow: 'hidden' }}>
+              <View style={{ marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden' }}>
                 <ScrollView style={{ maxHeight: 256 }} keyboardShouldPersistTaps="handled">
                   {[
                     { modal: 'feeding' as ActiveModal, label: '食物記錄', icon: 'restaurant' },
@@ -279,7 +279,7 @@ export function RecordsContent({
           </Pressable>
         </View>
 
-        <View style={{ flexDirection: 'row' }}>
+        <View style={{ flexDirection: 'row', width: '100%', gap: 6 }}>
           {filterCell('範圍', scopeLabel, () => setFilterSheet('scope'))}
           {filterCell('類型', typeLabels[typeFilter], () => setFilterSheet('type'))}
           {filterCell('日期', dateLabels[dateFilter], () => setFilterSheet('date'))}
