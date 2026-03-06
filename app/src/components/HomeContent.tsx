@@ -54,8 +54,6 @@ export function HomeContent({
   onEditCat,
   onRecordPress,
 }: Props) {
-  const householdDivisor = Math.max(1, cats.length);
-
   // 若父層未傳入 vesselProfiles，則自行從 AsyncStorage 載入（向後相容）
   const [localVesselProfiles, setLocalVesselProfiles] = useState<VesselCalibration[]>([]);
   useEffect(() => {
@@ -140,37 +138,14 @@ export function HomeContent({
     });
 
     // Filter by level
+    // household_only 記錄只歸屬家庭層級，個體層級只顯示明確指定該貓的記錄
     const filteredFeedings = level === 'household'
       ? feedingHistory
-      : [
-          ...feedingHistory.filter(l => matchesCatSeries(l.selectedTagId, level)),
-          ...feedingHistory
-            .filter(l => l.ownershipType === 'household_only')
-            .map(l => ({
-              ...l,
-              id: `${l.id}_share_${level}`,
-              totalGram: l.totalGram / householdDivisor,
-              kcal: l.kcal == null ? undefined : l.kcal / householdDivisor,
-              selectedTagId: level,
-              ownershipType: 'household_and_tag' as const,
-            })),
-        ];
+      : feedingHistory.filter(l => matchesCatSeries(l.selectedTagId, level));
 
     const filteredHydrations = level === 'household'
       ? hydrationHistory
-      : [
-          ...hydrationHistory.filter(l => matchesCatSeries(l.selectedTagId, level)),
-          ...hydrationHistory
-            .filter(l => l.ownershipType === 'household_only')
-            .map(l => ({
-              ...l,
-              id: `${l.id}_share_${level}`,
-              totalMl: l.totalMl / householdDivisor,
-              actualWaterMl: l.actualWaterMl == null ? undefined : l.actualWaterMl / householdDivisor,
-              selectedTagId: level,
-              ownershipType: 'household_and_tag' as const,
-            })),
-        ];
+      : hydrationHistory.filter(l => matchesCatSeries(l.selectedTagId, level));
 
     // Group feeding (kcal) by date with error margin and record tracking
     const kcalData = days.map(day => {
@@ -248,7 +223,7 @@ export function HomeContent({
     const appetiteRecordsComplete = appetiteData.filter(d => d.hasRecord).length;
 
     return { kcalData, waterData, appetiteData, kcalRecordsComplete, waterRecordsComplete, appetiteRecordsComplete };
-  }, [feedingHistory, hydrationHistory, level, vesselProfiles, householdDivisor]);
+  }, [feedingHistory, hydrationHistory, level, vesselProfiles]);
 
   const showLowAppetiteBanner = useMemo(() => {
     const filtered = level === 'household'
