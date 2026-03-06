@@ -241,7 +241,7 @@ export function RecordsContent({
           {addRecordDropdownOpen && (
             <>
               <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -260, zIndex: 1 }} onPress={() => setAddRecordDropdownOpen(false)} />
-              <View style={{ marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden' }}>
+              <View style={{ position: 'relative', marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', zIndex: 2 }}>
                 <ScrollView style={{ maxHeight: 256 }} keyboardShouldPersistTaps="handled">
                   {[
                     { modal: 'feeding' as ActiveModal, label: '食物記錄', icon: 'restaurant' },
