@@ -410,14 +410,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{initialMode === 'late_entry' ? '補填記錄' : '食物記錄'}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              {initialMode !== 'late_entry' && (
-                <Pressable onPress={() => setInputMode(inputMode === 'manual' ? 'camera' : 'manual')}>
-                  <Text style={{ fontSize: 14, color: palette.primary, fontWeight: '600' }}>{inputMode === 'manual' ? '返回' : '手動輸入'}</Text>
-                </Pressable>
-              )}
-              <Pressable onPress={() => { resetToBlankRecordScreen(); onClose(); }}><Text style={styles.closeText}>×</Text></Pressable>
-            </View>
+            <Pressable onPress={() => { resetToBlankRecordScreen(); onClose(); }}><Text style={styles.closeText}>×</Text></Pressable>
           </View>
           <ScrollView style={styles.modalBody}>
             {initialMode === 'late_entry' ? (
@@ -477,6 +470,9 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
             <>
             {inputMode === 'manual' ? (
               <View>
+                <Pressable onPress={() => setInputMode('camera')} style={{ marginBottom: 12 }}>
+                  <Text style={{ fontSize: 13, color: palette.primary, fontWeight: '600' }}>← 返回選擇食物類型</Text>
+                </Pressable>
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>提供克數 (g)</Text>
                   <TextInput
