@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState, useEffect } from 'react';
-import { Alert, SafeAreaView, ScrollView, View, Platform } from 'react-native';
+import { Alert, SafeAreaView, ScrollView, View, Text, Platform } from 'react-native';
 import { getAiRecognitionService } from './src/services/ai';
 import { buildClinicalSummary } from './src/services/clinicalSummary';
 import { calculateAdaptiveDailyWaterGoal, calculateDailyKcalIntake, calculateDailyKcalGoal } from './src/utils/health';
@@ -45,9 +45,11 @@ import { useRecordReminders } from './src/hooks/useRecordReminders';
 
 import { CATS_STORAGE_KEY, VITALS_HISTORY_KEY } from './src/constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CatIdentity, ClinicalSummary, FeedingLog, VitalsLog } from './src/types/domain';
+import { CatFormData, CatIdentity, ClinicalSummary, VitalsLog } from './src/types/domain';
 import { applyDevDataMode } from './src/config/devDataMode';
 import { getScopedCats, matchesCatSeries } from './src/utils/catScope';
+import { isToday } from './src/utils/date';
+import { getRecentDailyWaterIntakesForCat } from './src/utils/hydrationUtils';
 
 function AppMain() {
   const ai = useMemo(() => getAiRecognitionService(), []);
@@ -75,10 +77,9 @@ function AppMain() {
   // Dynamic Data States
   const [cats, setCats] = useState<CatIdentity[]>([]);
   const [vitalsLogs, setVitalsLogs] = useState<VitalsLog[]>([]);
-  const [feedingLogs, setFeedingLogs] = useState<FeedingLog[]>([]);
 
   const feeding = useFeeding(ai, launchCamera, sharedVessels, cats);
-  const pendingT1VesselIds = useMemo(() => feeding.getPendingT1VesselIds(), [feeding]);
+  const pendingT1VesselIds = useMemo(() => feeding.getPendingT1VesselIds(), [feeding.ownershipLogs]);
   const hydration = useHydration(ai, launchCamera, sharedVessels, cats);
   const elimination = useElimination(ai, launchCamera);
   const medication = useMedication();
@@ -158,25 +159,13 @@ function AppMain() {
   );
 
   const todayHouseholdKcal = useMemo(() => {
-    const now = new Date();
-    const isToday = (ts: number) => {
-      const d = new Date(ts);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-    };
     return feeding.ownershipLogs
-      // Household daily total should include shared logs and cat-tagged logs.
       .filter(item => isToday(item.createdAt))
       .reduce((sum, item) => sum + (item.kcal ?? calculateDailyKcalIntake(item.totalGram, 3.5)), 0);
   }, [feeding.ownershipLogs]);
 
   const todayHouseholdWater = useMemo(() => {
-    const now = new Date();
-    const isToday = (ts: number) => {
-      const d = new Date(ts);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-    };
     return hydration.ownershipLogs
-      // Household daily total should include shared logs and cat-tagged logs.
       .filter(item => isToday(item.createdAt))
       .reduce((sum, item) => sum + (item.actualWaterMl || item.totalMl || 0), 0);
   }, [hydration.ownershipLogs]);
@@ -188,20 +177,6 @@ function AppMain() {
     return selected || null;
   }, [cats, level]);
   const currentSummary = currentCat ? summaryByCatId[currentCat.id] : null;
-  const getRecentDailyWaterIntakesForCat = (catId: string): number[] => {
-    const byDay = new Map<string, number>();
-    hydration.ownershipLogs
-      .filter((log) => matchesCatSeries(log.selectedTagId, catId))
-      .forEach((log) => {
-        const d = new Date(log.createdAt);
-        const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-        byDay.set(key, (byDay.get(key) || 0) + (log.actualWaterMl || log.totalMl || 0));
-      });
-    return Array.from(byDay.entries())
-      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
-      .map(([, total]) => total)
-      .slice(-7);
-  };
 
   function openModal(modal: ActiveModal) {
     if (modal === 'feeding') feeding.openReset();
@@ -236,7 +211,7 @@ function AppMain() {
     return birth.toISOString().slice(0, 10);
   }
 
-  async function handleSaveCat(data: any) {
+  async function handleSaveCat(data: CatFormData) {
     try {
       if (data.id) {
         // Edit existing cat
@@ -328,6 +303,11 @@ function AppMain() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.appFrame}>
+        {sharedVessels.loadErrorToast && (
+          <View style={{ backgroundColor: '#fee2e2', borderBottomWidth: 1, borderBottomColor: '#fca5a5', paddingVertical: 8, paddingHorizontal: 16 }}>
+            <Text style={{ fontSize: 12, color: '#991b1b' }}>{sharedVessels.loadErrorToast}</Text>
+          </View>
+        )}
         <TopNav level={level} onLevelChange={setLevel} cats={indexedCats} activeTab={bottomTab} />
         <ScrollView contentContainerStyle={styles.mainContent}>
           {bottomTab === 'home' && (
@@ -349,6 +329,8 @@ function AppMain() {
               vesselProfiles={sharedVessels.vesselProfiles}
               onEditCat={() => openEditCat()}
               onRecordPress={(record) => { setSelectedRecord(record); openModal('recordDetail'); }}
+              pendingT1Count={pendingT1VesselIds.length}
+              onOpenPendingT1={pendingT1VesselIds.length > 0 ? () => { setCompleteT1VesselId(pendingT1VesselIds[0]); openModal('feeding'); } : undefined}
             />
           )}
           {bottomTab === 'records' && (
@@ -448,7 +430,7 @@ function AppMain() {
         visible={activeModal === 'waterAdvice'}
         onClose={closeModal}
         currentWater={todayHouseholdWater}
-        goalWater={indexedCats.reduce((sum, c) => sum + calculateAdaptiveDailyWaterGoal(c, getRecentDailyWaterIntakesForCat(c.id)), 0) || 569}
+        goalWater={indexedCats.reduce((sum, c) => sum + calculateAdaptiveDailyWaterGoal(c, getRecentDailyWaterIntakesForCat(hydration.ownershipLogs, c.id)), 0) || 569}
       />
       <BackupModal
         visible={activeModal === 'backup'}

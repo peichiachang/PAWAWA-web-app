@@ -8,6 +8,8 @@ interface DataPoint {
   errorMargin?: number;
   hasRecord?: boolean;
   lowConfidence?: boolean;
+  /** 有記錄但攝取程度為「幾乎沒吃」（kcal=0 但不同於未記錄） */
+  hasAlmostNone?: boolean;
 }
 
 interface Props {
@@ -38,6 +40,7 @@ export function TrendChart({ title, data, goal, unit, color = '#000', recordsCom
         {data.map((dp, idx) => {
           const hasRecord = dp.hasRecord !== false;
           const isNoRecord = dp.value === 0 && !hasRecord;
+          const isAlmostNone = !isNoRecord && dp.hasAlmostNone === true && dp.value === 0;
           const achievementRate = goal > 0 ? dp.value / goal : 0;
           const fillPercent = Math.min(100, achievementRate * 100);
           const isOverGoal = dp.value >= goal;
@@ -57,6 +60,10 @@ export function TrendChart({ title, data, goal, unit, color = '#000', recordsCom
                     dp.lowConfidence && { borderLeftWidth: 3, borderLeftColor: '#f59e0b' },
                   ]}
                 />
+                {/* 幾乎沒吃：底部細條，區隔「未記錄」灰色 */}
+                {isAlmostNone && (
+                  <View style={[chartStyles.almostNoneStripe, { backgroundColor: color }]} />
+                )}
                 {/* 超過目標時顯示綠色標記 */}
                 {isOverGoal && hasRecord && (
                   <View style={chartStyles.overGoalBadge}>
@@ -67,8 +74,8 @@ export function TrendChart({ title, data, goal, unit, color = '#000', recordsCom
               <Text style={[chartStyles.label, isNoRecord && chartStyles.labelNoRecord]}>
                 {dp.label}
               </Text>
-              <Text style={[chartStyles.valueLabel, isNoRecord && chartStyles.labelNoRecord]}>
-                {isNoRecord ? '—' : `${dp.value} ${unit}`}
+              <Text style={[chartStyles.valueLabel, isNoRecord && chartStyles.labelNoRecord, isAlmostNone && chartStyles.labelAlmostNone]}>
+                {isNoRecord ? '—' : isAlmostNone ? '幾乎沒吃' : `${dp.value} ${unit}`}
               </Text>
             </View>
           );
@@ -180,6 +187,19 @@ const chartStyles = StyleSheet.create({
     color: '#999',
     fontStyle: 'italic',
     fontWeight: '400',
+  },
+  labelAlmostNone: {
+    color: '#f59e0b',
+    fontStyle: 'italic',
+    fontWeight: '400',
+  },
+  almostNoneStripe: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    opacity: 0.45,
   },
   footer: {
     flexDirection: 'row',

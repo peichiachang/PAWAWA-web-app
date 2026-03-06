@@ -166,6 +166,13 @@ export function useHydration(
       return;
     }
 
+    // Phase W1：再次確認 W0 尚未過期（防止使用者在標記介面停留過久）
+    if (!currentW0 || Date.now() - currentW0.capturedAt > HYDRATION_W0_TTL_MS) {
+      Alert.alert('W0 已過期', 'W0 記錄已超過 24 小時，請重新拍攝 W0。');
+      setIsAnalyzing(false);
+      return;
+    }
+
     // Phase W1
     const storedW1 = {
       ...image,
@@ -255,15 +262,22 @@ export function useHydration(
           return;
         }
 
-        // 上限保護：結果不可超過 volumeMl（spec 六）
-        waterW0Ml = Math.min(waterW0Ml, volumeMl);
-        waterW1Ml = Math.min(waterW1Ml, volumeMl);
-
         console.log('[waterW0Ml]', waterW0Ml);
         console.log('[waterW1Ml]', waterW1Ml);
 
         // 【重構】改用時間差計算真實蒸發率 (預設 0.5ml / hr)
         const envFactorMl = calculateEvaporationMl(w0.capturedAt, storedW1.capturedAt, 0.5);
+
+        // W1 水位高於 W0：偵測到補水，無法計算攝水量
+        if (waterW1Ml > waterW0Ml) {
+          Alert.alert(
+            '偵測到補水',
+            `W1 水量（${Math.round(waterW1Ml)}ml）高於 W0（${Math.round(waterW0Ml)}ml），可能在測量期間補過水。\n\n本次紀錄無法計算攝水量，請重新從 W0 開始記錄。`,
+            [{ text: '確定', style: 'cancel' }]
+          );
+          setIsAnalyzing(false);
+          return;
+        }
 
         // W1 水位高於 W0 時 actualIntakeMl = 0，不顯示負值（spec 七）
         const actualIntakeMl = Math.max(0, waterW0Ml - waterW1Ml - envFactorMl);

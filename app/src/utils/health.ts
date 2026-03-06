@@ -35,7 +35,11 @@ export function calculateDailyKcalGoal(cat: CatIdentity): number {
 
   // Disease multipliers
   if (cat.chronicConditions.includes('hyperthyroidism')) return rer * 1.6 * ageKcalFactor;
-  if (cat.chronicConditions.includes('obesity')) return rer * 0.8;
+  if (cat.chronicConditions.includes('obesity')) {
+    // 幼貓仍需生長，不應低於 RER×1.0；成貓／老貓限制至 RER×0.8
+    const obesityFactor = getCatAgeYears(cat) < 1 ? 1.0 : 0.8;
+    return rer * obesityFactor;
+  }
 
   const neuteredFactor = cat.spayedNeutered ? 1.2 : 1.4;
   return rer * neuteredFactor * ageKcalFactor;
@@ -107,7 +111,7 @@ export function calculateAdaptiveDailyWaterGoal(cat: CatIdentity, recentDailyInt
 }
 
 export function calculateDailyKcalIntake(intakeGram: number, kcalPerGram: number): number {
-  return intakeGram * kcalPerGram;
+  return Math.round(intakeGram * kcalPerGram);
 }
 
 export function calculateWeeklyWeightChangeRatePct(currentWeightKg: number, weekAgoWeightKg: number): number {
