@@ -111,7 +111,7 @@ export function calculateAdaptiveDailyWaterGoal(cat: CatIdentity, recentDailyInt
 }
 
 export function calculateDailyKcalIntake(intakeGram: number, kcalPerGram: number): number {
-  return intakeGram * kcalPerGram;
+  return Math.round(intakeGram * kcalPerGram);
 }
 
 export function calculateWeeklyWeightChangeRatePct(currentWeightKg: number, weekAgoWeightKg: number): number {
