@@ -105,6 +105,8 @@ function createHttpAiService(baseUrl: string): AiRecognitionService {
         vesselVolumeMl: input.vessel?.volumeMl ?? null,
         foodType: input.t0.foodType || input.vessel?.foodType || 'dry',
         manualWeight: input.t0.manualWeight ?? null,
+        emptyBowlBase64: input.vessel?.topViewImageBase64 ?? null,
+        emptyBowlMimeType: 'image/jpeg',
       }),
     extractNutritionLabel: (input) =>
       post('/ai/nutrition-ocr', mapImage(input)),

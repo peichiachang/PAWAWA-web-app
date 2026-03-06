@@ -103,9 +103,10 @@ function handleFeedingMock(body) {
 }
 
 async function handleFeedingGemini(body) {
+  const emptyBowlPart = buildInlineImagePart(body.emptyBowlBase64, body.emptyBowlMimeType || 'image/jpeg');
   const t0Part = buildInlineImagePart(body.t0ImageBase64, body.t0MimeType);
   const t1Part = buildInlineImagePart(body.t1ImageBase64, body.t1MimeType);
-  const imageParts = [t0Part, t1Part].filter(Boolean);
+  const hasEmptyBowl = !!emptyBowlPart;
 
   const vesselVolumeMl = normalizeNumber(body.vesselVolumeMl, 0);
   const foodType = body.foodType === 'wet' ? 'wet' : 'dry';
@@ -117,27 +118,57 @@ async function handleFeedingGemini(body) {
     ? `Bowl: ${vesselVolumeMl > 0 ? vesselVolumeMl + 'ml' : 'unknown volume'}, food: ${foodType} (~${density}g/ml). T0 reference weight: ~${t0RefGrams}g.`
     : 'Bowl capacity unknown — estimate consumedRatio visually.';
 
+  const imageRolesSection = hasEmptyBowl
+    ? `You receive THREE images in order:
+- [1] Empty bowl (0% food) — use as contour/texture reference and absolute fill baseline.
+- [2] T0 = bowl immediately after food was placed (full).
+- [3] T1 = bowl after the cat has eaten.
+Return "t0FillRatio" and "t1FillRatio" as absolute fill levels relative to the empty bowl, then consumedRatio = t0FillRatio - t1FillRatio.`
+    : `You receive TWO images in order:
+- [1] T0 = bowl immediately after food was placed (this is the 100% baseline for this meal).
+- [2] T1 = bowl after the cat has eaten.
+Return "consumedRatio" = fraction of T0 that was eaten.`;
+
   const prompt = `
 You are a cat feeding vision analyzer. Return JSON only.
-Compare T0 (full bowl) and T1 (after eating) food amount in the same bowl.
 ${calibrationNote}
 
+IMAGE ROLES:
+${imageRolesSection}
+
 IMPORTANT RULES:
-- "consumedRatio" = fraction of T0 that was EATEN (0.0=nothing eaten, 1.0=everything eaten).
 - Bowl bottom decorations, patterns, or colored ornaments becoming visible in T1 simply indicate food level has dropped — they do NOT mean the bowl is empty. Estimate remaining food volume carefully.
-- Compare only the food volume remaining, not bowl appearance.
+- Compare only the food volume, ignoring bowl color and decorative elements.
 
 Return:
-{
+${hasEmptyBowl ? `{
+  "t0FillRatio": number (0.0-1.0, T0 fill relative to empty bowl),
+  "t1FillRatio": number (0.0-1.0, T1 fill relative to empty bowl),
+  "consumedRatio": number (= t0FillRatio - t1FillRatio),
+  "isBowlMatch": boolean,
+  "mismatchReason": string,
+  "confidence": number
+}` : `{
   "consumedRatio": number (0.0-1.0, fraction of T0 eaten),
   "isBowlMatch": boolean,
   "mismatchReason": string,
   "confidence": number
-}
+}`}
 `;
+
+  const imageParts = [emptyBowlPart, t0Part, t1Part].filter(Boolean);
   const raw = await callGeminiForJson(prompt, imageParts);
-  const consumedRatio = Math.max(0, Math.min(1, normalizeNumber(raw.consumedRatio, 0.5)));
-  // Compute grams using physics-based calibration when available; fall back to AI gram estimate
+
+  let consumedRatio;
+  if (hasEmptyBowl && raw.t0FillRatio != null && raw.t1FillRatio != null) {
+    const t0Fill = Math.max(0, Math.min(1, normalizeNumber(raw.t0FillRatio, 0.8)));
+    const t1Fill = Math.max(0, Math.min(1, normalizeNumber(raw.t1FillRatio, 0)));
+    consumedRatio = Math.max(0, Math.min(1, t0Fill - t1Fill));
+  } else {
+    consumedRatio = Math.max(0, Math.min(1, normalizeNumber(raw.consumedRatio, 0.5)));
+  }
+
+  // Compute grams using physics-based calibration when available
   const grams = t0RefGrams > 0
     ? Math.max(0, Math.round(consumedRatio * t0RefGrams))
     : Math.max(0, Math.round(normalizeNumber(raw.consumedGram ?? raw.householdTotalGram, 0)));
