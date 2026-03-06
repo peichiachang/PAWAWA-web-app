@@ -1111,6 +1111,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
 
                       return (
                         <>
+                          <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 6 }}>AI 依 T0／T1 影像估算本次「吃了多少」與對應熱量：</Text>
                           {result.consumptionLevel && (
                             <View style={{ marginBottom: 8, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#f0fdf4', borderLeftWidth: 4, borderLeftColor: '#166534' }}>
                               <Text style={{ fontSize: 14, fontWeight: '700', color: '#166534' }}>
@@ -1125,14 +1126,14 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                               </Text>
                             ))}
                             <Text style={[styles.aiTag, styles.aiTagHighlight]}>
-                              總計：{result.householdTotalGram}g
+                              AI 估算攝取：{result.householdTotalGram}g
                             </Text>
                             <Text style={styles.aiTag}>
                               kcal/g：{kcalPerGram}
                               {!nutritionResult ? '（預設）' : nutritionImage ? '（來自成分表 OCR）' : '（來自已選飼料）'}
                             </Text>
                             <Text style={[styles.aiTag, styles.aiTagHighlight]}>
-                              熱量：{kcal} kcal
+                              AI 估算熱量：{kcal} kcal
                             </Text>
                           </View>
 

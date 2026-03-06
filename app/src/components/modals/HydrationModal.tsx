@@ -323,15 +323,22 @@ export function HydrationModal({ visible, hydration, cats, onClose }: Props) {
                       </View>
                     )}
 
+                    {isAnalyzing && (
+                      <View style={{ padding: 12, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#3b82f6', borderRadius: 8, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+                        <ActivityIndicator size="small" color="#2563eb" style={{ marginRight: 8 }} />
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#1e40af' }}>AI 計算中… 正在計算飲水量</Text>
+                      </View>
+                    )}
                     {w1Done && result && (
                       <View style={[styles.aiResult, { borderColor: palette.primary, backgroundColor: palette.surfaceSoft }]}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="check-circle" size={18} color={palette.primary} style={{ marginRight: 6 }} /><Text style={[styles.aiResultTitle, { color: palette.text }]}>AI 飲水分析結果</Text></View>
+                        <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 6 }}>AI 依 W0／W1 影像估算本次飲水量與蒸發修正：</Text>
                         <View style={styles.aiTags}>
                           <Text style={styles.aiTag}>W0：{result.waterT0Ml} ml</Text>
                           <Text style={styles.aiTag}>W1：{result.waterT1Ml} ml</Text>
                           <Text style={styles.aiTag}>蒸發修正：{result.envFactorMl} ml</Text>
                           <Text style={[styles.aiTag, styles.aiTagHighlight]}>
-                            實際飲水量：{result.actualIntakeMl} ml
+                            AI 估算飲水量：{result.actualIntakeMl} ml
                           </Text>
                         </View>
                         {(vessels.currentVessel?.calibrationMethod === 'dimensions' || vessels.currentVessel?.calibrationMethod === 'side_profile') && (
@@ -398,14 +405,29 @@ export function HydrationModal({ visible, hydration, cats, onClose }: Props) {
                       </View>
                     )}
 
-                    {mismatchError && (
-                      <Text style={styles.resultErrorBox}>
-                        碗位辨識不一致：{mismatchError}
-                        {'\n'}請重拍 W1（必要時重拍 W0）。
-                      </Text>
+                    {w1Image && !w1Done && !isAnalyzing && !mismatchError && (
+                      <View style={{ padding: 12, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8, marginBottom: 12 }}>
+                        <Text style={{ fontSize: 13, color: '#92400e' }}>W1 已拍攝，但尚未取得分析結果。請檢查上方是否有錯誤訊息，或重拍 W1。</Text>
+                      </View>
                     )}
-
-                    {isAnalyzing && <ActivityIndicator size="small" color="#000000" style={styles.loadingSpinner} />}
+                    {mismatchError && (
+                      <View style={[styles.resultErrorBox, { backgroundColor: '#fef2f2', borderColor: '#dc2626', padding: 12, borderRadius: 8, marginBottom: 12 }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                          <AppIcon name="warning" size={18} color="#dc2626" style={{ marginRight: 6 }} />
+                          <Text style={{ fontSize: 14, fontWeight: '700', color: '#dc2626' }}>
+                            {mismatchError.includes('404') || mismatchError.includes('500') || mismatchError.includes('502') || mismatchError.includes('503') ? '後端服務錯誤' : mismatchError.includes('碗') || mismatchError.includes('不一致') ? '碗位辨識不一致' : '分析未完成'}
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 13, color: '#991b1b', lineHeight: 20 }}>{mismatchError}</Text>
+                        <Text style={{ fontSize: 12, color: '#991b1b', marginTop: 6 }}>
+                          {mismatchError.includes('404') || mismatchError.includes('500') || mismatchError.includes('502') || mismatchError.includes('503')
+                            ? '後端 AI 服務暫時無法使用，請稍後再試或確認 API 已正確部署。'
+                            : mismatchError.includes('timeout') || mismatchError.includes('超時')
+                              ? '連線逾時，請檢查網路後重試。'
+                              : '請確認 W0、W1 為同一水碗、光線充足後重拍 W1（必要時重拍 W0）。'}
+                        </Text>
+                      </View>
+                    )}
 
                     <Pressable style={styles.primaryBtn} onPress={() => saveOwnershipLog((addAnother) => {
                       if (addAnother) {

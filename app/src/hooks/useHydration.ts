@@ -332,7 +332,11 @@ export function useHydration(
       setCanIdentifyTags(true);
       setSelectedTagId(null); // 預設由 Modal 依 cats 設定
     } catch (error) {
-      Alert.alert('AI 分析失敗', (error as Error).message);
+      const msg = (error as Error).message;
+      setMismatchError(msg);
+      setResult(null);
+      setW1Done(false);
+      Alert.alert('分析失敗', msg);
     } finally {
       setIsAnalyzing(false);
     }
