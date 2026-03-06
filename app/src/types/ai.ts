@@ -14,6 +14,7 @@ export interface AiImageInput {
   capturedAt?: number;
   waterLevelPct?: number;
   manualWeight?: number; // T0 手動測重的克數（用於精確模式）
+  foodType?: 'dry' | 'wet' | 'mixed'; // 讓 AI 知道是哪種食物以調整視覺判斷
 }
 
 /** T1 相對於 T0 的進食程度（五分位離散分級） */

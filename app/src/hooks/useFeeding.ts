@@ -251,12 +251,13 @@ export function useFeeding(
   }
 
   /** 由 Modal 內嵌相機拍完 T0 後呼叫，不經過全域 launchCamera */
-  async function submitT0Image(image: CapturedImage, manualWeight?: number) {
+  async function submitT0Image(image: CapturedImage, manualWeight?: number, foodType?: 'dry' | 'wet' | 'mixed') {
     if (!vessels.selectedVesselId) return;
     const stored: StoredFeedingT0 = {
       ...image,
       capturedAt: Date.now(),
       manualWeight,
+      foodType,
       vesselId: vessels.selectedVesselId,
     };
     const nextMap = { ...t0Map, [vessels.selectedVesselId]: stored };

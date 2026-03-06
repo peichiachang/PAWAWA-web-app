@@ -4,7 +4,7 @@ export type Level = 'household' | `cat_${string}`;
 export type BottomTab = 'home' | 'records' | 'knowledge' | 'profile';
 export type ActiveModal = 'feeding' | 'feedingLateEntry' | 'water' | 'elimination' | 'medication' | 'symptom' | 'settings' | 'blood' | 'bloodHistory' | 'bloodDetail' | 'kcalAdvice' | 'waterAdvice' | 'backup' | 'iap' | 'addCat' | 'editCat' | 'recordDetail' | 'weightRecord' | 'canLibrary' | 'feedLibrary' | null;
 export type CapturedImage = Required<Pick<AiImageInput, 'uri' | 'imageBase64' | 'mimeType'>>;
-export type StoredFeedingT0 = CapturedImage & { capturedAt: number; manualWeight?: number; vesselId?: string };
+export type StoredFeedingT0 = CapturedImage & { capturedAt: number; manualWeight?: number; foodType?: 'dry' | 'wet' | 'mixed'; vesselId?: string };
 export type StoredHydrationImage = CapturedImage & {
   capturedAt: number;
   waterLevelPct?: number;

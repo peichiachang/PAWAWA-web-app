@@ -217,6 +217,19 @@ For deep bowls, shadows and perspective distortion can hide the bottom. Focus on
 `
       : '';
 
+    const isWetFood = input.t0.foodType === 'wet' || input.t1.foodType === 'wet';
+    const wetFoodSection = isWetFood
+      ? `
+## WET FOOD 3D RECOGNITION RULE（濕食/罐頭專屬分析）
+
+Wet food forms a 3D "mound" or "pile" rather than spreading flat like dry kibble.
+CRITICAL OPTICAL CUES for WET FOOD:
+1. Focus heavily on HIGHLIGHTS, SHADOWS, and TEXTURE DEPTH to estimate the Y-axis thickness of the food mound.
+2. DO NOT rely purely on 2D horizontal surface area coverage.
+3. If T1 shows a widespread but extremely THIN film or smear of residue on the bowl bottom, recognize that its remaining volume is extremely low (e.g. consumedRatio > 0.9), despite covering a large surface area.
+`
+      : '';
+
     const prompt = hasEmptyBowl
       ? `
 You are a production vision model for cat feeding analysis.
@@ -244,6 +257,7 @@ Hard rules:
 
 ${shallowBowlSection}
 ${deepBowlSection}
+${wetFoodSection}
 
 Return JSON:
 {
@@ -278,6 +292,7 @@ Hard rules:
 
 ${shallowBowlSection}
 ${deepBowlSection}
+${wetFoodSection}
 
 Return JSON:
 {
