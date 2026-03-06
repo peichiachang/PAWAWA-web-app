@@ -473,9 +473,11 @@ export function HomeContent({
   }
 
   const individualKcalGoal = currentCat ? Math.round(calculateDailyKcalGoal(currentCat)) : 250;
+  const recentWaterIntakes = currentCat ? getRecentDailyWaterIntakesForCat(currentCat.id) : [];
   const individualWaterGoal = currentCat
-    ? Math.round(calculateAdaptiveDailyWaterGoal(currentCat, getRecentDailyWaterIntakesForCat(currentCat.id)))
+    ? Math.round(calculateAdaptiveDailyWaterGoal(currentCat, recentWaterIntakes))
     : 210;
+  const isWaterGoalPersonalized = recentWaterIntakes.filter((v) => v > 0).length >= 3;
 
   const kcalMultiplierHint = currentCat?.chronicConditions.includes('hyperthyroidism') ? 'RER × 1.6 (甲亢)' :
     currentCat?.chronicConditions.includes('obesity') ? 'RER × 0.8 (減重期)' :
@@ -632,7 +634,12 @@ export function HomeContent({
                       觀察：若連續多日 {'>'} {Math.round(waterRange.max)} ml，建議回診檢查控制狀態
                     </Text>
                   ) : (
-                    <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>{waterProgressPct}% 達成</Text>
+                    <>
+                      <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>{waterProgressPct}% 達成</Text>
+                      {isWaterGoalPersonalized && (
+                        <Text style={{ fontSize: 9, color: '#888', textAlign: 'right', marginTop: 2 }}>目標已根據近期紀錄調整</Text>
+                      )}
+                    </>
                   )}
                 </View>
               </View>

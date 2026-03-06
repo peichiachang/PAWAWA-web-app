@@ -60,6 +60,9 @@ export function calculateHydrationVolume({
     }
     // 模式 B：若有側面輪廓，使用微積分
     else if (vessel?.calibrationMethod === 'side_profile' && vessel.profileContour) {
+        if (!vessel.profileContour.points || vessel.profileContour.points.length === 0) {
+            throw new Error('側面輪廓資料不完整，請至食碗管理重新進行容器校準。');
+        }
         volumeMl = calculateVolumeToWaterLevel(vessel.profileContour, clampedWLevelPct);
     }
     // 模式 C：直筒預設線性
