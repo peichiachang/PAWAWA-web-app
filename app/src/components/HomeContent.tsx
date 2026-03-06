@@ -1,6 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActiveModal, Level, FeedingOwnershipLog, HydrationOwnershipLog, VesselCalibration, INTAKE_LEVEL_RATIO } from '../types/app';
 import { EliminationOwnershipLog } from '../hooks/useElimination';
 import { CatIdentity, ClinicalSummary, MedicationLog, SymptomLog } from '../types/domain';
@@ -10,9 +9,9 @@ import { TrendChart } from './TrendChart';
 import { DetailRecord } from './modals/RecordDetailModal';
 import { AppIcon } from './AppIcon';
 import { RecordLogItem } from './RecordLogItem';
-import { VESSEL_PROFILES_KEY } from '../constants';
-import { recalculateVesselVolume } from '../utils/vesselVolume';
 import { extractCatSeries, getCatNameBySeries, matchesCatSeries, getScopedCats } from '../utils/catScope';
+import { toDateKey, isToday } from '../utils/date';
+import { getRecentDailyWaterIntakesForCat } from '../utils/hydrationUtils';
 
 interface Props {
   level: Level;
@@ -29,10 +28,11 @@ interface Props {
   eliminationHistory: EliminationOwnershipLog[];
   medicationHistory: MedicationLog[];
   symptomHistory: SymptomLog[];
-  /** 若由父層傳入，以父層為準（與食碗管理編輯即時同步）；未傳則自行從 AsyncStorage 載入 */
-  vesselProfiles?: VesselCalibration[];
+  vesselProfiles: VesselCalibration[];
   onEditCat?: () => void;
   onRecordPress?: (record: DetailRecord) => void;
+  pendingT1Count?: number;
+  onOpenPendingT1?: () => void;
 }
 
 export function HomeContent({
@@ -50,51 +50,13 @@ export function HomeContent({
   eliminationHistory,
   medicationHistory,
   symptomHistory,
-  vesselProfiles: vesselProfilesFromParent,
+  vesselProfiles,
   onEditCat,
   onRecordPress,
+  pendingT1Count = 0,
+  onOpenPendingT1,
 }: Props) {
-  // 若父層未傳入 vesselProfiles，則自行從 AsyncStorage 載入（向後相容）
-  const [localVesselProfiles, setLocalVesselProfiles] = useState<VesselCalibration[]>([]);
-  useEffect(() => {
-    if (vesselProfilesFromParent != null) return;
-    async function loadVessels() {
-      try {
-        const raw = await AsyncStorage.getItem(VESSEL_PROFILES_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw) as VesselCalibration[];
-          const corrected = parsed.map(v => recalculateVesselVolume(v));
-          setLocalVesselProfiles(corrected);
-          const needsSave = corrected.some((v, i) => v.volumeMl !== parsed[i]?.volumeMl);
-          if (needsSave) {
-            await AsyncStorage.setItem(VESSEL_PROFILES_KEY, JSON.stringify(corrected));
-          }
-        }
-      } catch (_e) {}
-    }
-    void loadVessels();
-  }, [vesselProfilesFromParent]);
-
-  const vesselProfiles = vesselProfilesFromParent ?? localVesselProfiles;
-
-  /** 數據／趨勢區塊：今日數據 | 熱量趨勢 | 飲水量趨勢 */
   const [dataTrendTab, setDataTrendTab] = useState<'today' | 'kcal' | 'water'>('today');
-  const [dataTrendDropdownOpen, setDataTrendDropdownOpen] = useState(false);
-
-  const getRecentDailyWaterIntakesForCat = (catId: string): number[] => {
-    const byDay = new Map<string, number>();
-    hydrationHistory
-      .filter((log) => matchesCatSeries(log.selectedTagId, catId))
-      .forEach((log) => {
-        const d = new Date(log.createdAt);
-        const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-        byDay.set(key, (byDay.get(key) || 0) + (log.actualWaterMl || log.totalMl || 0));
-      });
-    return Array.from(byDay.entries())
-      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
-      .map(([, total]) => total)
-      .slice(-7);
-  };
 
   // 計算動態誤差範圍的 helper function
   const calculateErrorMargin = (
@@ -130,11 +92,14 @@ export function HomeContent({
   };
 
   const chartData = useMemo(() => {
-    // Generate last 7 days labels
+    // Generate last 7 days: key for grouping (YYYY-M-D) + label for display (M/D)
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - (6 - i));
-      return d.toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }); // "MM/DD" format varies by locale but better than UTC
+      return {
+        key: toDateKey(d.getTime()),
+        label: `${d.getMonth() + 1}/${d.getDate()}`,
+      };
     });
 
     // Filter by level
@@ -148,10 +113,8 @@ export function HomeContent({
       : hydrationHistory.filter(l => matchesCatSeries(l.selectedTagId, level));
 
     // Group feeding (kcal) by date with error margin and record tracking
-    const kcalData = days.map(day => {
-      const dayLogs = filteredFeedings.filter(log =>
-        new Date(log.createdAt).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) === day
-      );
+    const kcalData = days.map(({ key: day, label }) => {
+      const dayLogs = filteredFeedings.filter(log => toDateKey(log.createdAt) === day);
       const totalKcal = dayLogs.reduce((sum, log) => sum + (log.kcal || log.totalGram * 3), 0);
       
       // 計算誤差範圍：根據記錄的模式、容器校準、confidence 動態調整
@@ -174,7 +137,7 @@ export function HomeContent({
       
       const roundedKcal = Math.round(totalKcal);
       return {
-        label: day,
+        label,
         value: roundedKcal,
         errorMargin: weightedErrorMargin > 0 ? weightedErrorMargin : undefined,
         hasRecord: dayLogs.length > 0,
@@ -184,9 +147,8 @@ export function HomeContent({
     });
 
     // Group hydration by date with error margin and record tracking
-    const waterData = days.map(day => {
-      const dayLogs = filteredHydrations.filter(log =>
-        new Date(log.createdAt).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) === day
+    const waterData = days.map(({ key: day, label }) => {
+      const dayLogs = filteredHydrations.filter(log => toDateKey(log.createdAt) === day
       );
       const totalMl = dayLogs.reduce((sum, log) => sum + (log.actualWaterMl || log.totalMl), 0);
       
@@ -194,7 +156,7 @@ export function HomeContent({
       const errorMargin = dayLogs.length > 0 ? 0.15 : undefined;
       
       return {
-        label: day,
+        label,
         value: Math.round(totalMl),
         errorMargin,
         hasRecord: dayLogs.length > 0,
@@ -203,16 +165,16 @@ export function HomeContent({
     });
 
     // 胃口趨勢：僅納入有 intakeLevel 的記錄（有 T1／攝取程度），每日平均攝取程度 0–100%
-    const appetiteData = days.map(day => {
+    const appetiteData = days.map(({ key: day, label }) => {
       const dayLogs = filteredFeedings.filter(
-        log => log.intakeLevel != null && new Date(log.createdAt).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) === day
+        log => log.intakeLevel != null && toDateKey(log.createdAt) === day
       );
       const avgRatio = dayLogs.length > 0
         ? dayLogs.reduce((sum, log) => sum + INTAKE_LEVEL_RATIO[log.intakeLevel!], 0) / dayLogs.length
         : 0;
       const roundedPct = Math.round(avgRatio * 100);
       return {
-        label: day,
+        label,
         value: roundedPct,
         hasRecord: dayLogs.length > 0,
         hasAlmostNone: roundedPct === 0 && dayLogs.some(l => l.intakeLevel === 'almost_none'),
@@ -277,7 +239,7 @@ export function HomeContent({
     const goalCats = indexedCats.length > 0 ? indexedCats : cats;
     const householdKcalGoal = goalCats.reduce((sum, cat) => sum + calculateDailyKcalGoal(cat), 0) || 625;
     const householdWaterGoal = goalCats.reduce((sum, cat) => {
-      const recent = getRecentDailyWaterIntakesForCat(cat.id);
+      const recent = getRecentDailyWaterIntakesForCat(hydrationHistory, cat.id);
       return sum + calculateAdaptiveDailyWaterGoal(cat, recent);
     }, 0) || 569;
 
@@ -300,41 +262,33 @@ export function HomeContent({
             </Pressable>
           </View>
         )}
+        {pendingT1Count > 0 && onOpenPendingT1 && (
+          <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#3b82f6', borderRadius: 8 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#1e40af', marginBottom: 6 }}>您有 {pendingT1Count} 筆放飯記錄尚未填寫收碗</Text>
+            <Pressable onPress={onOpenPendingT1} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, backgroundColor: '#3b82f6', borderRadius: 8 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>去填寫</Text>
+            </Pressable>
+          </View>
+        )}
         <View style={styles.cardBlock}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <AppIcon name="dashboard" size={20} color="#000" style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>數據與趨勢</Text>
           </View>
-          <View style={{ position: 'relative', zIndex: 10, marginBottom: 16 }}>
-            <Pressable
-              onPress={() => setDataTrendDropdownOpen((o) => !o)}
-              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: '#000' }}
-            >
-              <Text style={{ fontSize: 14, fontWeight: '600' }}>
-                {dataTrendTab === 'today' ? '今日家庭數據' : dataTrendTab === 'kcal' ? '熱量攝取趨勢' : '飲水量趨勢'}
-              </Text>
-              <AppIcon name={dataTrendDropdownOpen ? 'expand-less' : 'expand-more'} size={22} color="#000" />
-            </Pressable>
-            {dataTrendDropdownOpen && (
-              <>
-                <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -200, zIndex: 1 }} onPress={() => setDataTrendDropdownOpen(false)} />
-                <View style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 2, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', zIndex: 2 }}>
-                  {[
-                    { key: 'today' as const, label: '今日家庭數據' },
-                    { key: 'kcal' as const, label: '熱量攝取趨勢' },
-                    { key: 'water' as const, label: '飲水量趨勢' },
-                  ].map(({ key, label }) => (
-                    <Pressable
-                      key={key}
-                      style={{ paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}
-                      onPress={() => { setDataTrendTab(key); setDataTrendDropdownOpen(false); }}
-                    >
-                      <Text style={{ fontSize: 14, fontWeight: dataTrendTab === key ? '700' : '400' }}>{label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </>
-            )}
+          <View style={{ flexDirection: 'row', marginBottom: 16, borderWidth: 1, borderColor: '#000', borderRadius: 4, overflow: 'hidden' }}>
+            {([
+              { key: 'today' as const, label: '今日數據' },
+              { key: 'kcal' as const, label: '熱量趨勢' },
+              { key: 'water' as const, label: '飲水趨勢' },
+            ] as const).map(({ key, label }, i, arr) => (
+              <Pressable
+                key={key}
+                style={{ flex: 1, paddingVertical: 8, backgroundColor: dataTrendTab === key ? '#000' : '#fff', borderRightWidth: i < arr.length - 1 ? 1 : 0, borderRightColor: '#000' }}
+                onPress={() => setDataTrendTab(key)}
+              >
+                <Text style={{ fontSize: 12, textAlign: 'center', fontWeight: dataTrendTab === key ? '700' : '400', color: dataTrendTab === key ? '#fff' : '#000' }}>{label}</Text>
+              </Pressable>
+            ))}
           </View>
 
           {dataTrendTab === 'today' && (
@@ -438,7 +392,7 @@ export function HomeContent({
   }
 
   const individualKcalGoal = currentCat ? Math.round(calculateDailyKcalGoal(currentCat)) : 250;
-  const recentWaterIntakes = currentCat ? getRecentDailyWaterIntakesForCat(currentCat.id) : [];
+  const recentWaterIntakes = currentCat ? getRecentDailyWaterIntakesForCat(hydrationHistory, currentCat.id) : [];
   const individualWaterGoal = currentCat
     ? Math.round(calculateAdaptiveDailyWaterGoal(currentCat, recentWaterIntakes))
     : 210;
@@ -459,29 +413,15 @@ export function HomeContent({
         '50ml / kg (標準)';
   // 今日攝取（僅當日紀錄，非累積）
   const currentKcal = useMemo(
-    () => {
-      const now = new Date();
-      const isToday = (ts: number) => {
-        const d = new Date(ts);
-        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-      };
-      return feedingHistory
-        .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
-        .reduce((sum, log) => sum + (log.kcal ?? log.totalGram * 3), 0);
-    },
+    () => feedingHistory
+      .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
+      .reduce((sum, log) => sum + (log.kcal ?? log.totalGram * 3), 0),
     [feedingHistory, level]
   );
   const currentWater = useMemo(
-    () => {
-      const now = new Date();
-      const isToday = (ts: number) => {
-        const d = new Date(ts);
-        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-      };
-      return hydrationHistory
-        .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
-        .reduce((sum, log) => sum + (log.actualWaterMl ?? log.totalMl ?? 0), 0);
-    },
+    () => hydrationHistory
+      .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
+      .reduce((sum, log) => sum + (log.actualWaterMl ?? log.totalMl ?? 0), 0),
     [hydrationHistory, level]
   );
   const waterProgressBase = isWaterObservationMode ? Math.max(waterRange.max, 1) : Math.max(individualWaterGoal, 1);
@@ -489,6 +429,14 @@ export function HomeContent({
 
   return (
     <>
+      {pendingT1Count > 0 && onOpenPendingT1 && (
+        <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#3b82f6', borderRadius: 8 }}>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: '#1e40af', marginBottom: 6 }}>您有 {pendingT1Count} 筆放飯記錄尚未填寫收碗</Text>
+          <Pressable onPress={onOpenPendingT1} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, backgroundColor: '#3b82f6', borderRadius: 8 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>去填寫</Text>
+          </Pressable>
+        </View>
+      )}
       <View style={{ borderWidth: 2, borderColor: '#000', padding: 20, marginBottom: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
           <AppIcon name="pets" size={20} color="#000" style={{ marginRight: 8 }} />
@@ -529,36 +477,20 @@ export function HomeContent({
             <AppIcon name="dashboard" size={18} color="#000" style={{ marginRight: 6 }} />
             <Text style={styles.sectionTitle}>數據與趨勢</Text>
           </View>
-          <View style={{ position: 'relative', zIndex: 10, marginBottom: 12 }}>
-            <Pressable
-              onPress={() => setDataTrendDropdownOpen((o) => !o)}
-              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: '#000' }}
-            >
-              <Text style={{ fontSize: 14, fontWeight: '600' }}>
-                {dataTrendTab === 'today' ? '今日數據' : dataTrendTab === 'kcal' ? '熱量攝取趨勢' : '飲水量趨勢'}
-              </Text>
-              <AppIcon name={dataTrendDropdownOpen ? 'expand-less' : 'expand-more'} size={22} color="#000" />
-            </Pressable>
-            {dataTrendDropdownOpen && (
-              <>
-                <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -200, zIndex: 1 }} onPress={() => setDataTrendDropdownOpen(false)} />
-                <View style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 2, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', zIndex: 2 }}>
-                  {[
-                    { key: 'today' as const, label: '今日數據' },
-                    { key: 'kcal' as const, label: '熱量攝取趨勢' },
-                    { key: 'water' as const, label: '飲水量趨勢' },
-                  ].map(({ key, label }) => (
-                    <Pressable
-                      key={key}
-                      style={{ paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}
-                      onPress={() => { setDataTrendTab(key); setDataTrendDropdownOpen(false); }}
-                    >
-                      <Text style={{ fontSize: 14, fontWeight: dataTrendTab === key ? '700' : '400' }}>{label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </>
-            )}
+          <View style={{ flexDirection: 'row', marginBottom: 12, borderWidth: 1, borderColor: '#000', borderRadius: 4, overflow: 'hidden' }}>
+            {([
+              { key: 'today' as const, label: '今日數據' },
+              { key: 'kcal' as const, label: '熱量趨勢' },
+              { key: 'water' as const, label: '飲水趨勢' },
+            ] as const).map(({ key, label }, i, arr) => (
+              <Pressable
+                key={key}
+                style={{ flex: 1, paddingVertical: 8, backgroundColor: dataTrendTab === key ? '#000' : '#fff', borderRightWidth: i < arr.length - 1 ? 1 : 0, borderRightColor: '#000' }}
+                onPress={() => setDataTrendTab(key)}
+              >
+                <Text style={{ fontSize: 12, textAlign: 'center', fontWeight: dataTrendTab === key ? '700' : '400', color: dataTrendTab === key ? '#fff' : '#000' }}>{label}</Text>
+              </Pressable>
+            ))}
           </View>
 
           {dataTrendTab === 'today' && (

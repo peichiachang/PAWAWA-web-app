@@ -1,6 +1,19 @@
 export type Gender = 'male' | 'female' | 'unknown';
 export type ChronicCondition = 'ckd' | 'diabetes' | 'hyperthyroidism' | 'obesity' | 'fip' | 'heart_disease' | 'ibd' | 'asthma' | 'flutd' | 'other';
 
+/** AddCatModal / EditCatModal 的 onSave 回傳資料結構 */
+export interface CatFormData {
+  id?: string;
+  name: string;
+  gender: Gender;
+  weight: number;
+  age: number;
+  spayedNeutered: boolean;
+  activity: string;
+  bodyCondition: string;
+  chronicConditions: ChronicCondition[];
+}
+
 export interface CatIdentity {
   id: string;
   name: string;

@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Pressable, ScrollView, Text, View, TextInput, Alert, Switch, SafeAreaView } from 'react-native';
 import { styles } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
-import { ChronicCondition, CatIdentity } from '../../types/domain';
+import { ChronicCondition, CatIdentity, CatFormData } from '../../types/domain';
 
 interface Props {
     visible: boolean;
     onClose: () => void;
-    onSave: (catData: any) => Promise<void> | void;
+    onSave: (catData: CatFormData) => Promise<void> | void;
     initialData?: CatIdentity | null;
     mode?: 'add' | 'edit';
 }
