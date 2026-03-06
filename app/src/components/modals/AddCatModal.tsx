@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Pressable, ScrollView, Text, View, TextInput, Alert, Switch, SafeAreaView } from 'react-native';
 import { styles } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
-import { ChronicCondition, CatIdentity, CatFormData } from '../../types/domain';
+import { ChronicCondition, CatIdentity, CatFormData, Gender } from '../../types/domain';
 
 interface Props {
     visible: boolean;
@@ -84,7 +84,7 @@ export function AddCatModal({ visible, onClose, onSave, initialData, mode = 'add
             await onSave({
                 ...(isEditMode && initialData ? { id: initialData.id } : {}),
                 name,
-                gender,
+                gender: gender as Gender,
                 weight: parsedWeight,
                 age: parsedAge,
                 spayedNeutered,

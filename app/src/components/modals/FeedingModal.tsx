@@ -85,13 +85,14 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
   // 食物記錄只顯示「食碗」
   const feedingVessels = vesselProfiles.filter(p => (p.vesselType || 'feeding') === 'feeding');
 
-  /** 飼料／罐頭列表：已儲存（fromSeed 為 false 或未設）的排前面 */
-  const sortedFeedLibrary = useMemo(
-    () => [...feedLibrary].sort((a, b) => (a.fromSeed ? 1 : 0) - (b.fromSeed ? 1 : 0)),
+  /** 僅使用者已選擇儲存的飼料（不顯示種子庫項目） */
+  const savedFeedLibrary = useMemo(
+    () => feedLibrary.filter(f => !f.fromSeed),
     [feedLibrary]
   );
-  const sortedCanLibrary = useMemo(
-    () => [...canLibrary].sort((a, b) => (a.fromSeed ? 1 : 0) - (b.fromSeed ? 1 : 0)),
+  /** 僅使用者已選擇儲存的罐頭（不顯示種子庫項目） */
+  const savedCanLibrary = useMemo(
+    () => canLibrary.filter(c => !c.fromSeed),
     [canLibrary]
   );
 
@@ -143,13 +144,13 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
             <>
               <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -280, zIndex: 1 }} onPress={() => setAutoFeederFeedSelectOpen(false)} />
               <View style={{ minHeight: 48, maxHeight: 220, marginTop: 6, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.surface, borderRadius: 8, zIndex: 2, overflow: 'hidden' }}>
-                {sortedFeedLibrary.length === 0 ? (
+                {savedFeedLibrary.length === 0 ? (
                   <View style={{ paddingVertical: 16, paddingHorizontal: 14 }}>
-                    <Text style={{ fontSize: 12, color: palette.muted }}>尚無飼料，可至個人 → 飼料設定新增</Text>
+                    <Text style={{ fontSize: 12, color: palette.muted }}>尚無已儲存的飼料，請前往個人 → 飼料設定選擇平時餵的飼料</Text>
                   </View>
                 ) : (
                   <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
-                    {sortedFeedLibrary.map((feed) => (
+                    {savedFeedLibrary.map((feed) => (
                       <Pressable
                         key={feed.id}
                         style={{ paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: palette.border }}
@@ -261,6 +262,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
   const [inputMode, setInputMode] = useState<'camera' | 'manual'>('camera');
   const [manualGrams, setManualGrams] = useState('');
   const [manualTagId, setManualTagId] = useState<string | null>(null);
+  const [manualFoodType, setManualFoodType] = useState('');
   const [note, setNote] = useState('');
   const [sessionFoodType, setSessionFoodType] = useState<FoodType>('dry');
   const [capturePhase, setCapturePhase] = useState<'t0' | 't1' | 'nutrition' | null>(null);
@@ -300,6 +302,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
     setManualWeight('');
     setManualGrams('');
     setManualTagId(null);
+    setManualFoodType('');
     setManualBoundaryLevel(null);
     setNote('');
     setSessionFoodSource(null);
@@ -409,14 +412,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{initialMode === 'late_entry' ? '補填記錄' : '食物記錄'}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              {initialMode !== 'late_entry' && (
-                <Pressable onPress={() => setInputMode(inputMode === 'manual' ? 'camera' : 'manual')}>
-                  <Text style={{ fontSize: 14, color: palette.primary, fontWeight: '600' }}>{inputMode === 'manual' ? '返回' : '手動輸入'}</Text>
-                </Pressable>
-              )}
-              <Pressable onPress={() => { resetToBlankRecordScreen(); onClose(); }}><Text style={styles.closeText}>×</Text></Pressable>
-            </View>
+            <Pressable onPress={() => { resetToBlankRecordScreen(); onClose(); }}><Text style={styles.closeText}>×</Text></Pressable>
           </View>
           <ScrollView style={styles.modalBody}>
             {initialMode === 'late_entry' ? (
@@ -476,6 +472,18 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
             <>
             {inputMode === 'manual' ? (
               <View>
+                <Pressable onPress={() => setInputMode('camera')} style={{ marginBottom: 12 }}>
+                  <Text style={{ fontSize: 13, color: palette.primary, fontWeight: '600' }}>← 返回選擇食物類型</Text>
+                </Pressable>
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>食物類型（可自由填寫）</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="例：混飼料、罐頭+乾糧、鮮食"
+                    value={manualFoodType}
+                    onChangeText={setManualFoodType}
+                  />
+                </View>
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>提供克數 (g)</Text>
                   <TextInput
@@ -521,7 +529,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                   onPress={() => {
                     const g = parseFloat(manualGrams);
                     if (!g || g <= 0) { Alert.alert('請輸入克數', '克數必須大於 0。'); return; }
-                    saveManualLog(g, manualTagId, resetToBlankRecordScreen, note);
+                    saveManualLog(g, manualTagId, resetToBlankRecordScreen, note, { manualFoodType: manualFoodType || undefined });
                   }}
                 >
                   <Text style={styles.primaryBtnText}>儲存記錄</Text>
@@ -537,7 +545,13 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                       style={{ paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surface }}
                       onPress={() => setSessionFoodSource(src)}
                     >
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: palette.text }}>{FOOD_SOURCE_LABEL[src]}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: palette.text }}>
+                        {src === 'auto_feeder' && '🤖 '}
+                        {src === 'dry_once' && '🌾 '}
+                        {src === 'canned' && '🥫 '}
+                        {src === 'homemade' && '🍳 '}
+                        {FOOD_SOURCE_LABEL[src]}
+                      </Text>
                       <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
                         {src === 'auto_feeder' && '不需拍照，手動輸入克數與攝取程度'}
                         {src === 'dry_once' && '放飯拍照 + 收碗拍照 + 攝取程度'}
@@ -546,6 +560,15 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                       </Text>
                     </Pressable>
                   ))}
+                </View>
+                <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: palette.border }}>
+                  <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 8 }}>找不到合適選項？</Text>
+                  <Pressable
+                    style={{ paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surfaceSoft }}
+                    onPress={() => setInputMode('manual')}
+                  >
+                    <Text style={{ fontSize: 13, color: palette.muted }}>✏️ 手動輸入</Text>
+                  </Pressable>
                 </View>
               </>
             ) : effectiveSessionFoodSource === 'auto_feeder' ? (
@@ -631,16 +654,13 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                             <>
                               <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -320, zIndex: 1 }} onPress={() => setCannedCanSelectOpen(false)} />
                               <View style={{ minHeight: 48, maxHeight: 220, marginTop: 6, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.surface, borderRadius: 8, zIndex: 2, overflow: 'hidden' }}>
-                                {sortedCanLibrary.length === 0 ? (
-                                  <View style={{ paddingVertical: 16, paddingHorizontal: 14 }}>
-                                    <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 8 }}>尚無罐頭，可至個人 → 罐頭庫新增，或下方＋ 新增罐頭</Text>
-                                    <Pressable style={[styles.choiceBtn, { borderStyle: 'dashed', alignSelf: 'flex-start' }]} onPress={() => { setAddCanMode(true); setCannedCanSelectOpen(false); }}>
-                                      <Text style={styles.choiceBtnText}>＋ 新增罐頭</Text>
-                                    </Pressable>
-                                  </View>
-                                ) : (
-                                  <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
-                                    {sortedCanLibrary.map((can) => (
+                        {savedCanLibrary.length === 0 ? (
+                          <View style={{ paddingVertical: 16, paddingHorizontal: 14 }}>
+                            <Text style={{ fontSize: 12, color: palette.muted }}>尚無已儲存的罐頭，請前往個人 → 罐頭庫選擇平時餵的罐頭</Text>
+                          </View>
+                        ) : (
+                          <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
+                            {savedCanLibrary.map((can) => (
                                       <Pressable
                                         key={can.id}
                                         style={{ paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: palette.border }}
@@ -1262,13 +1282,13 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                     <>
                       <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -280, zIndex: 1 }} onPress={() => setAutoFeederFeedSelectOpen(false)} />
                       <View style={{ minHeight: 48, maxHeight: 220, marginTop: 6, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.surface, borderRadius: 8, zIndex: 2, overflow: 'hidden' }}>
-                        {sortedFeedLibrary.length === 0 ? (
+                        {savedFeedLibrary.length === 0 ? (
                           <View style={{ paddingVertical: 16, paddingHorizontal: 14 }}>
-                            <Text style={{ fontSize: 12, color: palette.muted }}>尚無飼料，可至個人 → 飼料設定新增，或下方掃描標籤</Text>
+                            <Text style={{ fontSize: 12, color: palette.muted }}>尚無已儲存的飼料，請前往個人 → 飼料設定選擇平時餵的飼料</Text>
                           </View>
                         ) : (
                           <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
-                            {sortedFeedLibrary.map((feed) => (
+                            {savedFeedLibrary.map((feed) => (
                               <Pressable
                                 key={feed.id}
                                 style={{ paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: palette.border }}

@@ -216,6 +216,8 @@ export interface FeedingOwnershipLog {
   canId?: string;
   /** 自煮食材（僅 foodSourceType === 'homemade'） */
   ingredients?: string[];
+  /** 手動輸入時可自由填寫的食物類型（例：混飼料、罐頭+乾糧） */
+  manualFoodType?: string;
 }
 
 export interface HydrationOwnershipLog {

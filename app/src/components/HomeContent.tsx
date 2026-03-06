@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActiveModal, Level, FeedingOwnershipLog, HydrationOwnershipLog, VesselCalibration, INTAKE_LEVEL_RATIO } from '../types/app';
 import { EliminationOwnershipLog } from '../hooks/useElimination';
 import { CatIdentity, ClinicalSummary, MedicationLog, SymptomLog } from '../types/domain';
@@ -57,6 +58,8 @@ export function HomeContent({
   onOpenPendingT1,
 }: Props) {
   const [dataTrendTab, setDataTrendTab] = useState<'today' | 'kcal' | 'water'>('today');
+  const [dataTrendDropdownOpen, setDataTrendDropdownOpen] = useState(false);
+  /** 首頁「新增紀錄」選單是否展開 */
   const [addRecordMenuOpen, setAddRecordMenuOpen] = useState(false);
 
   // 計算動態誤差範圍的 helper function
@@ -277,7 +280,50 @@ export function HomeContent({
             </Pressable>
           </View>
         )}
-        {pendingT1Count > 0 && onOpenPendingT1 && (
+        <View style={[styles.cardBlock, { marginBottom: 16 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <AppIcon name="add-circle" size={20} color="#000" style={{ marginRight: 8 }} />
+            <Text style={styles.cardTitle}>新增紀錄</Text>
+          </View>
+          <Text style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
+          <View style={{ position: 'relative', zIndex: 20 }}>
+            <Pressable
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 2, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff' }}
+              onPress={() => setAddRecordMenuOpen((v) => !v)}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600' }}>選擇記錄類型</Text>
+              <AppIcon name={addRecordMenuOpen ? 'expand-less' : 'expand-more'} size={22} color="#000" />
+            </Pressable>
+            {addRecordMenuOpen && (
+              <>
+                <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -280, zIndex: 1 }} onPress={() => setAddRecordMenuOpen(false)} />
+                <View style={{ position: 'relative', marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', zIndex: 2 }}>
+                  <ScrollView style={{ maxHeight: 256 }} keyboardShouldPersistTaps="handled">
+                    {[
+                      { modal: 'feeding' as ActiveModal, label: '食物記錄', icon: 'restaurant' },
+                      { modal: 'water' as ActiveModal, label: '飲水記錄', icon: 'opacity' },
+                      { modal: 'elimination' as ActiveModal, label: '排泄記錄', icon: 'sanitizer' },
+                      { modal: 'weightRecord' as ActiveModal, label: '體重記錄', icon: 'monitor-weight' },
+                      { modal: 'medication' as ActiveModal, label: '用藥記錄', icon: 'medication' },
+                      { modal: 'symptom' as ActiveModal, label: '異常症狀', icon: 'healing' },
+                      { modal: 'blood' as ActiveModal, label: '報告掃描', icon: 'biotech' },
+                    ].map(({ modal, label, icon }) => (
+                      <Pressable
+                        key={modal}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                        onPress={() => { onOpenModal(modal); setAddRecordMenuOpen(false); }}
+                      >
+                        <AppIcon name={icon as any} size={20} color="#000" style={{ marginRight: 10 }} />
+                        <Text style={{ fontSize: 14, fontWeight: '500' }}>{label}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+        {pendingT1Count != null && pendingT1Count > 0 && onOpenPendingT1 && (
           <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#3b82f6', borderRadius: 8 }}>
             <Text style={{ fontSize: 13, fontWeight: '600', color: '#1e40af', marginBottom: 6 }}>您有 {pendingT1Count} 筆放飯記錄尚未填寫收碗</Text>
             <Pressable onPress={onOpenPendingT1} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, backgroundColor: '#3b82f6', borderRadius: 8 }}>
@@ -457,32 +503,74 @@ export function HomeContent({
     );
   }
 
-  const individualKcalGoal = currentCat ? Math.round(calculateDailyKcalGoal(currentCat)) : 250;
-  const recentWaterIntakes = currentCat ? getRecentDailyWaterIntakesForCat(hydrationHistory, currentCat.id) : [];
-  const individualWaterGoal = currentCat
-    ? Math.round(calculateAdaptiveDailyWaterGoal(currentCat, recentWaterIntakes))
-    : 210;
+  const recentWaterIntakes = getRecentDailyWaterIntakesForCat(hydrationHistory, currentCat.id);
   const isWaterGoalPersonalized = recentWaterIntakes.filter((v) => v > 0).length >= 3;
+  const individualKcalGoal = Math.round(calculateDailyKcalGoal(currentCat));
+  const individualWaterGoal = Math.round(calculateAdaptiveDailyWaterGoal(currentCat, recentWaterIntakes));
 
-  const kcalMultiplierHint = currentCat?.chronicConditions.includes('hyperthyroidism') ? 'RER × 1.6 (甲亢)' :
-    currentCat?.chronicConditions.includes('obesity') ? 'RER × 0.8 (減重期)' :
-      currentCat?.spayedNeutered ? 'RER × 1.2 (已結紮)' : 'RER × 1.4 (未結紮)';
+  const conditions = currentCat.chronicConditions ?? [];
+  const kcalMultiplierHint = conditions.includes('hyperthyroidism') ? 'RER × 1.6 (甲亢)' :
+    conditions.includes('obesity') ? 'RER × 0.8 (減重期)' :
+      currentCat.spayedNeutered ? 'RER × 1.2 (已結紮)' : 'RER × 1.4 (未結紮)';
 
-  const waterRange = currentCat ? calculateDailyWaterGoalRange(currentCat) : { min: 0, max: 0 };
-  const hasCkd = Boolean(currentCat?.chronicConditions.includes('ckd'));
-  const hasDiabetes = Boolean(currentCat?.chronicConditions.includes('diabetes'));
-  const hasFlutd = Boolean(currentCat?.chronicConditions.includes('flutd'));
+  const waterRange = calculateDailyWaterGoalRange(currentCat);
+  const hasCkd = Boolean(conditions.includes('ckd'));
+  const hasDiabetes = Boolean(conditions.includes('diabetes'));
+  const hasFlutd = Boolean(conditions.includes('flutd'));
   const isWaterObservationMode = hasDiabetes || hasFlutd;
-  const waterMultiplierHint = currentCat?.chronicConditions.includes('ckd') ? '40–60ml / kg (腎病建議區間)' :
-    currentCat?.chronicConditions.includes('diabetes') ? '50–70ml / kg（觀察區間）' :
-      currentCat?.chronicConditions.includes('flutd') ? '50–65ml / kg（觀察區間）' :
+  const waterMultiplierHint = conditions.includes('ckd') ? '40–60ml / kg (腎病建議區間)' :
+    conditions.includes('diabetes') ? '50–70ml / kg（觀察區間）' :
+      conditions.includes('flutd') ? '50–65ml / kg（觀察區間）' :
         '50ml / kg (標準)';
   const waterProgressBase = isWaterObservationMode ? Math.max(waterRange.max, 1) : Math.max(individualWaterGoal, 1);
   const waterProgressPct = Math.round((currentWater / waterProgressBase) * 100);
 
   return (
     <>
-      {pendingT1Count > 0 && onOpenPendingT1 && (
+      <View style={[styles.cardBlock, { marginBottom: 16 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+          <AppIcon name="add-circle" size={20} color="#000" style={{ marginRight: 8 }} />
+          <Text style={styles.cardTitle}>新增紀錄</Text>
+        </View>
+        <Text style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
+        <View style={{ position: 'relative', zIndex: 20 }}>
+          <Pressable
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 2, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff' }}
+            onPress={() => setAddRecordMenuOpen((v) => !v)}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '600' }}>選擇記錄類型</Text>
+            <AppIcon name={addRecordMenuOpen ? 'expand-less' : 'expand-more'} size={22} color="#000" />
+          </Pressable>
+          {addRecordMenuOpen && (
+            <>
+              <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -280, zIndex: 1 }} onPress={() => setAddRecordMenuOpen(false)} />
+              <View style={{ position: 'relative', marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', zIndex: 2 }}>
+                <ScrollView style={{ maxHeight: 256 }} keyboardShouldPersistTaps="handled">
+                  {[
+                    { modal: 'feeding' as ActiveModal, label: '食物記錄', icon: 'restaurant' },
+                    { modal: 'water' as ActiveModal, label: '飲水記錄', icon: 'opacity' },
+                    { modal: 'elimination' as ActiveModal, label: '排泄記錄', icon: 'sanitizer' },
+                    { modal: 'weightRecord' as ActiveModal, label: '體重記錄', icon: 'monitor-weight' },
+                    { modal: 'medication' as ActiveModal, label: '用藥記錄', icon: 'medication' },
+                    { modal: 'symptom' as ActiveModal, label: '異常症狀', icon: 'healing' },
+                    { modal: 'blood' as ActiveModal, label: '報告掃描', icon: 'biotech' },
+                  ].map(({ modal, label, icon }) => (
+                    <Pressable
+                      key={modal}
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                      onPress={() => { onOpenModal(modal); setAddRecordMenuOpen(false); }}
+                    >
+                      <AppIcon name={icon as any} size={20} color="#000" style={{ marginRight: 10 }} />
+                      <Text style={{ fontSize: 14, fontWeight: '500' }}>{label}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            </>
+          )}
+        </View>
+      </View>
+      {pendingT1Count != null && pendingT1Count > 0 && onOpenPendingT1 && (
         <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#3b82f6', borderRadius: 8 }}>
           <Text style={{ fontSize: 13, fontWeight: '600', color: '#1e40af', marginBottom: 6 }}>您有 {pendingT1Count} 筆放飯記錄尚未填寫收碗</Text>
           <Pressable onPress={onOpenPendingT1} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, backgroundColor: '#3b82f6', borderRadius: 8 }}>
@@ -536,21 +624,21 @@ export function HomeContent({
       <View style={{ borderWidth: 2, borderColor: '#000', padding: 20, marginBottom: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
           <AppIcon name="pets" size={20} color="#000" style={{ marginRight: 8 }} />
-          <Text style={[styles.cardTitle, { marginBottom: 0 }]}>{currentCat?.name} - 個體數據</Text>
+          <Text style={[styles.cardTitle, { marginBottom: 0 }]}>{currentCat.name} - 個體數據</Text>
         </View>
 
         <View style={[styles.weightSection, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
           <View>
             <Text style={styles.dataLabel}>目前體重</Text>
-            <Text style={[styles.weightCurrent, { fontSize: 32 }]}>{currentCat?.currentWeightKg.toFixed(1)} kg</Text>
+            <Text style={[styles.weightCurrent, { fontSize: 32 }]}>{(currentCat.currentWeightKg ?? 0).toFixed(1)} kg</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.dataLabel}>起始</Text>
-            <Text style={[styles.weightCurrent, { fontSize: 24 }]}>{currentCat?.baselineWeightKg.toFixed(1)} kg</Text>
+            <Text style={[styles.weightCurrent, { fontSize: 24 }]}>{(currentCat.baselineWeightKg ?? 0).toFixed(1)} kg</Text>
           </View>
         </View>
         <Text style={[styles.weightRange, { marginTop: 0, paddingTop: 0, borderTopWidth: 0 }]}>
-          目標：{currentCat?.targetWeightKg.toFixed(1)} kg
+          目標：{(currentCat.targetWeightKg ?? 0).toFixed(1)} kg
         </Text>
 
         <View style={{ marginBottom: 16 }}>
@@ -560,11 +648,11 @@ export function HomeContent({
           </View>
           <View style={styles.recordItem}>
             <Text style={styles.recordTitle}>慢性病紀錄</Text>
-            <Text style={styles.recordDesc}>{currentCat?.chronicConditions.join(' • ') || '無'}</Text>
+            <Text style={styles.recordDesc}>{(currentCat.chronicConditions ?? []).join(' • ') || '無'}</Text>
           </View>
           <View style={styles.recordItem}>
             <Text style={styles.recordTitle}>飲食限制/過敏</Text>
-            <Text style={styles.recordDesc}>{currentCat?.allergyBlacklist.join(' • ') || '無'}</Text>
+            <Text style={styles.recordDesc}>{(currentCat.allergyBlacklist ?? []).join(' • ') || '無'}</Text>
           </View>
         </View>
 

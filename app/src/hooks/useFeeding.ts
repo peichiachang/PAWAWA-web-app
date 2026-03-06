@@ -441,7 +441,7 @@ export function useFeeding(
     tagId: string | null,
     onClose: () => void,
     note?: string,
-    opts?: { foodSourceType?: FoodSourceType; intakeLevel?: IntakeLevel; canId?: string; ingredients?: string[] }
+    opts?: { foodSourceType?: FoodSourceType; intakeLevel?: IntakeLevel; canId?: string; ingredients?: string[]; manualFoodType?: string }
   ) {
     if (!grams || grams <= 0) {
       Alert.alert('請輸入克數', '克數必須大於 0。');
@@ -462,6 +462,7 @@ export function useFeeding(
       intakeLevel,
       canId: opts?.canId,
       ingredients: opts?.ingredients,
+      manualFoodType: opts?.manualFoodType?.trim() || undefined,
     };
     setOwnershipLogs((prev) => {
       const updated = [newLog, ...prev].slice(0, 50);
