@@ -122,6 +122,8 @@ function createHttpAiService(baseUrl: string): AiRecognitionService {
         t1MimeType: input.t1.mimeType || 'image/jpeg',
         t1CapturedAt: input.t1.capturedAt || null,
         t1LevelYPct: input.t1.waterLevelPct ?? null,
+        vesselVolumeMl: input.vessel?.volumeMl ?? null,
+        rimDiameterCm: input.vessel?.rimDiameterCm ?? null,
       }),
     analyzeEliminationImage: (input) =>
       post('/ai/elimination', mapImage(input)),

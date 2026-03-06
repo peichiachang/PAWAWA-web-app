@@ -7,21 +7,30 @@ export interface HydrationMathParams {
     vessel?: VesselCalibration;
 }
 
+/** ml evaporated per cm² of water surface per hour at ~25°C indoors */
+export const EVAP_RATE_ML_PER_CM2_PER_HOUR = 0.008;
+
 /**
  * 計算環境自然蒸發量
- * 基於時間差，預設蒸發率為 0.5ml / 小時。
+ * 若提供水面面積（surfaceAreaCm2），使用面積公式：hoursElapsed × surfaceAreaCm2 × EVAP_RATE
+ * 否則退回固定每小時蒸發率（rateMlPerHour）。
  * @param w0Timestamp 初始拍攝時間(ms)
  * @param w1Timestamp 結束拍攝時間(ms)
- * @param rateMlPerHour 每小時蒸發率 (預設 0.5)
+ * @param rateMlPerHour 每小時蒸發率 (僅無面積資料時使用，預設 0.5)
+ * @param surfaceAreaCm2 水面面積 cm²（優先使用此參數）
  * @returns 蒸發量 (ml)
  */
 export function calculateEvaporationMl(
     w0Timestamp: number,
     w1Timestamp: number,
-    rateMlPerHour: number = 0.5
+    rateMlPerHour: number = 0.5,
+    surfaceAreaCm2?: number
 ): number {
     if (w1Timestamp <= w0Timestamp) return 0;
     const hoursElapsed = (w1Timestamp - w0Timestamp) / (1000 * 60 * 60);
+    if (surfaceAreaCm2 && surfaceAreaCm2 > 0) {
+        return hoursElapsed * surfaceAreaCm2 * EVAP_RATE_ML_PER_CM2_PER_HOUR;
+    }
     return hoursElapsed * rateMlPerHour;
 }
 

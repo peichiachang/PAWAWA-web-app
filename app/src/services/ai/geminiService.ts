@@ -173,6 +173,7 @@ export const geminiService: AiRecognitionService = {
 
 You receive THREE images in order:
 - [1] Empty bowl（空碗） = 0% food — used as contour/texture reference and absolute fill level baseline.
+  NOTE: Residual crumbs, food dust, dry smears, or small traces on the empty bowl bottom are irrelevant — treat the empty bowl as 0% fill regardless of these minor residues.
 - [2] T0 = The state immediately after feeding this meal.
 - [3] T1 = The state after some time has passed.
 
@@ -224,9 +225,12 @@ For deep bowls, shadows and perspective distortion can hide the bottom. Focus on
 
 Wet food forms a 3D "mound" or "pile" rather than spreading flat like dry kibble.
 CRITICAL OPTICAL CUES for WET FOOD:
-1. Focus heavily on HIGHLIGHTS, SHADOWS, and TEXTURE DEPTH to estimate the Y-axis thickness of the food mound.
-2. DO NOT rely purely on 2D horizontal surface area coverage.
+1. Focus heavily on HIGHLIGHTS, SHADOWS, and TEXTURE DEPTH to estimate the Y-axis (vertical) thickness of the food mound.
+2. DO NOT rely purely on 2D horizontal surface area coverage — a thin smear can cover the whole bowl bottom but contain almost no volume.
 3. If T1 shows a widespread but extremely THIN film or smear of residue on the bowl bottom, recognize that its remaining volume is extremely low (e.g. consumedRatio > 0.9), despite covering a large surface area.
+4. For TOP-DOWN views, estimate mound height by: shadow depth around the mound perimeter, specular highlight size on top of mound, and how much of the bowl wall is covered.
+5. For ANGLED (≈45°) views, estimate mound thickness directly from the visible side profile of the food pile. An angled view makes height estimation far more reliable — trust the side-silhouette of the mound over surface area.
+6. If the food has been licked flat into a thin layer spread across the bowl bottom, treat remaining volume as ≤ 5% even if surface coverage appears large.
 `
       : '';
 
@@ -522,7 +526,9 @@ JSON schema:
       const tempC = 25; // 預設溫度
       const humidityPct = 60; // 預設濕度
       const { calculateEvaporationMl } = require('../../utils/hydrationMath');
-      const envFactorMl = calculateEvaporationMl(input.t0.capturedAt, input.t1.capturedAt, 0.5);
+      const _rimRadius0 = input.vessel.profileContour?.points?.[0]?.radius;
+      const _surfaceArea0 = _rimRadius0 && _rimRadius0 > 0 ? Math.PI * _rimRadius0 * _rimRadius0 : undefined;
+      const envFactorMl = calculateEvaporationMl(input.t0.capturedAt, input.t1.capturedAt, 0.5, _surfaceArea0);
       const actualIntakeMl = Math.max(0, waterT0Ml - waterT1Ml - envFactorMl);
 
       return {
@@ -553,7 +559,9 @@ JSON schema:
         const { calculateEvaporationMl } = require('../../utils/hydrationMath');
         const waterT0Ml = calculateVolumeToWaterLevel(contour, t0Level);
         const waterT1Ml = calculateVolumeToWaterLevel(contour, t1Level);
-        const envFactorMl = calculateEvaporationMl(input.t0.capturedAt, input.t1.capturedAt, 0.5);
+        const _rimRadiusM = contour?.points?.[0]?.radius;
+        const _surfaceAreaM = _rimRadiusM && _rimRadiusM > 0 ? Math.PI * _rimRadiusM * _rimRadiusM : undefined;
+        const envFactorMl = calculateEvaporationMl(input.t0.capturedAt, input.t1.capturedAt, 0.5, _surfaceAreaM);
         const actualIntakeMl = Math.max(0, waterT0Ml - waterT1Ml - envFactorMl);
         return {
           waterT0Ml: Math.round(waterT0Ml),
@@ -618,7 +626,9 @@ Volume (ml) will be calculated from these percentages using the profile. Do NOT 
       const { calculateEvaporationMl } = require('../../utils/hydrationMath');
       const waterT0Ml = calculateVolumeToWaterLevel(contour, Math.max(0, Math.min(1, raw.waterLevelPctT0)));
       const waterT1Ml = calculateVolumeToWaterLevel(contour, Math.max(0, Math.min(1, raw.waterLevelPctT1)));
-      const envFactorMl = calculateEvaporationMl(input.t0.capturedAt, input.t1.capturedAt, 0.5);
+      const _rimRadiusA = contour?.points?.[0]?.radius;
+      const _surfaceAreaA = _rimRadiusA && _rimRadiusA > 0 ? Math.PI * _rimRadiusA * _rimRadiusA : undefined;
+      const envFactorMl = calculateEvaporationMl(input.t0.capturedAt, input.t1.capturedAt, 0.5, _surfaceAreaA);
       const actualIntakeMl = Math.max(0, waterT0Ml - waterT1Ml - envFactorMl);
 
       return {
