@@ -517,23 +517,30 @@ export function HomeContent({
     );
   }
 
-  const individualKcalGoal = currentCat ? Math.round(calculateDailyKcalGoal(currentCat)) : 250;
-  const individualWaterGoal = currentCat
-    ? Math.round(calculateAdaptiveDailyWaterGoal(currentCat, getRecentDailyWaterIntakesForCat(currentCat.id)))
-    : 210;
+  if (!currentCat) {
+    return (
+      <View style={[styles.cardBlock, { padding: 24 }]}>
+        <Text style={{ fontSize: 14, color: '#666', textAlign: 'center' }}>找不到此貓咪資料，請從上方切換回家庭或選擇其他貓咪。</Text>
+      </View>
+    );
+  }
 
-  const kcalMultiplierHint = currentCat?.chronicConditions.includes('hyperthyroidism') ? 'RER × 1.6 (甲亢)' :
-    currentCat?.chronicConditions.includes('obesity') ? 'RER × 0.8 (減重期)' :
-      currentCat?.spayedNeutered ? 'RER × 1.2 (已結紮)' : 'RER × 1.4 (未結紮)';
+  const individualKcalGoal = Math.round(calculateDailyKcalGoal(currentCat));
+  const individualWaterGoal = Math.round(calculateAdaptiveDailyWaterGoal(currentCat, getRecentDailyWaterIntakesForCat(currentCat.id)));
 
-  const waterRange = currentCat ? calculateDailyWaterGoalRange(currentCat) : { min: 0, max: 0 };
-  const hasCkd = Boolean(currentCat?.chronicConditions.includes('ckd'));
-  const hasDiabetes = Boolean(currentCat?.chronicConditions.includes('diabetes'));
-  const hasFlutd = Boolean(currentCat?.chronicConditions.includes('flutd'));
+  const conditions = currentCat.chronicConditions ?? [];
+  const kcalMultiplierHint = conditions.includes('hyperthyroidism') ? 'RER × 1.6 (甲亢)' :
+    conditions.includes('obesity') ? 'RER × 0.8 (減重期)' :
+      currentCat.spayedNeutered ? 'RER × 1.2 (已結紮)' : 'RER × 1.4 (未結紮)';
+
+  const waterRange = calculateDailyWaterGoalRange(currentCat);
+  const hasCkd = Boolean(conditions.includes('ckd'));
+  const hasDiabetes = Boolean(conditions.includes('diabetes'));
+  const hasFlutd = Boolean(conditions.includes('flutd'));
   const isWaterObservationMode = hasDiabetes || hasFlutd;
-  const waterMultiplierHint = currentCat?.chronicConditions.includes('ckd') ? '40–60ml / kg (腎病建議區間)' :
-    currentCat?.chronicConditions.includes('diabetes') ? '50–70ml / kg（觀察區間）' :
-      currentCat?.chronicConditions.includes('flutd') ? '50–65ml / kg（觀察區間）' :
+  const waterMultiplierHint = conditions.includes('ckd') ? '40–60ml / kg (腎病建議區間)' :
+    conditions.includes('diabetes') ? '50–70ml / kg（觀察區間）' :
+      conditions.includes('flutd') ? '50–65ml / kg（觀察區間）' :
         '50ml / kg (標準)';
   // 今日攝取（僅當日紀錄，非累積）
   const currentKcal = useMemo(
@@ -564,14 +571,6 @@ export function HomeContent({
   );
   const waterProgressBase = isWaterObservationMode ? Math.max(waterRange.max, 1) : Math.max(individualWaterGoal, 1);
   const waterProgressPct = Math.round((currentWater / waterProgressBase) * 100);
-
-  if (!currentCat) {
-    return (
-      <View style={[styles.cardBlock, { padding: 24 }]}>
-        <Text style={{ fontSize: 14, color: '#666', textAlign: 'center' }}>找不到此貓咪資料，請從上方切換回家庭或選擇其他貓咪。</Text>
-      </View>
-    );
-  }
 
   return (
     <>
