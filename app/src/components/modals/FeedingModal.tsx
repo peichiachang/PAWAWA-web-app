@@ -409,7 +409,14 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{initialMode === 'late_entry' ? '補填記錄' : '食物記錄'}</Text>
-            <Pressable onPress={() => { resetToBlankRecordScreen(); onClose(); }}><Text style={styles.closeText}>×</Text></Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              {initialMode !== 'late_entry' && (
+                <Pressable onPress={() => setInputMode(inputMode === 'manual' ? 'camera' : 'manual')}>
+                  <Text style={{ fontSize: 14, color: palette.primary, fontWeight: '600' }}>{inputMode === 'manual' ? '返回' : '手動輸入'}</Text>
+                </Pressable>
+              )}
+              <Pressable onPress={() => { resetToBlankRecordScreen(); onClose(); }}><Text style={styles.closeText}>×</Text></Pressable>
+            </View>
           </View>
           <ScrollView style={styles.modalBody}>
             {initialMode === 'late_entry' ? (
@@ -467,22 +474,6 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
               </>
             ) : (
             <>
-            {/* Mode toggle */}
-            <View style={[styles.choiceRow, { marginBottom: 16 }]}>
-              <Pressable
-                style={[styles.choiceBtn, inputMode === 'camera' && styles.choiceBtnActive]}
-                onPress={() => setInputMode('camera')}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}><AppIcon name="camera-alt" size={16} color={inputMode === 'camera' ? '#fff' : '#000'} style={{ marginRight: 4 }} /><Text style={[styles.choiceBtnText, inputMode === 'camera' && styles.choiceBtnTextActive]}>相機記錄</Text></View>
-              </Pressable>
-              <Pressable
-                style={[styles.choiceBtn, inputMode === 'manual' && styles.choiceBtnActive]}
-                onPress={() => setInputMode('manual')}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}><AppIcon name="edit" size={16} color={inputMode === 'manual' ? '#fff' : '#000'} style={{ marginRight: 4 }} /><Text style={[styles.choiceBtnText, inputMode === 'manual' && styles.choiceBtnTextActive]}>手動輸入</Text></View>
-              </Pressable>
-            </View>
-
             {inputMode === 'manual' ? (
               <View>
                 <View style={styles.formGroup}>
