@@ -78,14 +78,23 @@ export function useFeeding(
       try {
         const raw = await AsyncStorage.getItem(FEEDING_FOOD_LIBRARY_KEY);
         if (raw) {
-          const list = JSON.parse(raw) as FeedLibraryItem[];
-          setFeedLibrary(list.length > 0 ? list : DRY_FEED_SEED);
-          if (list.length === 0) await AsyncStorage.setItem(FEEDING_FOOD_LIBRARY_KEY, JSON.stringify(DRY_FEED_SEED));
+          const list = (JSON.parse(raw) as FeedLibraryItem[]) ?? [];
+          const seedIds = new Set(DRY_FEED_SEED.map((s) => s.id));
+          const isOldPrefilled =
+            list.length === DRY_FEED_SEED.length &&
+            list.every((item) => seedIds.has(item.id));
+          if (isOldPrefilled) {
+            setFeedLibrary([]);
+            await AsyncStorage.setItem(FEEDING_FOOD_LIBRARY_KEY, JSON.stringify([]));
+          } else {
+            setFeedLibrary(list);
+          }
         } else {
-          setFeedLibrary(DRY_FEED_SEED);
-          await AsyncStorage.setItem(FEEDING_FOOD_LIBRARY_KEY, JSON.stringify(DRY_FEED_SEED));
+          setFeedLibrary([]);
         }
-      } catch (_e) { }
+      } catch (_e) {
+        setFeedLibrary([]);
+      }
     }
     void loadFeedLibrary();
   }, []);

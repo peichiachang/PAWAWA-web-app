@@ -105,11 +105,11 @@ export function FeedLibraryModal({ visible, feedLibrary, onAdd, onRemove, onClos
           </View>
           <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
             <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 16 }}>
-              輸入關鍵字從乾糧庫搜尋並加入，或手動新增。記錄時會優先顯示您已加入的飼料。
+              內建約 50 種乾糧資料庫，輸入關鍵字搜尋後點擊項目即加入「我常用的飼料」；記錄時會優先顯示我常用的飼料。
             </Text>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>從乾糧庫搜尋並加入</Text>
+              <Text style={styles.formLabel}>從乾糧庫搜尋並加入我常用的飼料</Text>
               <TextInput
                 style={styles.input}
                 placeholder="輸入品牌、品名或關鍵字（例：皇家、泌尿、幼貓）"
@@ -126,7 +126,7 @@ export function FeedLibraryModal({ visible, feedLibrary, onAdd, onRemove, onClos
                         onPress={() => handleSelectSeed(item)}
                       >
                         <Text style={{ fontSize: 14, fontWeight: '600' }}>{getFeedDisplayName(item)}</Text>
-                        <Text style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>{item.kcalPerGram} kcal/g · 點擊加入飼料庫</Text>
+                        <Text style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>{item.kcalPerGram} kcal/g · 點擊加入「我常用的飼料」</Text>
                       </Pressable>
                     ))}
                   </ScrollView>
@@ -135,7 +135,7 @@ export function FeedLibraryModal({ visible, feedLibrary, onAdd, onRemove, onClos
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>或手動新增飼料</Text>
+              <Text style={styles.formLabel}>或手動新增至我常用的飼料</Text>
               <TextInput style={styles.input} placeholder="品牌（選填）" value={brand} onChangeText={setBrand} />
               <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="品名（例：成貓／室內／泌尿保健）" value={productName} onChangeText={setProductName} />
               <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="口味（選填）" value={flavor} onChangeText={setFlavor} />
@@ -148,14 +148,14 @@ export function FeedLibraryModal({ visible, feedLibrary, onAdd, onRemove, onClos
               />
               <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>可從成份表「每 100g 熱量」÷ 100 得到</Text>
               <Pressable style={[styles.primaryBtn, { marginTop: 12 }]} onPress={handleAdd}>
-                <Text style={styles.primaryBtnText}>加入飼料庫</Text>
+                <Text style={styles.primaryBtnText}>加入我常用的飼料</Text>
               </Pressable>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>已儲存的飼料（{feedLibrary.length}）</Text>
+              <Text style={styles.formLabel}>我常用的飼料（{feedLibrary.length}）</Text>
               {feedLibrary.length === 0 ? (
-                <Text style={{ fontSize: 13, color: palette.muted }}>尚無飼料，請上方新增或從食物記錄掃描標籤後儲存</Text>
+                <Text style={{ fontSize: 13, color: palette.muted }}>尚無項目。請在上方從乾糧庫搜尋並點擊加入，或手動新增；記錄時可快速選取</Text>
               ) : (
                 feedLibrary.map((feed) => (
                   <View
