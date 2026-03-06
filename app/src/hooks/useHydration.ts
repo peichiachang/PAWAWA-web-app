@@ -212,7 +212,7 @@ export function useHydration(
       if (hasPixelData) {
         const w0WaterLevelPct = w0.waterLevelPct ?? 0;
         const w1WaterLevelPct = storedW1.waterLevelPct ?? 0;
-        
+
         // Debug log：追蹤所有相關變數
         console.log('[calibrationMethod]', vessel?.calibrationMethod);
         console.log('[profileContour]', vessel?.profileContour);
@@ -222,21 +222,37 @@ export function useHydration(
         console.log('[volumeMl]', volumeMl);
         console.log('[w0WaterLevelPct]', w0WaterLevelPct);
         console.log('[fullWaterCalibration]', vessel?.fullWaterCalibration);
-        
+
         let waterW0Ml: number;
         let waterW1Ml: number;
-        
+
         // 已知容量模式 + 滿水校準：使用滿水校準基準計算
         if (vessel?.calibrationMethod === 'known_volume' && vessel.fullWaterCalibration) {
           const cal = vessel.fullWaterCalibration;
-          // 使用滿水校準的基準：fullY 作為 0%（滿），bottomY 作為參考底線
-          // waterLevelPct = (waterY - fullY) / (bottomY - fullY)
-          const w0LevelPct = Math.max(0, Math.min(1, (w0.water_y! - cal.fullY) / (cal.bottomY - cal.fullY)));
-          const w1LevelPct = Math.max(0, Math.min(1, (storedW1.water_y! - cal.fullY) / (cal.bottomY - cal.fullY)));
-          // 水量 = (1 - waterLevelPct) × volumeMl
+          let w0LevelPct = 0;
+          let w1LevelPct = 0;
+
+          if (cal.topY !== undefined && cal.bottomY > cal.topY) {
+            // 使用相對比例來比較跨照片的座標（消除拍攝距離與角度的誤差）
+            // calFullFrac = 滿水線在校準圖片中，相對 (top ~ bottom) 的百分比
+            const calFullFrac = (cal.fullY - cal.topY) / (cal.bottomY - cal.topY);
+            // w0WaterLevelPct 本身即為 W0 圖片中，水線相對 (top ~ bottom) 的百分比
+
+            // 將 W0 的相對水線百分比，對應到滿量範圍 [calFullFrac, 1] 之間的比例
+            // 如果水位在滿水線之上，w0Frac < calFullFrac，歸零視為全滿 (w0LevelPct = 0)
+            const calSpan = 1 - calFullFrac;
+            w0LevelPct = calSpan > 0 ? Math.max(0, Math.min(1, (w0WaterLevelPct - calFullFrac) / calSpan)) : 0;
+            w1LevelPct = calSpan > 0 ? Math.max(0, Math.min(1, (w1WaterLevelPct - calFullFrac) / calSpan)) : 0;
+          } else {
+            // 向後相容：若舊版校準資料沒有 topY，迫不得已只能退回絕對像素計算（通常會失真）
+            w0LevelPct = Math.max(0, Math.min(1, (w0.water_y! - cal.fullY) / (cal.bottomY - cal.fullY)));
+            w1LevelPct = Math.max(0, Math.min(1, (storedW1.water_y! - cal.fullY) / (cal.bottomY - cal.fullY)));
+          }
+
+          // 水量 = (1 - wLevelPct) × volumeMl
           waterW0Ml = Math.round((1 - w0LevelPct) * volumeMl);
           waterW1Ml = Math.round((1 - w1LevelPct) * volumeMl);
-          console.log('[mode]', 'Mode B (known_volume with full water calibration)');
+          console.log('[mode]', 'Mode B (known_volume with full water calibration - normalized)');
           console.log('[w0LevelPct]', w0LevelPct);
           console.log('[w1LevelPct]', w1LevelPct);
         }
@@ -261,7 +277,7 @@ export function useHydration(
           waterW1Ml = Math.round((1 - Math.max(0, Math.min(1, w1WaterLevelPct))) * volumeMl);
           console.log('[mode]', 'Mode B (linear, default)');
         }
-        
+
         // 邊緣案例：計算結果超過容器容量 → 強制重拍（spec v4）
         if (waterW0Ml > volumeMl || waterW1Ml > volumeMl) {
           setResult(null);
