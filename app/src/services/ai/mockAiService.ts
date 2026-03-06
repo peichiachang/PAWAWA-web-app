@@ -32,7 +32,7 @@ export const mockAiService: AiRecognitionService = {
         { bowlId: 'A', tag: 'Milo', estimatedIntakeGram: miloGram },
         { bowlId: 'B', tag: 'Luna', estimatedIntakeGram: lunaGram },
       ],
-      householdTotalGram: miloGram + lunaGram,
+      totalGram: miloGram + lunaGram,
       isBowlMatch: true,
       confidence: Number(seededRange(seed + 15, 0.65, 0.99).toFixed(2)),
     };

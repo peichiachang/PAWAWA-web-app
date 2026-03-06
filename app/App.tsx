@@ -122,19 +122,19 @@ function AppMain() {
     };
   }, []);
 
-  // Load persistence data
+  // 一次性儲存遷移（舊 key → 新 key），再載入資料
   useEffect(() => {
     async function loadData() {
       try {
+        const { runStorageMigration } = await import('./src/storage/migration');
+        await runStorageMigration();
+
         const storedCats = await AsyncStorage.getItem(CATS_STORAGE_KEY);
         if (storedCats) setCats(JSON.parse(storedCats));
 
         const storedVitals = await AsyncStorage.getItem(VITALS_HISTORY_KEY);
         if (storedVitals) setVitalsLogs(JSON.parse(storedVitals));
 
-        // Note: feeding.ownershipLogs and hydration.ownershipLogs are already loaded in hooks.
-        // But for ClinicalSummary, we might need a more unified way if we want full history.
-        // For now, let's keep it simple.
         bloodReport.loadSavedReports();
       } catch (e) {
         console.error('Failed to load data', e);

@@ -471,7 +471,7 @@ const consumedGrams = consumedRatio * t0Grams;
 **重試邏輯：** 最多 3 次，間隔 `800ms × attempt`，`confidence < 0.6` 繼續重試
 
 **合理性檢查（PRD 2.5）：**
-`householdTotalGram > maxPossibleGrams × 1.1` → 顯示警告，要求重拍
+`totalGram > maxPossibleGrams × 1.1` → 顯示警告，要求重拍
 
 ### 6.2 useHydration
 
@@ -781,7 +781,7 @@ interface AiImageInput {
 interface FeedingVisionResult {
   bowlsDetected: number
   assignments: { bowlId: string; tag: string; estimatedIntakeGram: number }[]
-  householdTotalGram: number
+  totalGram: number
   consumedRatio?: number  // 0~1，消耗比例
   consumptionLevel?: ConsumptionLevel  // 離散分級（版本 B 使用）
   isBowlMatch: boolean

@@ -233,7 +233,7 @@ function createHandlers(config) {
         { bowlId: 'A', tag: 'Milo', estimatedIntakeGram: miloGram },
         { bowlId: 'B', tag: 'Luna', estimatedIntakeGram: lunaGram },
       ],
-      householdTotalGram: miloGram + lunaGram,
+      totalGram: miloGram + lunaGram,
       isBowlMatch: true,
       mismatchReason: '',
     };
@@ -401,7 +401,7 @@ Return exactly this shape:
 {
   "bowlsDetected": number,
   "assignments": [{"bowlId":"A","tag":"Milo","estimatedIntakeGram":number}],
-  "householdTotalGram": number,
+  "totalGram": number,
   "isBowlMatch": boolean,
   "mismatchReason": string,
   "confidence": number // Overall confidence score of the assessment between 0.0 and 1.0
@@ -416,7 +416,7 @@ Return exactly this shape:
         tag: String(item.tag || `Cat-${index + 1}`),
         estimatedIntakeGram: Math.max(0, Math.round(normalizeNumber(item.estimatedIntakeGram, 0))),
       })),
-      householdTotalGram: Math.max(0, Math.round(normalizeNumber(raw.householdTotalGram, 0))),
+      totalGram: Math.max(0, Math.round(normalizeNumber(raw.totalGram, 0))),
       isBowlMatch: normalizeBoolean(raw.isBowlMatch, true),
       mismatchReason: String(raw.mismatchReason || ''),
       confidence: normalizeNumber(raw.confidence, 0.8),

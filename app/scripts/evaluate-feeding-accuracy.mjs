@@ -119,7 +119,7 @@ function inferConsumedRatio(parsed, t0RefGrams) {
   const direct = Number(parsed?.consumedRatio);
   if (Number.isFinite(direct)) return clamp(direct, 0, 1);
 
-  const grams = Number(parsed?.householdTotalGram);
+  const grams = Number(parsed?.totalGram);
   if (Number.isFinite(grams) && t0RefGrams > 0) return clamp(grams / t0RefGrams, 0, 1);
 
   const level = String(parsed?.consumptionLevel || '');
@@ -234,7 +234,7 @@ Return JSON:
   "bowlsDetected": 1,
   "assignments": [{"bowlId": "bowl1", "tag": "Tag A", "estimatedIntakeGram": number}],
   "consumedRatio": number,
-  "householdTotalGram": number,
+  "totalGram": number,
   "consumptionLevel": "almost_all_eaten" | "more_than_half" | "about_half" | "a_little" | "almost_none",
   "isBowlMatch": boolean,
   "mismatchReason": string | null,

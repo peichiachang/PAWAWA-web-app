@@ -139,7 +139,7 @@ const TESTS = [
       '進食分析',
       `You are an expert feline nutrition assistant.
       Analyze these two images of cat food bowls: T0 (before) and T1 (after).
-      Return JSON: { "bowlsDetected": number, "isBowlMatch": boolean, "assignments": [{ "bowlId": string, "tag": string, "estimatedIntakeGram": number }], "householdTotalGram": number, "confidence": number }`,
+      Return JSON: { "bowlsDetected": number, "isBowlMatch": boolean, "assignments": [{ "bowlId": string, "tag": string, "estimatedIntakeGram": number }], "totalGram": number, "confidence": number }`,
       [{ base64: TEST_IMAGE_BASE64, mimeType: TEST_IMAGE_MIME }, { base64: TEST_IMAGE_BASE64, mimeType: TEST_IMAGE_MIME }],
       (r) => {
         if (typeof r.bowlsDetected !== 'number') throw new Error('Missing bowlsDetected');
@@ -148,7 +148,7 @@ const TESTS = [
     ),
     validateFn: (r) => {
       if (typeof r.bowlsDetected !== 'number') throw new Error('Missing bowlsDetected (number)');
-      if (typeof r.householdTotalGram !== 'number') throw new Error('Missing householdTotalGram (number)');
+      if (typeof r.totalGram !== 'number') throw new Error('Missing totalGram (number)');
       if (!Array.isArray(r.assignments)) throw new Error('Missing assignments (array)');
       if (typeof r.isBowlMatch !== 'boolean') throw new Error('Missing isBowlMatch (boolean)');
     },

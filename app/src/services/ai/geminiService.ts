@@ -76,7 +76,7 @@ function inferConsumedRatio(parsed: Partial<FeedingVisionResult>, t0RefGrams: nu
   const direct = Number((parsed as { consumedRatio?: number }).consumedRatio);
   if (Number.isFinite(direct)) return clamp(direct, 0, 1);
 
-  const grams = Number(parsed.householdTotalGram);
+  const grams = Number(parsed.totalGram);
   if (Number.isFinite(grams) && t0RefGrams > 0) return clamp(grams / t0RefGrams, 0, 1);
 
   const level = parsed.consumptionLevel;
@@ -329,7 +329,8 @@ Return JSON:
     const density = foodType === 'wet' ? 0.95 : 0.45; // 乾飼料用 0.45，罐頭用 0.95
 
     let consumedRatio: number;
-    let householdTotalGram: number;
+    let totalGram: number;
+    let t0EstimatedGram: number | undefined;
 
     if (hasEmptyBowl && parsed.t0FillRatio !== undefined && parsed.t1FillRatio !== undefined) {
       // 版本 A：有空碗照片，使用絕對填充比例計算
@@ -351,11 +352,13 @@ Return JSON:
       // 計算克數：使用絕對填充比例和容器容量
       if (vesselVolumeMl && vesselVolumeMl > 0) {
         const t0Grams = t0FillRatio * vesselVolumeMl * density;
-        householdTotalGram = Math.round(consumedRatio * t0Grams);
+        totalGram = Math.round(consumedRatio * t0Grams);
+        t0EstimatedGram = Math.round(t0Grams);
       } else {
         // 沒有容器容量時，使用 fallback 計算
         const t0Grams = t0FillRatio * (hasManualWeight ? input.t0.manualWeight! : 500);
-        householdTotalGram = Math.round(consumedRatio * t0Grams);
+        totalGram = Math.round(consumedRatio * t0Grams);
+        t0EstimatedGram = Math.round(t0Grams);
       }
     } else {
       // 版本 B：沒有空碗照片，使用相對比例（保留原有邏輯）
@@ -385,7 +388,7 @@ Return JSON:
       }
 
       parsed.consumptionLevel = normalizedLevel;
-      householdTotalGram = levelToGram[normalizedLevel];
+      totalGram = levelToGram[normalizedLevel];
     }
 
     parsed.confidence = clamp(Number(parsed.confidence ?? 0.5), 0, 1);
@@ -393,10 +396,14 @@ Return JSON:
     parsed.isBowlMatch = Boolean(parsed.isBowlMatch);
     parsed.mismatchReason = parsed.isBowlMatch ? undefined : (parsed.mismatchReason || 'Bowl mismatch');
     parsed.consumedRatio = consumedRatio;
-    parsed.householdTotalGram = householdTotalGram;
+    parsed.totalGram = totalGram;
+    if (t0EstimatedGram !== undefined) {
+      parsed.t0EstimatedGram = t0EstimatedGram;
+      parsed.t1EstimatedGram = Math.max(0, Math.round(t0EstimatedGram - totalGram));
+    }
     if (!Array.isArray(parsed.assignments)) parsed.assignments = [];
     if (parsed.assignments[0]) {
-      parsed.assignments[0].estimatedIntakeGram = householdTotalGram;
+      parsed.assignments[0].estimatedIntakeGram = totalGram;
     }
 
     return parsed as FeedingVisionResult;
@@ -451,7 +458,7 @@ Return JSON:
       ...base,
       consumedRatio: medianRatio,
       consumptionLevel: levelFromRatio,
-      householdTotalGram: levelToGram[levelFromRatio],
+      totalGram: levelToGram[levelFromRatio],
       distribution: counts,
       confidence: clamp((counts[levelFromRatio] ?? 0) / 3, 0, 1),
     };

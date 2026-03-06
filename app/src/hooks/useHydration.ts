@@ -1,15 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 import { AiRecognitionService, HydrationVisionResult } from '../types/ai';
 import type { WaterLevelMarkResult } from '../components/WaterLevelMarker';
 import { calculateActualWaterIntakeMl } from '../utils/health';
 import { CapturedImage, StoredHydrationW0, HydrationOwnershipLog } from '../types/app';
-import {
-  HYDRATION_W0_STORAGE_KEY,
-  HYDRATION_W0_TTL_MS,
-  HYDRATION_HISTORY_KEY
-} from '../constants';
+import { HYDRATION_W0_TTL_MS } from '../constants';
+import { getW0Map, setW0Map, getHydrationHistory, saveHydrationHistory } from '../storage/hydrationStorage';
 import { useVessels } from './useVessels';
 import type { CatIdentity } from '../types/domain';
 
@@ -37,46 +33,21 @@ export function useHydration(
 
   const reloadOwnershipLogs = useCallback(async () => {
     try {
-      const hist = await AsyncStorage.getItem(HYDRATION_HISTORY_KEY);
-      if (hist) setOwnershipLogs(JSON.parse(hist));
+      const hist = await getHydrationHistory();
+      setOwnershipLogs(hist);
     } catch (_e) { }
   }, []);
 
   useEffect(() => {
-    async function init() {
-      try {
-        // 先嘗試讀取新的 W0 key，如果沒有則讀取舊的 T0 key（向後相容）
-        let raw = await AsyncStorage.getItem(HYDRATION_W0_STORAGE_KEY);
-        if (!raw) {
-          raw = await AsyncStorage.getItem('carecat:hydration:t0'); // 舊 key
-        }
-        if (raw) {
-          const parsed = JSON.parse(raw) as Record<string, StoredHydrationW0>;
-          const now = Date.now();
-          const validMap: Record<string, StoredHydrationW0> = {};
-          let changed = false;
+    getW0Map().then(setW0Map).catch(() => setW0Map({}));
+  }, []);
 
-          Object.entries(parsed).forEach(([id, img]) => {
-            if (now - img.capturedAt <= HYDRATION_W0_TTL_MS) {
-              validMap[id] = img;
-            } else {
-              changed = true;
-            }
-          });
-
-          if (changed) {
-            await AsyncStorage.setItem(HYDRATION_W0_STORAGE_KEY, JSON.stringify(validMap));
-          }
-          setW0Map(validMap);
-        }
-        await reloadOwnershipLogs();
-      } catch (_e) { }
-    }
-    void init();
+  useEffect(() => {
+    void reloadOwnershipLogs();
   }, [reloadOwnershipLogs]);
 
   async function persistW0Map(map: Record<string, StoredHydrationW0>) {
-    await AsyncStorage.setItem(HYDRATION_W0_STORAGE_KEY, JSON.stringify(map));
+    await setW0Map(map);
   }
 
   const currentW0 = vessels.selectedVesselId ? w0Map[vessels.selectedVesselId] : null;
@@ -378,7 +349,7 @@ export function useHydration(
 
     setOwnershipLogs((prev) => {
       const updated = [newLog, ...prev].slice(0, 50);
-      void AsyncStorage.setItem(HYDRATION_HISTORY_KEY, JSON.stringify(updated));
+      void saveHydrationHistory(updated);
       return updated;
     });
 
@@ -422,7 +393,7 @@ export function useHydration(
     };
     setOwnershipLogs((prev) => {
       const updated = [newLog, ...prev].slice(0, 50);
-      void AsyncStorage.setItem(HYDRATION_HISTORY_KEY, JSON.stringify(updated));
+      void saveHydrationHistory(updated);
       return updated;
     });
     Alert.alert('儲存完成', '飲水紀錄已寫入。', [

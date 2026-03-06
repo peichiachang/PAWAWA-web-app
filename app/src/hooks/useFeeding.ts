@@ -24,13 +24,13 @@ import {
   getFeedDisplayName,
 } from '../types/app';
 import {
-  FEEDING_T0_STORAGE_KEY,
   FEEDING_T0_TTL_MS,
-  FEEDING_HISTORY_KEY,
   FOOD_NUTRITION_KEY,
   CAN_LIBRARY_KEY,
   FEEDING_FOOD_LIBRARY_KEY,
 } from '../constants';
+import { getT0Map, setT0Map, getFeedingHistory, saveFeedingHistory } from '../storage/feedingStorage';
+import { getMaxPossibleGrams, isIntakeOverLimit, getIntakeOverLimitMessage } from '../algorithms/feedingBounds';
 import { DRY_FEED_SEED } from '../constants/feedLibrarySeed';
 import type { CatIdentity } from '../types/domain';
 
@@ -144,8 +144,8 @@ export function useFeeding(
 
   const reloadOwnershipLogs = useCallback(async () => {
     try {
-      const hist = await AsyncStorage.getItem(FEEDING_HISTORY_KEY);
-      if (hist) setOwnershipLogs(JSON.parse(hist));
+      const hist = await getFeedingHistory();
+      setOwnershipLogs(hist);
     } catch (_e) { }
   }, []);
 
@@ -161,38 +161,11 @@ export function useFeeding(
   }, [reloadOwnershipLogs]);
 
   useEffect(() => {
-    async function loadSavedT0() {
-      try {
-        const raw = await AsyncStorage.getItem(FEEDING_T0_STORAGE_KEY);
-        if (!raw) return;
-        const parsed = JSON.parse(raw) as Record<string, StoredFeedingT0>;
-
-        // Filter out expired T0s
-        const now = Date.now();
-        const validMap: Record<string, StoredFeedingT0> = {};
-        let changed = false;
-
-        Object.entries(parsed).forEach(([id, img]) => {
-          if (now - img.capturedAt <= FEEDING_T0_TTL_MS) {
-            validMap[id] = img;
-          } else {
-            changed = true;
-          }
-        });
-
-        if (changed) {
-          await AsyncStorage.setItem(FEEDING_T0_STORAGE_KEY, JSON.stringify(validMap));
-        }
-        setT0Map(validMap);
-      } catch (_error) {
-        await AsyncStorage.removeItem(FEEDING_T0_STORAGE_KEY);
-      }
-    }
-    void loadSavedT0();
+    getT0Map().then(setT0Map).catch(() => setT0Map({}));
   }, []);
 
   async function persistT0Map(map: Record<string, StoredFeedingT0>) {
-    await AsyncStorage.setItem(FEEDING_T0_STORAGE_KEY, JSON.stringify(map));
+    await setT0Map(map);
   }
 
   const currentT0 = vessels.selectedVesselId ? t0Map[vessels.selectedVesselId] : null;
@@ -329,10 +302,9 @@ export function useFeeding(
 
       if (!analysisResult) throw lastError || new Error('分析失敗');
 
-      // SDD 2.5 Reasonableness Check
-      const maxPossibleGrams = currentT0!.manualWeight || (vessels.currentVessel?.volumeMl ? vessels.currentVessel.volumeMl * 0.8 : 1000);
-      if (analysisResult.householdTotalGram > maxPossibleGrams * 1.1) {
-        setMismatchError(`進食量 (${analysisResult.householdTotalGram}g) 不合理地大於預估限制 (${Math.round(maxPossibleGrams)}g)，請確認圖片是否正確。`);
+      const maxPossibleGrams = getMaxPossibleGrams(currentT0!.manualWeight, vessels.currentVessel?.volumeMl);
+      if (isIntakeOverLimit(analysisResult.totalGram, maxPossibleGrams)) {
+        setMismatchError(getIntakeOverLimitMessage(analysisResult.totalGram, maxPossibleGrams));
         Alert.alert('異常提示', '辨識出的進食量大於碗內可能容量，請重拍。');
         setT1Done(false);
         setResult(null);
@@ -410,11 +382,11 @@ export function useFeeding(
     }
 
     const intakeLevel = opts?.intakeLevel;
-    const refGram = opts?.refGramForIntake ?? overrideTotalGram ?? result.householdTotalGram;
+    const refGram = opts?.refGramForIntake ?? overrideTotalGram ?? result.totalGram;
     const totalGram =
       intakeLevel != null && refGram > 0
         ? Math.round(refGram * INTAKE_LEVEL_RATIO[intakeLevel])
-        : (overrideTotalGram && overrideTotalGram > 0 ? overrideTotalGram : result.householdTotalGram);
+        : (overrideTotalGram && overrideTotalGram > 0 ? overrideTotalGram : result.totalGram);
 
     const newLog: FeedingOwnershipLog = {
       id: `feeding_${Date.now()}`,
@@ -433,12 +405,11 @@ export function useFeeding(
     };
 
     setOwnershipLogs((prev) => {
-      const updated = [newLog, ...prev].slice(0, 50); // Keep 50 records
-      void AsyncStorage.setItem(FEEDING_HISTORY_KEY, JSON.stringify(updated));
+      const updated = [newLog, ...prev].slice(0, 50);
+      void saveFeedingHistory(updated);
       return updated;
     });
 
-    // 儲存後清空 T0/T1 照片與分析結果，下次開啟可重新拍攝
     setResult(null);
     setT1Image(null);
     setT1Done(false);
@@ -492,7 +463,7 @@ export function useFeeding(
     };
     setOwnershipLogs((prev) => {
       const updated = [newLog, ...prev].slice(0, 50);
-      void AsyncStorage.setItem(FEEDING_HISTORY_KEY, JSON.stringify(updated));
+      void saveFeedingHistory(updated);
       return updated;
     });
     onClose();
@@ -527,7 +498,7 @@ export function useFeeding(
     };
     setOwnershipLogs((prev) => {
       const updated = [newLog, ...prev].slice(0, 50);
-      void AsyncStorage.setItem(FEEDING_HISTORY_KEY, JSON.stringify(updated));
+      void saveFeedingHistory(updated);
       return updated;
     });
     onClose();
@@ -562,7 +533,7 @@ export function useFeeding(
     };
     setOwnershipLogs((prev) => {
       const updated = [newLog, ...prev].slice(0, 50);
-      void AsyncStorage.setItem(FEEDING_HISTORY_KEY, JSON.stringify(updated));
+      void saveFeedingHistory(updated);
       return updated;
     });
     onClose();
@@ -596,7 +567,7 @@ export function useFeeding(
     };
     setOwnershipLogs((prev) => {
       const updated = [newLog, ...prev].slice(0, 50);
-      void AsyncStorage.setItem(FEEDING_HISTORY_KEY, JSON.stringify(updated));
+      void saveFeedingHistory(updated);
       return updated;
     });
     onClose();

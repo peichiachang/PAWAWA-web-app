@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { recalculateVesselVolume } from '../../utils/vesselVolume';
 import { CustomCamera } from '../CustomCamera';
 import { calculateDailyKcalIntake } from '../../utils/health';
+import { getMaxPossibleGrams, shouldWarnHighIntake } from '../../algorithms/feedingBounds';
 import type { ConsumptionLevel } from '../../types/ai';
 
 const CONSUMPTION_LEVEL_LABEL: Record<ConsumptionLevel, string> = {
@@ -358,7 +359,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
 
   useEffect(() => {
     setManualBoundaryLevel(null);
-  }, [result?.consumedRatio, result?.householdTotalGram, t1Image?.uri, visible]);
+  }, [result?.consumedRatio, result?.totalGram, t1Image?.uri, visible]);
 
   // 切換食碗時，同步食物類型（沿用食碗設定或預設乾飼料）
   useEffect(() => {
@@ -972,6 +973,11 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                   <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
                     {sessionFoodType === 'dry' ? '份量通常固定，可設預設值沿用' : '每次給量可能不同（半罐、1/4 罐等），可選填克數'}
                   </Text>
+                  {sessionFoodType === 'wet' && (
+                    <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4, fontStyle: 'italic' }}>
+                      濕食建議從斜上方約 45° 拍攝，可減少體積誤差。
+                    </Text>
+                  )}
                 </View>
 
                 <View style={styles.formGroup}>
@@ -1100,14 +1106,10 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="smart-toy" size={18} color="#000" style={{ marginRight: 6 }} /><Text style={styles.aiResultTitle}>AI 分析結果</Text></View>
                     {(() => {
                       const kcalPerGram = nutritionResult?.kcalPerGram || 3.5;
-                      const kcal = calculateDailyKcalIntake(result.householdTotalGram, kcalPerGram);
-                      const maxPossibleGrams =
-                        t0Image?.manualWeight ||
-                        (currentVessel?.volumeMl ? currentVessel.volumeMl * 0.8 : 1000);
+                      const kcal = calculateDailyKcalIntake(result.totalGram, kcalPerGram);
+                      const maxPossibleGrams = getMaxPossibleGrams(t0Image?.manualWeight, currentVessel?.volumeMl);
                       const confidence = result.confidence ?? 1;
-                      const shouldWarn =
-                        confidence < 0.7 ||
-                        result.householdTotalGram > maxPossibleGrams * 0.9;
+                      const shouldWarn = confidence < 0.7 || shouldWarnHighIntake(result.totalGram, maxPossibleGrams);
 
                       return (
                         <>
@@ -1129,7 +1131,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                               </Text>
                             )) : null}
                             <Text style={[styles.aiTag, styles.aiTagHighlight]}>
-                              AI 估算攝取：{result.householdTotalGram}g
+                              AI 估算攝取：{result.totalGram}g
                             </Text>
                             <Text style={styles.aiTag}>
                               kcal/g：{kcalPerGram}

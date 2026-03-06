@@ -90,11 +90,11 @@ async function callGeminiForJson(prompt, imageParts = []) {
 
 function handleFeedingMock(body) {
   const seed = hashSeed(`${body.t0ImageRef || ''}:${body.t1ImageRef || ''}`);
-  const householdTotalGram = Math.round(seededRange(seed + 1, 35, 95));
+  const totalGram = Math.round(seededRange(seed + 1, 35, 95));
   return {
     bowlsDetected: 1,
-    assignments: [{ bowlId: 'A', tag: 'Household', estimatedIntakeGram: householdTotalGram }],
-    householdTotalGram,
+    assignments: [{ bowlId: 'A', tag: 'Household', estimatedIntakeGram: totalGram }],
+    totalGram,
     consumedRatio: Number(seededRange(seed + 2, 0.15, 0.85).toFixed(2)),
     isBowlMatch: true,
     mismatchReason: '',
@@ -120,11 +120,11 @@ Return:
 }
 `;
   const raw = await callGeminiForJson(prompt, imageParts);
-  const grams = Math.max(0, Math.round(normalizeNumber(raw.consumedGram ?? raw.householdTotalGram, 0)));
+  const grams = Math.max(0, Math.round(normalizeNumber(raw.consumedGram ?? raw.totalGram, 0)));
   return {
     bowlsDetected: 1,
     assignments: [{ bowlId: 'A', tag: 'Household', estimatedIntakeGram: grams }],
-    householdTotalGram: grams,
+    totalGram: grams,
     consumedRatio: Number(Math.max(0, Math.min(1, normalizeNumber(raw.consumedRatio, 0.5))).toFixed(2)),
     isBowlMatch: normalizeBoolean(raw.isBowlMatch, true),
     mismatchReason: String(raw.mismatchReason || ''),

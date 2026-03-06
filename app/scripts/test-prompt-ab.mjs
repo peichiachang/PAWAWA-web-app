@@ -103,12 +103,12 @@ function normalizeFeeding(parsed, t0RefGrams) {
     level = 'a_little';
   }
 
-  const householdTotalGram = gramsByLevel(level, t0RefGrams);
+  const totalGram = gramsByLevel(level, t0RefGrams);
   const confidence = clamp(parsed?.confidence ?? 0.5, 0, 1);
 
   return {
     consumptionLevel: level,
-    householdTotalGram,
+    totalGram,
     confidence,
     isBowlMatch: Boolean(parsed?.isBowlMatch ?? true),
     mismatchReason: parsed?.isBowlMatch === false ? String(parsed?.mismatchReason || 'Bowl mismatch') : '',
@@ -177,7 +177,7 @@ Return JSON:
   "preCheck": { "Q1": boolean, "Q2": boolean, "Q3": boolean, "Q4": boolean },
   "bowlsDetected": 1,
   "assignments": [{"bowlId": "bowl1", "tag": "Tag A", "estimatedIntakeGram": number}],
-  "householdTotalGram": number,
+  "totalGram": number,
   "consumptionLevel": "almost_all_eaten" | "more_than_half" | "about_half" | "a_little" | "almost_none",
   "isBowlMatch": boolean,
   "mismatchReason": string | null,
@@ -233,7 +233,7 @@ Return JSON:
   "preCheck": { "Q1": boolean, "Q2": boolean, "Q3": boolean, "Q4": boolean },
   "bowlsDetected": 1,
   "assignments": [{"bowlId": "bowl1", "tag": "Tag A", "estimatedIntakeGram": number}],
-  "householdTotalGram": number,
+  "totalGram": number,
   "consumptionLevel": "almost_all_eaten" | "more_than_half" | "about_half" | "a_little" | "almost_none",
   "isBowlMatch": boolean,
   "mismatchReason": string | null,
@@ -261,7 +261,7 @@ function summarize(label, rows) {
   rows.forEach((r) => {
     dist[r.consumptionLevel] = (dist[r.consumptionLevel] || 0) + 1;
     confSum += r.confidence;
-    gramSum += r.householdTotalGram;
+    gramSum += r.totalGram;
   });
   const entries = Object.entries(dist).sort((a, b) => b[1] - a[1]);
   const top = entries[0] || ['(none)', 0];
@@ -345,8 +345,8 @@ async function main() {
     if (disagree) disagreeCount += 1;
 
     console.log(
-      `run ${String(i + 1).padStart(2, '0')} | v1=${a.consumptionLevel.padEnd(16)}(${String(a.householdTotalGram).padStart(4)}g, c=${a.confidence.toFixed(2)})` +
-      ` | v2=${b.consumptionLevel.padEnd(16)}(${String(b.householdTotalGram).padStart(4)}g, c=${b.confidence.toFixed(2)})` +
+      `run ${String(i + 1).padStart(2, '0')} | v1=${a.consumptionLevel.padEnd(16)}(${String(a.totalGram).padStart(4)}g, c=${a.confidence.toFixed(2)})` +
+      ` | v2=${b.consumptionLevel.padEnd(16)}(${String(b.totalGram).padStart(4)}g, c=${b.confidence.toFixed(2)})` +
       `${disagree ? ' | DIFF' : ''}`
     );
   }

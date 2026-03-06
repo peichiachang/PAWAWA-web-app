@@ -141,7 +141,7 @@ Use T0 to identify bowl material. Ignore bowl texture when judging food coverage
 ## NEAR-ZERO RULE
 
 "almost_none" means T1 looks virtually identical to T0 — the cat has not eaten at all.
-If the visible food coverage difference between T0 and T1 is less than 5% AND PRE-CHECK is all NO → output "almost_none", householdTotalGram = 0.
+If the visible food coverage difference between T0 and T1 is less than 5% AND PRE-CHECK is all NO → output "almost_none", totalGram = 0.
 This is the ONLY condition under which "almost_none" is allowed.
 
 ## BOWL MATCHING
@@ -158,7 +158,7 @@ Return JSON:
   },
   "bowlsDetected": 1,
   "assignments": [{"bowlId": "bowl1", "tag": "Tag A", "estimatedIntakeGram": number}],
-  "householdTotalGram": number,
+  "totalGram": number,
   "consumptionLevel": "almost_all_eaten" | "more_than_half" | "about_half" | "a_little" | "almost_none",
   "isBowlMatch": boolean,
   "mismatchReason": string | null,
@@ -187,9 +187,9 @@ async function runFeedingAnalysis(genAI, prompt, t0Base64, t1Base64, t0Mime, t1M
   const almostNoneForbidden = parsed.preCheck && (parsed.preCheck.Q1 || parsed.preCheck.Q2 || parsed.preCheck.Q3 || parsed.preCheck.Q4);
   if (almostNoneForbidden && parsed.consumptionLevel === 'almost_none') {
     parsed.consumptionLevel = 'a_little';
-    parsed.householdTotalGram = Math.round(0.25 * t0RefGrams);
+    parsed.totalGram = Math.round(0.25 * t0RefGrams);
     if (Array.isArray(parsed.assignments) && parsed.assignments[0]) {
-      parsed.assignments[0].estimatedIntakeGram = parsed.householdTotalGram;
+      parsed.assignments[0].estimatedIntakeGram = parsed.totalGram;
     }
   }
   return parsed;
@@ -234,7 +234,7 @@ async function main() {
       levels.push(level);
       results.push(r);
       const valid = VALID_LEVELS.includes(level) ? '' : ' ⚠️ 非預期值';
-      console.log(`  Run ${String(i + 1).padStart(2)}: consumptionLevel = "${level}" (${r.householdTotalGram}g, conf ${(r.confidence ?? 0).toFixed(2)})${valid}`);
+      console.log(`  Run ${String(i + 1).padStart(2)}: consumptionLevel = "${level}" (${r.totalGram}g, conf ${(r.confidence ?? 0).toFixed(2)})${valid}`);
     } catch (err) {
       console.error(`  Run ${i + 1}: 失敗 -`, err.message);
       levels.push('(error)');

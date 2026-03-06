@@ -74,16 +74,16 @@ Do NOT output 0.73, 0.45, etc. — only the discrete level.
 4. When uncertain between two levels, prefer the more conservative (closer to "almost_none").
 
 ## NEAR-ZERO RULE
-- If T0 and T1 look essentially the same (same shot, re-shot, or no eating), use "almost_none" and householdTotalGram = 0.
+- If T0 and T1 look essentially the same (same shot, re-shot, or no eating), use "almost_none" and totalGram = 0.
 - If the visible difference could be lighting/angle/reflection, use "almost_none" and lower confidence.
 
 ## GRAM CONVERSION (use level midpoint, T0 reference = ${t0RefGrams}g)
-- "almost_all_eaten" → householdTotalGram = round(0.90 × ${t0RefGrams})
-- "more_than_half"   → householdTotalGram = round(0.70 × ${t0RefGrams})
-- "about_half"       → householdTotalGram = round(0.50 × ${t0RefGrams})
-- "a_little"         → householdTotalGram = round(0.30 × ${t0RefGrams})
-- "almost_none"      → householdTotalGram = 0
-- assignments[0].estimatedIntakeGram = householdTotalGram (single bowl)
+- "almost_all_eaten" → totalGram = round(0.90 × ${t0RefGrams})
+- "more_than_half"   → totalGram = round(0.70 × ${t0RefGrams})
+- "about_half"       → totalGram = round(0.50 × ${t0RefGrams})
+- "a_little"         → totalGram = round(0.30 × ${t0RefGrams})
+- "almost_none"      → totalGram = 0
+- assignments[0].estimatedIntakeGram = totalGram (single bowl)
 
 ## BOWL MATCHING
 - Verify bowl in T1 matches T0 (${vesselName}). If different, isBowlMatch=false.
@@ -92,7 +92,7 @@ Return JSON:
 {
   "bowlsDetected": 1,
   "assignments": [{"bowlId": "bowl1", "tag": "Tag A", "estimatedIntakeGram": number}],
-  "householdTotalGram": number,
+  "totalGram": number,
   "consumptionLevel": "almost_all_eaten" | "more_than_half" | "about_half" | "a_little" | "almost_none",
   "isBowlMatch": boolean,
   "mismatchReason": string | null,
@@ -150,10 +150,10 @@ async function main() {
   for (let i = 0; i < runs; i++) {
     try {
       const r = await analyzeFeeding(genAI, t0Base64, t1Base64, t0Mime, t1Mime, vesselVolumeMl);
-      results.push(r.householdTotalGram);
+      results.push(r.totalGram);
       confidences.push(r.confidence ?? 0);
       const level = r.consumptionLevel || '—';
-      console.log(`  Run ${String(i + 1).padStart(2)}: ${r.householdTotalGram}g (${level}), confidence ${(r.confidence ?? 0).toFixed(2)}`);
+      console.log(`  Run ${String(i + 1).padStart(2)}: ${r.totalGram}g (${level}), confidence ${(r.confidence ?? 0).toFixed(2)}`);
     } catch (err) {
       console.error(`  Run ${i + 1}: 失敗 -`, err.message);
     }

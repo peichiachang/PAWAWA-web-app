@@ -30,7 +30,7 @@ export interface FeedingPreCheck {
 export interface FeedingVisionResult {
   bowlsDetected: number;
   assignments: BowlDetection[];
-  householdTotalGram: number;
+  totalGram: number;
   consumedRatio?: number; // 0~1，程式端會再映射成離散 consumptionLevel
   /** 離散分級：幾乎全吃完 / 吃了一半以上 / 吃了不到一半 / 幾乎沒吃 */
   consumptionLevel?: ConsumptionLevel;
@@ -39,6 +39,15 @@ export interface FeedingVisionResult {
   confidence?: number;
   estimatedErrorMargin?: number; // AI 自己估算的誤差範圍（0.08-0.20）
   preCheck?: FeedingPreCheck;
+
+  /** 飯量（參考）：由前端依 T0 手動克數或碗容量估算填入，僅供顯示對照，非 AI 回傳 */
+  refT0Gram?: number;
+  /** AI 估算 T0 總量（克）：T0 時碗內食物克數，僅在有空碗／填充比例時由服務端填入 */
+  t0EstimatedGram?: number;
+  /** AI 估算 T1 剩餘（克）：T1 時碗內剩餘克數，由 t0EstimatedGram − totalGram 推得 */
+  t1EstimatedGram?: number;
+  /** AI 估算熱量（kcal）：由 totalGram × kcalPerGram 計算，通常由前端填入 */
+  estimatedKcal?: number;
 }
 
 /** Majority Vote 結果：與 FeedingVisionResult 相容，額外含 distribution */
