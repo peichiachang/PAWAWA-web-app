@@ -5,7 +5,7 @@ import { ActiveModal, Level, FeedingOwnershipLog, HydrationOwnershipLog, VesselC
 import { EliminationOwnershipLog } from '../hooks/useElimination';
 import { CatIdentity, ClinicalSummary, MedicationLog, SymptomLog } from '../types/domain';
 import { styles } from '../styles/common';
-import { calculateAdaptiveDailyWaterGoal, calculateDailyKcalGoal, calculateDailyWaterGoalRange, checkLowAppetiteAlert } from '../utils/health';
+import { calculateAdaptiveDailyWaterGoal, calculateDailyKcalGoal, calculateDailyWaterGoalRange } from '../utils/health';
 import { TrendChart } from './TrendChart';
 import { DetailRecord } from './modals/RecordDetailModal';
 import { AppIcon } from './AppIcon';
@@ -225,13 +225,6 @@ export function HomeContent({
     return { kcalData, waterData, appetiteData, kcalRecordsComplete, waterRecordsComplete, appetiteRecordsComplete };
   }, [feedingHistory, hydrationHistory, level, vesselProfiles]);
 
-  const showLowAppetiteBanner = useMemo(() => {
-    const filtered = level === 'household'
-      ? feedingHistory
-      : feedingHistory.filter(l => matchesCatSeries(l.selectedTagId, level));
-    return checkLowAppetiteAlert(filtered);
-  }, [feedingHistory, level]);
-
   const recentRecords = useMemo(() => {
     const allFeedings = feedingHistory.filter(f => level === 'household' ? (f.ownershipType === 'household_only' || f.selectedTagId === 'household') : matchesCatSeries(f.selectedTagId, level));
     const allHydrations = hydrationHistory.filter(h => level === 'household' ? (h.ownershipType === 'household_only' || h.selectedTagId === 'household') : matchesCatSeries(h.selectedTagId, level));
@@ -415,13 +408,6 @@ export function HomeContent({
             />
           )}
         </View>
-
-        {showLowAppetiteBanner && (
-          <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#fef3c7', borderWidth: 2, borderColor: '#f59e0b', borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
-            <AppIcon name="warning" size={22} color="#92400e" style={{ marginRight: 10 }} />
-            <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#92400e' }}>貓咪最近胃口偏低，建議觀察或就醫</Text>
-          </View>
-        )}
 
         {renderRecentRecords()}
 
@@ -652,13 +638,6 @@ export function HomeContent({
           </Text>
         </View>
       </View>
-
-      {showLowAppetiteBanner && (
-        <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#fef3c7', borderWidth: 2, borderColor: '#f59e0b', borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
-          <AppIcon name="warning" size={22} color="#92400e" style={{ marginRight: 10 }} />
-          <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#92400e' }}>貓咪最近胃口偏低，建議觀察或就醫</Text>
-        </View>
-      )}
 
       <View style={[styles.section, { maxWidth: 320, alignSelf: 'center', width: '100%' }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>

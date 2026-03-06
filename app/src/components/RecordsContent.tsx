@@ -8,7 +8,6 @@ import { styles } from '../styles/common';
 import { AppIcon } from './AppIcon';
 import { RecordLogItem } from './RecordLogItem';
 import { extractCatSeries, getCatNameBySeries, getScopedCats, matchesCatSeries } from '../utils/catScope';
-import { checkLowAppetiteAlert } from '../utils/health';
 
 type RecordScope = 'household' | string;
 type RecordTypeFilter = 'all' | 'feeding' | 'hydration' | 'elimination' | 'medication' | 'symptom';
@@ -50,13 +49,6 @@ export function RecordsContent({
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [filterSheet, setFilterSheet] = useState<'scope' | 'type' | 'date' | null>(null);
   const [addRecordDropdownOpen, setAddRecordDropdownOpen] = useState(false);
-
-  const showLowAppetiteBanner = useMemo(() => {
-    const filtered = scope === 'household'
-      ? feedingHistory.filter(f => f.ownershipType === 'household_only')
-      : feedingHistory.filter(f => matchesCatSeries(f.selectedTagId, scope));
-    return checkLowAppetiteAlert(filtered);
-  }, [feedingHistory, scope]);
 
   const filteredRecords = useMemo(() => {
     const now = Date.now();
@@ -213,12 +205,6 @@ export function RecordsContent({
 
   return (
     <View>
-      {showLowAppetiteBanner && (
-        <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#fef3c7', borderWidth: 2, borderColor: '#f59e0b', borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
-          <AppIcon name="warning" size={22} color="#92400e" style={{ marginRight: 10 }} />
-          <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#92400e' }}>貓咪最近胃口偏低，建議觀察或就醫</Text>
-        </View>
-      )}
       {pendingT1Count > 0 && onOpenPendingT1 && (
         <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#3b82f6', borderRadius: 8 }}>
           <Text style={{ fontSize: 13, fontWeight: '600', color: '#1e40af', marginBottom: 6 }}>您有 {pendingT1Count} 筆放飯記錄尚未填寫收碗（待補填）</Text>
