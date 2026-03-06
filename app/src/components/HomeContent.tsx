@@ -197,12 +197,14 @@ export function HomeContent({
         hasLowConfidence = dayLogs.some(log => log.confidence !== undefined && log.confidence < 0.7);
       }
       
+      const roundedKcal = Math.round(totalKcal);
       return {
         label: day,
-        value: Math.round(totalKcal),
+        value: roundedKcal,
         errorMargin: weightedErrorMargin > 0 ? weightedErrorMargin : undefined,
         hasRecord: dayLogs.length > 0,
         lowConfidence: hasLowConfidence,
+        hasAlmostNone: roundedKcal === 0 && dayLogs.some(l => l.intakeLevel === 'almost_none'),
       };
     });
 
@@ -233,10 +235,12 @@ export function HomeContent({
       const avgRatio = dayLogs.length > 0
         ? dayLogs.reduce((sum, log) => sum + INTAKE_LEVEL_RATIO[log.intakeLevel!], 0) / dayLogs.length
         : 0;
+      const roundedPct = Math.round(avgRatio * 100);
       return {
         label: day,
-        value: Math.round(avgRatio * 100),
+        value: roundedPct,
         hasRecord: dayLogs.length > 0,
+        hasAlmostNone: roundedPct === 0 && dayLogs.some(l => l.intakeLevel === 'almost_none'),
       };
     });
     const kcalRecordsComplete = kcalData.filter(d => d.hasRecord).length;
