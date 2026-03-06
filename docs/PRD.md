@@ -1,4 +1,4 @@
-# PAWAWA — Software Design Document (SDD)
+# PAWAWA — Product Requirements Document (PRD)
 
 > Version: 1.2
 > Last updated: 2026-03-06
@@ -470,7 +470,7 @@ const consumedGrams = consumedRatio * t0Grams;
 
 **重試邏輯：** 最多 3 次，間隔 `800ms × attempt`，`confidence < 0.6` 繼續重試
 
-**合理性檢查（SDD 2.5）：**
+**合理性檢查（PRD 2.5）：**
 `householdTotalGram > maxPossibleGrams × 1.1` → 顯示警告，要求重拍
 
 ### 6.2 useHydration

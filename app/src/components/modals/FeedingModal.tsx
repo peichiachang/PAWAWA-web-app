@@ -130,28 +130,45 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
         </View>
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>選擇已存飼料（選填，用於熱量估算）</Text>
-          {sortedFeedLibrary.length === 0 ? (
-            <Text style={{ fontSize: 12, color: palette.muted }}>尚無飼料，可至個人 → 飼料設定新增</Text>
-          ) : (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {sortedFeedLibrary.map((feed) => (
-                <Pressable
-                  key={feed.id}
-                  style={[styles.choiceBtn, nutritionResult?.rawText === getFeedDisplayName(feed) && styles.choiceBtnActive]}
-                  onPress={() => setNutritionFromFeedLibraryItem(feed)}
-                >
-                  <Text style={[styles.choiceBtnText, nutritionResult?.rawText === getFeedDisplayName(feed) && styles.choiceBtnTextActive]}>
-                    {getFeedDisplayName(feed)}（{feed.kcalPerGram} kcal/g）
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+          <Pressable
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surface }}
+            onPress={() => setAutoFeederFeedSelectOpen((v) => !v)}
+          >
+            <Text style={{ fontSize: 14, color: nutritionResult ? palette.text : palette.muted }} numberOfLines={1}>
+              {nutritionResult ? `${nutritionResult.rawText}（${nutritionResult.kcalPerGram} kcal/g）` : '請選擇一項'}
+            </Text>
+            <Text style={{ fontSize: 14, color: palette.muted }}>{autoFeederFeedSelectOpen ? '▲' : '▼'}</Text>
+          </Pressable>
+          {autoFeederFeedSelectOpen && (
+            <>
+              <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -280, zIndex: 1 }} onPress={() => setAutoFeederFeedSelectOpen(false)} />
+              <View style={{ minHeight: 48, maxHeight: 220, marginTop: 6, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.surface, borderRadius: 8, zIndex: 2, overflow: 'hidden' }}>
+                {sortedFeedLibrary.length === 0 ? (
+                  <View style={{ paddingVertical: 16, paddingHorizontal: 14 }}>
+                    <Text style={{ fontSize: 12, color: palette.muted }}>尚無飼料，可至個人 → 飼料設定新增</Text>
+                  </View>
+                ) : (
+                  <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
+                    {sortedFeedLibrary.map((feed) => (
+                      <Pressable
+                        key={feed.id}
+                        style={{ paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: palette.border }}
+                        onPress={() => { setNutritionFromFeedLibraryItem(feed); setAutoFeederFeedSelectOpen(false); }}
+                      >
+                        <Text style={{ fontSize: 14, fontWeight: nutritionResult?.rawText === getFeedDisplayName(feed) ? '600' : '400', color: palette.text }} numberOfLines={2}>
+                          {getFeedDisplayName(feed)}（{feed.kcalPerGram} kcal/g）
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            </>
           )}
           {nutritionResult != null && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
-              <Text style={{ fontSize: 12, color: palette.muted }}>目前：{nutritionResult.rawText}</Text>
-              <Pressable onPress={clearNutrition} style={{ padding: 4, borderWidth: 1, borderRadius: 4, borderColor: '#dc2626' }}>
-                <Text style={{ fontSize: 10, color: '#dc2626' }}>清除</Text>
+              <Pressable onPress={clearNutrition} style={{ padding: 6, borderWidth: 1, borderRadius: 4, borderColor: '#dc2626' }}>
+                <Text style={{ fontSize: 11, color: '#dc2626' }}>清除已選飼料</Text>
               </Pressable>
             </View>
           )}
@@ -271,6 +288,10 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
   /** 補填記錄：參考克數、記錄日期（今天/昨天/前天） */
   const [lateEntryGrams, setLateEntryGrams] = useState('');
   const [lateEntryDateOption, setLateEntryDateOption] = useState<'today' | 'yesterday' | '2days'>('today');
+  /** 自動餵食器流程：選擇已存飼料列表是否展開 */
+  const [autoFeederFeedSelectOpen, setAutoFeederFeedSelectOpen] = useState(false);
+  /** 罐頭流程：選擇罐頭列表是否展開 */
+  const [cannedCanSelectOpen, setCannedCanSelectOpen] = useState(false);
 
   function resetToBlankRecordScreen() {
     feeding.openReset();
@@ -297,6 +318,8 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
     setCannedT1Image(null);
     setLateEntryGrams('');
     setLateEntryDateOption('today');
+    setAutoFeederFeedSelectOpen(false);
+    setCannedCanSelectOpen(false);
   }
 
   const t0RefGramsForBoundary = t0Image?.manualWeight || (currentVessel?.volumeMl ? currentVessel.volumeMl * 0.8 * 0.45 : 500);
@@ -548,6 +571,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                       setCannedT0Saved(false);
                       setCannedSelectedCanId(null);
                       setCannedGrams('');
+                      setCannedCanSelectOpen(false);
                     }}
                     style={{ marginLeft: 8 }}
                   >
@@ -573,6 +597,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                               setCannedSelectedCanId(id);
                               setCannedGrams(String(g));
                               setAddCanMode(false);
+                              setCannedCanSelectOpen(false);
                               setNewCanName('');
                               setNewCanGrams('');
                             }}>
@@ -595,32 +620,57 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                             </Pressable>
                           </View>
                         </View>
-                      ) : canLibrary.length === 0 ? (
-                        <View style={{ marginTop: 8, padding: 12, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8 }}>
-                          <Text style={{ fontSize: 13, fontWeight: '600', color: '#92400e', marginBottom: 8 }}>請新增罐頭</Text>
-                          <Text style={{ fontSize: 12, color: '#92400e', marginBottom: 12 }}>尚無罐頭，請先新增一筆罐頭後再選擇。</Text>
-                          <Pressable style={[styles.choiceBtn, { borderStyle: 'dashed', alignSelf: 'flex-start' }]} onPress={() => setAddCanMode(true)}>
-                            <Text style={styles.choiceBtnText}>＋ 新增罐頭</Text>
-                          </Pressable>
-                        </View>
                       ) : (
                         <>
-                          <View style={{ marginTop: 8, gap: 8 }}>
-                            {sortedCanLibrary.map((can) => (
-                              <Pressable
-                                key={can.id}
-                                style={[styles.choiceBtn, cannedSelectedCanId === can.id && styles.choiceBtnActive]}
-                                onPress={() => { setCannedSelectedCanId(can.id); setCannedGrams(String(can.defaultGrams ?? 80)); }}
-                              >
-                                <Text style={[styles.choiceBtnText, cannedSelectedCanId === can.id && styles.choiceBtnTextActive]}>
-                                  {getCannedDisplayName(can)}（{can.defaultGrams ?? 80}g）
-                                </Text>
-                              </Pressable>
-                            ))}
-                            <Pressable style={[styles.choiceBtn, { borderStyle: 'dashed' }]} onPress={() => setAddCanMode(true)}>
-                              <Text style={styles.choiceBtnText}>＋ 新增罐頭</Text>
-                            </Pressable>
-                          </View>
+                          <Pressable
+                            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surface, marginTop: 8 }}
+                            onPress={() => setCannedCanSelectOpen((v) => !v)}
+                          >
+                            <Text style={{ fontSize: 14, color: cannedSelectedCanId ? palette.text : palette.muted }} numberOfLines={1}>
+                              {cannedSelectedCanId
+                                ? (() => {
+                                    const can = canLibrary.find(c => c.id === cannedSelectedCanId);
+                                    return can ? `${getCannedDisplayName(can)}（${cannedGrams || can.defaultGrams ?? 80}g）` : '請選擇一項';
+                                  })()
+                                : '請選擇一項'}
+                            </Text>
+                            <Text style={{ fontSize: 14, color: palette.muted }}>{cannedCanSelectOpen ? '▲' : '▼'}</Text>
+                          </Pressable>
+                          {cannedCanSelectOpen && (
+                            <>
+                              <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -320, zIndex: 1 }} onPress={() => setCannedCanSelectOpen(false)} />
+                              <View style={{ minHeight: 48, maxHeight: 220, marginTop: 6, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.surface, borderRadius: 8, zIndex: 2, overflow: 'hidden' }}>
+                                {sortedCanLibrary.length === 0 ? (
+                                  <View style={{ paddingVertical: 16, paddingHorizontal: 14 }}>
+                                    <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 8 }}>尚無罐頭，可至個人 → 罐頭庫新增，或下方＋ 新增罐頭</Text>
+                                    <Pressable style={[styles.choiceBtn, { borderStyle: 'dashed', alignSelf: 'flex-start' }]} onPress={() => { setAddCanMode(true); setCannedCanSelectOpen(false); }}>
+                                      <Text style={styles.choiceBtnText}>＋ 新增罐頭</Text>
+                                    </Pressable>
+                                  </View>
+                                ) : (
+                                  <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
+                                    {sortedCanLibrary.map((can) => (
+                                      <Pressable
+                                        key={can.id}
+                                        style={{ paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: palette.border }}
+                                        onPress={() => { setCannedSelectedCanId(can.id); setCannedGrams(String(can.defaultGrams ?? 80)); setCannedCanSelectOpen(false); }}
+                                      >
+                                        <Text style={{ fontSize: 14, fontWeight: cannedSelectedCanId === can.id ? '600' : '400', color: palette.text }} numberOfLines={2}>
+                                          {getCannedDisplayName(can)}（{can.defaultGrams ?? 80}g）
+                                        </Text>
+                                      </Pressable>
+                                    ))}
+                                    <Pressable
+                                      style={{ paddingVertical: 12, paddingHorizontal: 14, borderStyle: 'dashed', borderTopWidth: 1, borderColor: palette.border }}
+                                      onPress={() => { setAddCanMode(true); setCannedCanSelectOpen(false); }}
+                                    >
+                                      <Text style={[styles.choiceBtnText, { color: palette.primary }]}>＋ 新增罐頭</Text>
+                                    </Pressable>
+                                  </ScrollView>
+                                )}
+                              </View>
+                            </>
+                          )}
                           <View style={[styles.formGroup, { marginTop: 16 }]}>
                             <Text style={styles.formLabel}>克數（自動帶入，可修改）</Text>
                             <TextInput style={styles.input} keyboardType="numeric" value={cannedGrams} onChangeText={setCannedGrams} placeholder="例：80" />
@@ -1208,28 +1258,45 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
 
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>③ 選擇已存飼料（選填）</Text>
-                  {sortedFeedLibrary.length === 0 ? (
-                    <Text style={{ fontSize: 12, color: palette.muted }}>尚無飼料，可至個人 → 飼料設定新增，或下方掃描標籤</Text>
-                  ) : (
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                      {sortedFeedLibrary.map((feed) => (
-                        <Pressable
-                          key={feed.id}
-                          style={[styles.choiceBtn, nutritionResult?.rawText === getFeedDisplayName(feed) && styles.choiceBtnActive]}
-                          onPress={() => setNutritionFromFeedLibraryItem(feed)}
-                        >
-                          <Text style={[styles.choiceBtnText, nutritionResult?.rawText === getFeedDisplayName(feed) && styles.choiceBtnTextActive]}>
-                            {getFeedDisplayName(feed)}（{feed.kcalPerGram} kcal/g）
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
+                  <Pressable
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surface }}
+                    onPress={() => setAutoFeederFeedSelectOpen((v) => !v)}
+                  >
+                    <Text style={{ fontSize: 14, color: nutritionResult ? palette.text : palette.muted }} numberOfLines={1}>
+                      {nutritionResult ? `${nutritionResult.rawText}（${nutritionResult.kcalPerGram} kcal/g）` : '請選擇一項'}
+                    </Text>
+                    <Text style={{ fontSize: 14, color: palette.muted }}>{autoFeederFeedSelectOpen ? '▲' : '▼'}</Text>
+                  </Pressable>
+                  {autoFeederFeedSelectOpen && (
+                    <>
+                      <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -280, zIndex: 1 }} onPress={() => setAutoFeederFeedSelectOpen(false)} />
+                      <View style={{ minHeight: 48, maxHeight: 220, marginTop: 6, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.surface, borderRadius: 8, zIndex: 2, overflow: 'hidden' }}>
+                        {sortedFeedLibrary.length === 0 ? (
+                          <View style={{ paddingVertical: 16, paddingHorizontal: 14 }}>
+                            <Text style={{ fontSize: 12, color: palette.muted }}>尚無飼料，可至個人 → 飼料設定新增，或下方掃描標籤</Text>
+                          </View>
+                        ) : (
+                          <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
+                            {sortedFeedLibrary.map((feed) => (
+                              <Pressable
+                                key={feed.id}
+                                style={{ paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: palette.border }}
+                                onPress={() => { setNutritionFromFeedLibraryItem(feed); setAutoFeederFeedSelectOpen(false); }}
+                              >
+                                <Text style={{ fontSize: 14, fontWeight: nutritionResult?.rawText === getFeedDisplayName(feed) ? '600' : '400', color: palette.text }} numberOfLines={2}>
+                                  {getFeedDisplayName(feed)}（{feed.kcalPerGram} kcal/g）
+                                </Text>
+                              </Pressable>
+                            ))}
+                          </ScrollView>
+                        )}
+                      </View>
+                    </>
                   )}
                   {nutritionResult != null && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <Text style={{ fontSize: 12, color: palette.muted }}>目前使用：{nutritionResult.rawText}（{nutritionResult.kcalPerGram} kcal/g）</Text>
-                      <Pressable onPress={clearNutrition} style={{ padding: 4, borderWidth: 1, borderRadius: 4, borderColor: '#dc2626' }}>
-                        <Text style={{ fontSize: 10, color: '#dc2626' }}>清除</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                      <Pressable onPress={clearNutrition} style={{ padding: 6, borderWidth: 1, borderRadius: 4, borderColor: '#dc2626' }}>
+                        <Text style={{ fontSize: 11, color: '#dc2626' }}>清除已選飼料</Text>
                       </Pressable>
                     </View>
                   )}
