@@ -217,6 +217,20 @@ export function HomeContent({
     return { feedings, hydrations, eliminations, medications, symptoms };
   }, [feedingHistory, hydrationHistory, eliminationHistory, medicationHistory, symptomHistory, level]);
 
+  // 今日攝取（僅當日紀錄，非累積）- 必須在 early return 之前，避免違反 React Rules of Hooks
+  const currentKcal = useMemo(
+    () => feedingHistory
+      .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
+      .reduce((sum, log) => sum + (log.kcal ?? log.totalGram * 3), 0),
+    [feedingHistory, level]
+  );
+  const currentWater = useMemo(
+    () => hydrationHistory
+      .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
+      .reduce((sum, log) => sum + (log.actualWaterMl ?? log.totalMl ?? 0), 0),
+    [hydrationHistory, level]
+  );
+
   const renderRecentRecords = () => (
     <View style={styles.section}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
@@ -317,6 +331,49 @@ export function HomeContent({
             </Pressable>
           </View>
         )}
+        <View style={[styles.cardBlock, { marginBottom: 16 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <AppIcon name="add-circle" size={20} color="#000" style={{ marginRight: 8 }} />
+            <Text style={styles.cardTitle}>新增紀錄</Text>
+          </View>
+          <Text style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
+          <View style={{ position: 'relative', zIndex: 20 }}>
+            <Pressable
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 2, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff' }}
+              onPress={() => setAddRecordMenuOpen((v) => !v)}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600' }}>選擇記錄類型</Text>
+              <AppIcon name={addRecordMenuOpen ? 'expand-less' : 'expand-more'} size={22} color="#000" />
+            </Pressable>
+            {addRecordMenuOpen && (
+              <>
+                <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -280, zIndex: 1 }} onPress={() => setAddRecordMenuOpen(false)} />
+                <View style={{ position: 'relative', marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', zIndex: 2 }}>
+                  <ScrollView style={{ maxHeight: 256 }} keyboardShouldPersistTaps="handled">
+                    {[
+                      { modal: 'feeding' as ActiveModal, label: '食物記錄', icon: 'restaurant' },
+                      { modal: 'water' as ActiveModal, label: '飲水記錄', icon: 'opacity' },
+                      { modal: 'elimination' as ActiveModal, label: '排泄記錄', icon: 'sanitizer' },
+                      { modal: 'weightRecord' as ActiveModal, label: '體重記錄', icon: 'monitor-weight' },
+                      { modal: 'medication' as ActiveModal, label: '用藥記錄', icon: 'medication' },
+                      { modal: 'symptom' as ActiveModal, label: '異常症狀', icon: 'healing' },
+                      { modal: 'blood' as ActiveModal, label: '報告掃描', icon: 'biotech' },
+                    ].map(({ modal, label, icon }) => (
+                      <Pressable
+                        key={modal}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                        onPress={() => { onOpenModal(modal); setAddRecordMenuOpen(false); }}
+                      >
+                        <AppIcon name={icon as any} size={20} color="#000" style={{ marginRight: 10 }} />
+                        <Text style={{ fontSize: 14, fontWeight: '500' }}>{label}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
         <View style={styles.cardBlock}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <AppIcon name="dashboard" size={20} color="#000" style={{ marginRight: 8 }} />
@@ -465,19 +522,6 @@ export function HomeContent({
     conditions.includes('diabetes') ? '50–70ml / kg（觀察區間）' :
       conditions.includes('flutd') ? '50–65ml / kg（觀察區間）' :
         '50ml / kg (標準)';
-  // 今日攝取（僅當日紀錄，非累積）
-  const currentKcal = useMemo(
-    () => feedingHistory
-      .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
-      .reduce((sum, log) => sum + (log.kcal ?? log.totalGram * 3), 0),
-    [feedingHistory, level]
-  );
-  const currentWater = useMemo(
-    () => hydrationHistory
-      .filter((log) => matchesCatSeries(log.selectedTagId, level) && isToday(log.createdAt))
-      .reduce((sum, log) => sum + (log.actualWaterMl ?? log.totalMl ?? 0), 0),
-    [hydrationHistory, level]
-  );
   const waterProgressBase = isWaterObservationMode ? Math.max(waterRange.max, 1) : Math.max(individualWaterGoal, 1);
   const waterProgressPct = Math.round((currentWater / waterProgressBase) * 100);
 
@@ -534,6 +578,49 @@ export function HomeContent({
           </Pressable>
         </View>
       )}
+      <View style={[styles.cardBlock, { marginBottom: 16 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+          <AppIcon name="add-circle" size={20} color="#000" style={{ marginRight: 8 }} />
+          <Text style={styles.cardTitle}>新增紀錄</Text>
+        </View>
+        <Text style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
+        <View style={{ position: 'relative', zIndex: 20 }}>
+          <Pressable
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 2, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff' }}
+            onPress={() => setAddRecordMenuOpen((v) => !v)}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '600' }}>選擇記錄類型</Text>
+            <AppIcon name={addRecordMenuOpen ? 'expand-less' : 'expand-more'} size={22} color="#000" />
+          </Pressable>
+          {addRecordMenuOpen && (
+            <>
+              <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -280, zIndex: 1 }} onPress={() => setAddRecordMenuOpen(false)} />
+              <View style={{ position: 'relative', marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', zIndex: 2 }}>
+                <ScrollView style={{ maxHeight: 256 }} keyboardShouldPersistTaps="handled">
+                  {[
+                    { modal: 'feeding' as ActiveModal, label: '食物記錄', icon: 'restaurant' },
+                    { modal: 'water' as ActiveModal, label: '飲水記錄', icon: 'opacity' },
+                    { modal: 'elimination' as ActiveModal, label: '排泄記錄', icon: 'sanitizer' },
+                    { modal: 'weightRecord' as ActiveModal, label: '體重記錄', icon: 'monitor-weight' },
+                    { modal: 'medication' as ActiveModal, label: '用藥記錄', icon: 'medication' },
+                    { modal: 'symptom' as ActiveModal, label: '異常症狀', icon: 'healing' },
+                    { modal: 'blood' as ActiveModal, label: '報告掃描', icon: 'biotech' },
+                  ].map(({ modal, label, icon }) => (
+                    <Pressable
+                      key={modal}
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                      onPress={() => { onOpenModal(modal); setAddRecordMenuOpen(false); }}
+                    >
+                      <AppIcon name={icon as any} size={20} color="#000" style={{ marginRight: 10 }} />
+                      <Text style={{ fontSize: 14, fontWeight: '500' }}>{label}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            </>
+          )}
+        </View>
+      </View>
       <View style={{ borderWidth: 2, borderColor: '#000', padding: 20, marginBottom: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
           <AppIcon name="pets" size={20} color="#000" style={{ marginRight: 8 }} />
