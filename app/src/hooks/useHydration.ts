@@ -223,60 +223,23 @@ export function useHydration(
         console.log('[w0WaterLevelPct]', w0WaterLevelPct);
         console.log('[fullWaterCalibration]', vessel?.fullWaterCalibration);
 
+        const { calculateEvaporationMl, calculateHydrationVolume } = require('../utils/hydrationMath');
+
         let waterW0Ml: number;
         let waterW1Ml: number;
 
-        // 已知容量模式 + 滿水校準：使用滿水校準基準計算
-        if (vessel?.calibrationMethod === 'known_volume' && vessel.fullWaterCalibration) {
-          const cal = vessel.fullWaterCalibration;
-          let w0LevelPct = 0;
-          let w1LevelPct = 0;
+        // 【重構】改用抽出至 `hydrationMath.ts` 的純函數運算大腦
+        waterW0Ml = calculateHydrationVolume({
+          waterLevelPct: w0WaterLevelPct,
+          vesselVolumeMl: volumeMl,
+          vessel: vessel ?? undefined,
+        });
 
-          if (cal.topY !== undefined && cal.bottomY > cal.topY) {
-            // 使用相對比例來比較跨照片的座標（消除拍攝距離與角度的誤差）
-            // calFullFrac = 滿水線在校準圖片中，相對 (top ~ bottom) 的百分比
-            const calFullFrac = (cal.fullY - cal.topY) / (cal.bottomY - cal.topY);
-            // w0WaterLevelPct 本身即為 W0 圖片中，水線相對 (top ~ bottom) 的百分比
-
-            // 將 W0 的相對水線百分比，對應到滿量範圍 [calFullFrac, 1] 之間的比例
-            // 如果水位在滿水線之上，w0Frac < calFullFrac，歸零視為全滿 (w0LevelPct = 0)
-            const calSpan = 1 - calFullFrac;
-            w0LevelPct = calSpan > 0 ? Math.max(0, Math.min(1, (w0WaterLevelPct - calFullFrac) / calSpan)) : 0;
-            w1LevelPct = calSpan > 0 ? Math.max(0, Math.min(1, (w1WaterLevelPct - calFullFrac) / calSpan)) : 0;
-          } else {
-            // 向後相容：若舊版校準資料沒有 topY，迫不得已只能退回絕對像素計算（通常會失真）
-            w0LevelPct = Math.max(0, Math.min(1, (w0.water_y! - cal.fullY) / (cal.bottomY - cal.fullY)));
-            w1LevelPct = Math.max(0, Math.min(1, (storedW1.water_y! - cal.fullY) / (cal.bottomY - cal.fullY)));
-          }
-
-          // 水量 = (1 - wLevelPct) × volumeMl
-          waterW0Ml = Math.round((1 - w0LevelPct) * volumeMl);
-          waterW1Ml = Math.round((1 - w1LevelPct) * volumeMl);
-          console.log('[mode]', 'Mode B (known_volume with full water calibration - normalized)');
-          console.log('[w0LevelPct]', w0LevelPct);
-          console.log('[w1LevelPct]', w1LevelPct);
-        }
-        // 已知容量模式（無滿水校準，向後相容）：使用線性計算
-        else if (vessel?.calibrationMethod === 'known_volume') {
-          waterW0Ml = Math.round((1 - Math.max(0, Math.min(1, w0WaterLevelPct))) * volumeMl);
-          waterW1Ml = Math.round((1 - Math.max(0, Math.min(1, w1WaterLevelPct))) * volumeMl);
-          console.log('[mode]', 'Mode B (known_volume, linear, no calibration)');
-        }
-        // 如果有側面輪廓校準，使用精確的輪廓計算（Mode A）
-        else if (vessel?.calibrationMethod === 'side_profile' && vessel.profileContour) {
-          const { calculateVolumeToWaterLevel } = require('../utils/profileVolume');
-          waterW0Ml = calculateVolumeToWaterLevel(vessel.profileContour, w0WaterLevelPct);
-          waterW1Ml = calculateVolumeToWaterLevel(vessel.profileContour, w1WaterLevelPct);
-          console.log('[mode]', 'Mode A (side_profile, contour integration)');
-        }
-        // 其他情況：使用簡單的線性計算（假設容器是圓柱形，Mode B）
-        else {
-          // waterLevelPct = 0 時（滿），水量 = volumeMl
-          // waterLevelPct = 1 時（空），水量 = 0
-          waterW0Ml = Math.round((1 - Math.max(0, Math.min(1, w0WaterLevelPct))) * volumeMl);
-          waterW1Ml = Math.round((1 - Math.max(0, Math.min(1, w1WaterLevelPct))) * volumeMl);
-          console.log('[mode]', 'Mode B (linear, default)');
-        }
+        waterW1Ml = calculateHydrationVolume({
+          waterLevelPct: w1WaterLevelPct,
+          vesselVolumeMl: volumeMl,
+          vessel: vessel ?? undefined,
+        });
 
         // 邊緣案例：計算結果超過容器容量 → 強制重拍（spec v4）
         if (waterW0Ml > volumeMl || waterW1Ml > volumeMl) {
@@ -299,9 +262,12 @@ export function useHydration(
         console.log('[waterW0Ml]', waterW0Ml);
         console.log('[waterW1Ml]', waterW1Ml);
 
-        const envFactorMl = Math.max(0, (waterW0Ml - waterW1Ml) * 0.02); // 簡單估算：2% 蒸發
+        // 【重構】改用時間差計算真實蒸發率 (預設 0.5ml / hr)
+        const envFactorMl = calculateEvaporationMl(w0.capturedAt, storedW1.capturedAt, 0.5);
+
         // W1 水位高於 W0 時 actualIntakeMl = 0，不顯示負值（spec 七）
         const actualIntakeMl = Math.max(0, waterW0Ml - waterW1Ml - envFactorMl);
+
         analysisResult = {
           waterT0Ml: Math.round(waterW0Ml),
           waterT1Ml: Math.round(waterW1Ml),

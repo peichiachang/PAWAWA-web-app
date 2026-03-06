@@ -498,10 +498,11 @@ JSON schema:
       const waterT0Ml = calculateVolumeToWaterLevel(input.vessel.profileContour, input.t0.waterLevelPct);
       const waterT1Ml = calculateVolumeToWaterLevel(input.vessel.profileContour, input.t1.waterLevelPct);
 
-      // 估算環境因素（蒸發等）
+      // 估算環境因素（蒸發等），改用時間掛勾
       const tempC = 25; // 預設溫度
       const humidityPct = 60; // 預設濕度
-      const envFactorMl = Math.max(0, (waterT0Ml - waterT1Ml) * 0.02); // 簡單估算：2% 蒸發
+      const { calculateEvaporationMl } = require('../../utils/hydrationMath');
+      const envFactorMl = calculateEvaporationMl(input.t0.capturedAt, input.t1.capturedAt, 0.5);
       const actualIntakeMl = Math.max(0, waterT0Ml - waterT1Ml - envFactorMl);
 
       return {
@@ -529,9 +530,10 @@ JSON schema:
       // 若使用者已手動標記兩張，直接計算（不呼叫 AI）
       if (t0Level !== undefined && t1Level !== undefined) {
         const { calculateVolumeToWaterLevel } = require('../../utils/profileVolume');
+        const { calculateEvaporationMl } = require('../../utils/hydrationMath');
         const waterT0Ml = calculateVolumeToWaterLevel(contour, t0Level);
         const waterT1Ml = calculateVolumeToWaterLevel(contour, t1Level);
-        const envFactorMl = Math.max(0, (waterT0Ml - waterT1Ml) * 0.02);
+        const envFactorMl = calculateEvaporationMl(input.t0.capturedAt, input.t1.capturedAt, 0.5);
         const actualIntakeMl = Math.max(0, waterT0Ml - waterT1Ml - envFactorMl);
         return {
           waterT0Ml: Math.round(waterT0Ml),
@@ -559,8 +561,12 @@ The vessel profile has been pre-calibrated. Your task is to estimate the WATER L
 ## TASK
 For each image (T0 and T1), estimate where the water surface is relative to the bowl:
 - waterLevelPct: 0.0 = water at rim (top), 1.0 = water at bottom. Values in between = fractional fill.
-- Use the visible waterline, meniscus, reflections, and bowl geometry to estimate this fraction.
-- The bowl is the same in both images. Compare T0 vs T1 to ensure consistency.
+- Compare T0 vs T1 to ensure consistency.
+
+## OPTICAL CUES FOR WATER (CRITICAL)
+- Do NOT confuse the bottom pattern/logo of the bowl with the water surface.
+- Focus heavily on the **meniscus** (the sharp light reflection ring where water meets the bowl wall).
+- Look for refraction distortion of the text/patterns under the surface to determine the true depth.
 
 ## VESSEL PROFILE (for reference)
 ${contourSummary}
@@ -589,9 +595,10 @@ Volume (ml) will be calculated from these percentages using the profile. Do NOT 
       const raw = safeJsonParse<{ waterLevelPctT0: number; waterLevelPctT1: number; isBowlMatch: boolean; mismatchReason: string | null; confidence: number }>(response.text());
 
       const { calculateVolumeToWaterLevel } = require('../../utils/profileVolume');
+      const { calculateEvaporationMl } = require('../../utils/hydrationMath');
       const waterT0Ml = calculateVolumeToWaterLevel(contour, Math.max(0, Math.min(1, raw.waterLevelPctT0)));
       const waterT1Ml = calculateVolumeToWaterLevel(contour, Math.max(0, Math.min(1, raw.waterLevelPctT1)));
-      const envFactorMl = Math.max(0, (waterT0Ml - waterT1Ml) * 0.02);
+      const envFactorMl = calculateEvaporationMl(input.t0.capturedAt, input.t1.capturedAt, 0.5);
       const actualIntakeMl = Math.max(0, waterT0Ml - waterT1Ml - envFactorMl);
 
       return {
@@ -617,6 +624,11 @@ Return valid JSON only (no markdown, no extra text).
 
 CRITICAL INSTRUCTION FOR TRANSPARENT WATER: ${t0Level} ${t1Level}
 If explicit user water-level marks are provided, use them as primary signal.
+
+## OPTICAL CUES FOR WATER (CRITICAL)
+- Do NOT confuse the bottom pattern/logo of the bowl with the water surface.
+- Focus heavily on the **meniscus** (the sharp light reflection ring where water meets the bowl wall).
+- Look for refraction distortion of the text/patterns under the surface to determine the true depth.
 
 Hard constraints:
 - waterT0Ml >= 0
