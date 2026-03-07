@@ -860,17 +860,17 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                         </Pressable>
                                                     </View>
                                                     {knownVolumeMl && parseFloat(knownVolumeMl) > 0 && editingProfile?.volumeMl !== undefined && parseFloat(knownVolumeMl) !== editingProfile.volumeMl && (
-                                                        <View style={{ marginTop: 8, padding: 8, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 6 }}>
-                                                            <Text style={{ fontSize: 11, color: '#92400e' }}>容量已變更，建議重新設定滿量基準</Text>
+                                                        <View style={[styles.messageBoxWarning, { marginTop: 8, padding: 8 }]}>
+                                                            <Text style={styles.messageBoxWarningTextSecondary}>容量已變更，建議重新設定滿量基準</Text>
                                                         </View>
                                                     )}
                                                 </View>
                                             ) : (
-                                                <View style={{ padding: 12, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8 }}>
+                                                <View style={styles.messageBoxWarning}>
                                                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                            <AppIcon name="warning" size={18} color="#f59e0b" style={{ marginRight: 6 }} />
-                                                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400e' }}>⚠️ 尚未設定</Text>
+                                                            <AppIcon name="warning" size={18} color={palette.warningBorder} style={{ marginRight: 6 }} />
+                                                            <Text style={styles.messageBoxWarningText}>⚠️ 尚未設定</Text>
                                                         </View>
                                                         <Pressable
                                                             onPress={() => {
@@ -881,12 +881,12 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                 setShowFullWaterCalibration(true);
                                                             }}
                                                             hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
-                                                            style={{ padding: 10, minHeight: 44, justifyContent: 'center', backgroundColor: '#f59e0b', borderRadius: 6 }}
+                                                            style={{ padding: 10, minHeight: 44, justifyContent: 'center', backgroundColor: palette.warningBorder, borderRadius: 6 }}
                                                         >
-                                                            <Text style={{ fontSize: 11, color: '#fff', fontWeight: '600' }}>開始設定</Text>
+                                                            <Text style={{ fontSize: 11, color: palette.onPrimary, fontWeight: '600' }}>開始設定</Text>
                                                         </Pressable>
                                                     </View>
-                                                    <Text style={{ fontSize: 11, color: '#92400e' }}>設定後才能開始記錄飲水量</Text>
+                                                    <Text style={styles.messageBoxWarningTextSecondary}>設定後才能開始記錄飲水量</Text>
                                                 </View>
                                             )}
                                         </View>
@@ -982,44 +982,43 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
 
                                         {inputMethod === 'side_profile' ? (
                                             <>
-                                                <View style={{ marginBottom: 16, padding: 12, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#3b82f6', borderRadius: 4 }}>
+                                                <View style={[styles.messageBoxInfo, { marginBottom: 16, borderRadius: 4 }]}>
                                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                                                        <AppIcon name="camera-alt" size={16} color="#1e40af" style={{ marginRight: 6 }} />
-                                                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#1e40af' }}>側面輪廓校準（一次性）</Text>
+                                                        <AppIcon name="camera-alt" size={16} color={palette.infoText} style={{ marginRight: 6 }} />
+                                                        <Text style={styles.messageBoxInfoText}>側面輪廓校準（一次性）</Text>
                                                     </View>
-                                                    <Text style={{ fontSize: 11, color: '#1e3a8a', lineHeight: 16, marginBottom: 8 }}>
+                                                    <Text style={[styles.messageBoxInfoTextSecondary, { marginBottom: 8 }]}>
                                                         從正側面拍攝空碗照片，AI 會自動識別輪廓。只需輸入碗口直徑 + 碗高度兩個數值，誤差可望降至 ±3-5%
                                                     </Text>
 
                                                     {/* ① 拍攝側面照 */}
                                                     <View style={{ marginBottom: 12 }}>
-                                                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1e40af', marginBottom: 4 }}>① 拍攝側面照</Text>
+                                                        <Text style={[styles.messageBoxInfoText, { fontSize: 11, marginBottom: 4 }]}>① 拍攝側面照</Text>
                                                         {sideProfileImage ? (
-                                                            <View style={{ padding: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#3b82f6', borderRadius: 4, marginTop: 4 }}>
+                                                            <View style={{ padding: 8, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.infoBorder, borderRadius: 4, marginTop: 4 }}>
                                                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                                        <AppIcon name="check-circle" size={16} color="#059669" style={{ marginRight: 6 }} />
-                                                                        <Text style={{ fontSize: 11, color: '#059669' }}>側面照已拍攝</Text>
+                                                                        <AppIcon name="check-circle" size={16} color={palette.successText} style={{ marginRight: 6 }} />
+                                                                        <Text style={[styles.messageBoxSuccessText, { fontSize: 11 }]}>側面照已拍攝</Text>
                                                                     </View>
                                                                     <Pressable onPress={() => {
                                                                         setSideProfileImage(null);
                                                                         setProfileAnalysisResult(null);
-                                                                        // 重置追蹤值，避免 useEffect 誤觸發
                                                                         prevRimDiameterRef.current = '';
                                                                         prevHeightRef.current = '';
                                                                     }}>
-                                                                        <Text style={{ fontSize: 10, color: '#dc2626' }}>重新拍攝</Text>
+                                                                        <Text style={[styles.messageBoxDangerTextSecondary, { fontSize: 10 }]}>重新拍攝</Text>
                                                                     </Pressable>
                                                                 </View>
                                                             </View>
                                                         ) : (
                                                             <Pressable
-                                                                style={{ marginTop: 4, padding: 12, backgroundColor: '#3b82f6', borderRadius: 4, alignItems: 'center' }}
+                                                                style={{ marginTop: 4, padding: 12, backgroundColor: palette.infoBorder, borderRadius: 4, alignItems: 'center' }}
                                                                 onPress={handleStartCaptureSideProfile}
                                                             >
                                                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                                    <AppIcon name="camera-alt" size={18} color="#fff" style={{ marginRight: 6 }} />
-                                                                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>拍攝側面照</Text>
+                                                                    <AppIcon name="camera-alt" size={18} color={palette.onPrimary} style={{ marginRight: 6 }} />
+                                                                    <Text style={{ color: palette.onPrimary, fontSize: 12, fontWeight: '700' }}>拍攝側面照</Text>
                                                                 </View>
                                                             </Pressable>
                                                         )}
@@ -1027,7 +1026,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
 
                                                     {/* ② 輸入碗口直徑 */}
                                                     <View style={{ marginBottom: 12 }}>
-                                                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1e40af', marginBottom: 4 }}>② 輸入碗口直徑 (cm)</Text>
+                                                        <Text style={[styles.messageBoxInfoText, { fontSize: 11, marginBottom: 4 }]}>② 輸入碗口直徑 (cm)</Text>
                                                         <TextInput
                                                             style={[styles.input, { height: 40 }]}
                                                             value={rimDiameterCm}
@@ -1038,11 +1037,11 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                             keyboardType="numeric"
                                                             placeholder="例如: 12"
                                                         />
-                                                        <Text style={{ fontSize: 10, color: '#1e3a8a', marginTop: 4 }}>
+                                                        <Text style={[styles.messageBoxInfoTextSecondary, { fontSize: 10, marginTop: 4 }]}>
                                                             請測量碗口最寬處的直徑（從一邊到另一邊）
                                                         </Text>
                                                         {profileAnalysisResult && (
-                                                            <Text style={{ fontSize: 10, color: '#dc2626', marginTop: 4, fontStyle: 'italic' }}>
+                                                            <Text style={[styles.messageBoxDangerTextSecondary, { marginTop: 4, fontStyle: 'italic' }]}>
                                                                 ⚠️ 已改變數值，請重新計算輪廓
                                                             </Text>
                                                         )}
@@ -1050,7 +1049,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
 
                                                     {/* ③ 輸入碗高度 */}
                                                     <View style={{ marginBottom: 12 }}>
-                                                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1e40af', marginBottom: 4 }}>③ 輸入碗高度 (cm)</Text>
+                                                        <Text style={[styles.messageBoxInfoText, { fontSize: 11, marginBottom: 4 }]}>③ 輸入碗高度 (cm)</Text>
                                                         <TextInput
                                                             style={[styles.input, { height: 40 }]}
                                                             value={height}
@@ -1061,11 +1060,11 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                             keyboardType="numeric"
                                                             placeholder="例如: 5"
                                                         />
-                                                        <Text style={{ fontSize: 10, color: '#1e3a8a', marginTop: 4 }}>
+                                                        <Text style={{ fontSize: 10, color: palette.infoText, marginTop: 4 }}>
                                                             從碗內部最底部量到碗口邊緣的垂直高度
                                                         </Text>
                                                         {profileAnalysisResult && (
-                                                            <Text style={{ fontSize: 10, color: '#dc2626', marginTop: 4, fontStyle: 'italic' }}>
+                                                            <Text style={{ fontSize: 10, color: palette.dangerText, marginTop: 4, fontStyle: 'italic' }}>
                                                                 ⚠️ 已改變數值，請重新計算輪廓
                                                             </Text>
                                                         )}
@@ -1073,30 +1072,30 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
 
                                                     {/* ④（選填）俯視檢查照 */}
                                                     <View style={{ marginBottom: 12 }}>
-                                                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1e40af', marginBottom: 4 }}>④（選填）拍攝俯視檢查照</Text>
+                                                        <Text style={[styles.messageBoxInfoText, { fontSize: 11, marginBottom: 4 }]}>④（選填）拍攝俯視檢查照</Text>
                                                         {topViewImage ? (
-                                                            <View style={{ padding: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#3b82f6', borderRadius: 4, marginTop: 4 }}>
+                                                            <View style={{ padding: 8, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.infoBorder, borderRadius: 4, marginTop: 4 }}>
                                                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                                        <AppIcon name="check-circle" size={16} color="#059669" style={{ marginRight: 6 }} />
-                                                                        <Text style={{ fontSize: 11, color: '#059669' }}>俯視檢查照已拍攝</Text>
+                                                                        <AppIcon name="check-circle" size={16} color={palette.successText} style={{ marginRight: 6 }} />
+                                                                        <Text style={[styles.messageBoxSuccessText, { fontSize: 11 }]}>俯視檢查照已拍攝</Text>
                                                                     </View>
                                                                     <Pressable onPress={() => setTopViewImage(null)}>
-                                                                        <Text style={{ fontSize: 10, color: '#dc2626' }}>重新拍攝</Text>
+                                                                        <Text style={[styles.messageBoxDangerTextSecondary, { fontSize: 10 }]}>重新拍攝</Text>
                                                                     </Pressable>
                                                                 </View>
-                                                                <Text style={{ fontSize: 10, color: '#1e3a8a', marginTop: 4 }}>
+                                                                <Text style={[styles.messageBoxInfoTextSecondary, { fontSize: 10, marginTop: 4 }]}>
                                                                     此照片目前主要用於檢查碗是否接近圓形，未來版本可用來進一步自動校正。
                                                                 </Text>
                                                             </View>
                                                         ) : (
                                                             <Pressable
-                                                                style={{ marginTop: 4, padding: 12, backgroundColor: '#bfdbfe', borderRadius: 4, alignItems: 'center' }}
+                                                                style={{ marginTop: 4, padding: 12, backgroundColor: palette.infoBg, borderRadius: 4, alignItems: 'center' }}
                                                                 onPress={handleStartCaptureTopView}
                                                             >
                                                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                                    <AppIcon name="camera-alt" size={18} color="#1e3a8a" style={{ marginRight: 6 }} />
-                                                                    <Text style={{ color: '#1e3a8a', fontSize: 12, fontWeight: '700' }}>從上方拍攝空碗（建議）</Text>
+                                                                    <AppIcon name="camera-alt" size={18} color={palette.infoText} style={{ marginRight: 6 }} />
+                                                                    <Text style={[styles.messageBoxInfoText, { fontSize: 12 }]}>從上方拍攝空碗（建議）</Text>
                                                                 </View>
                                                             </Pressable>
                                                         )}
@@ -1105,28 +1104,28 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                     {/* ⑤ 計算輪廓 */}
                                                     {sideProfileImage && rimDiameterCm && parseFloat(rimDiameterCm) > 0 && height && parseFloat(height) > 0 && (
                                                         <View style={{ marginBottom: 12 }}>
-                                                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#1e40af', marginBottom: 4 }}>
+                                                            <Text style={{ fontSize: 11, fontWeight: '700', color: palette.infoText, marginBottom: 4 }}>
                                                                 {profileAnalysisResult ? '⑤ 重新計算輪廓' : '⑤ 計算輪廓'}
                                                             </Text>
                                                             {!profileAnalysisResult && (
-                                                                <Text style={{ fontSize: 10, color: '#1e3a8a', marginBottom: 8 }}>
+                                                                <Text style={{ fontSize: 10, color: palette.infoText, marginBottom: 8 }}>
                                                                     請點擊下方按鈕進行 AI 計算
                                                                 </Text>
                                                             )}
                                                             <Pressable
-                                                                style={{ padding: 12, backgroundColor: profileAnalysisResult ? '#f59e0b' : '#3b82f6', borderRadius: 4, alignItems: 'center' }}
+                                                                style={{ padding: 12, backgroundColor: profileAnalysisResult ? palette.warningBorder : palette.infoBorder, borderRadius: 4, alignItems: 'center' }}
                                                                 onPress={handleAnalyzeSideProfile}
                                                                 disabled={isAnalyzingProfile}
                                                             >
                                                                 {isAnalyzingProfile ? (
                                                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                                                         <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
-                                                                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>AI 正在計算...</Text>
+                                                                        <Text style={{ color: palette.onPrimary, fontSize: 12, fontWeight: '700' }}>AI 正在計算...</Text>
                                                                     </View>
                                                                 ) : (
                                                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                                                         <AppIcon name="calculate" size={18} color="#fff" style={{ marginRight: 6 }} />
-                                                                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
+                                                                        <Text style={{ color: palette.onPrimary, fontSize: 12, fontWeight: '700' }}>
                                                                             {profileAnalysisResult ? '重新計算輪廓' : '計算輪廓'}
                                                                         </Text>
                                                                     </View>
@@ -1138,12 +1137,12 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                     {/* ⑤ 計算結果顯示 */}
                                                     {profileAnalysisResult && (
                                                         <View style={{ marginBottom: 12 }}>
-                                                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#1e40af', marginBottom: 4 }}>⑤ 計算結果</Text>
-                                                            <View style={{ padding: 12, backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#22c55e', borderRadius: 4 }}>
+                                                            <Text style={{ fontSize: 11, fontWeight: '700', color: palette.infoText, marginBottom: 4 }}>⑤ 計算結果</Text>
+                                                            <View style={{ padding: 12, backgroundColor: palette.successBg, borderWidth: 1, borderColor: palette.successBorder, borderRadius: 4 }}>
                                                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                                                         <AppIcon name="check-circle" size={18} color="#059669" style={{ marginRight: 6 }} />
-                                                                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#059669' }}>計算完成</Text>
+                                                                        <Text style={{ fontSize: 12, fontWeight: '700', color: palette.successText }}>計算完成</Text>
                                                                     </View>
                                                                     <Pressable
                                                                         onPress={() => {
@@ -1151,17 +1150,17 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                         }}
                                                                         style={{ padding: 4 }}
                                                                     >
-                                                                        <Text style={{ fontSize: 10, color: '#dc2626' }}>重新計算</Text>
+                                                                        <Text style={{ fontSize: 10, color: palette.dangerText }}>重新計算</Text>
                                                                     </Pressable>
                                                                 </View>
-                                                                <View style={{ backgroundColor: '#fff', padding: 8, borderRadius: 4, marginBottom: 4 }}>
-                                                                    <Text style={{ fontSize: 11, color: '#166534', marginBottom: 4 }}>
+                                                                <View style={{ backgroundColor: palette.surface, padding: 8, borderRadius: 4, marginBottom: 4 }}>
+                                                                    <Text style={{ fontSize: 11, color: palette.successText, marginBottom: 4 }}>
                                                                         <Text style={{ fontWeight: '700' }}>輪廓點數：</Text>{profileAnalysisResult.contour?.points?.length || 0} 個
                                                                     </Text>
-                                                                    <Text style={{ fontSize: 11, color: '#166534', marginBottom: 4 }}>
+                                                                    <Text style={{ fontSize: 11, color: palette.successText, marginBottom: 4 }}>
                                                                         <Text style={{ fontWeight: '700' }}>AI 信心度：</Text>{((profileAnalysisResult.confidence || 0) * 100).toFixed(1)}%
                                                                     </Text>
-                                                                    <Text style={{ fontSize: 11, color: '#166534' }}>
+                                                                    <Text style={{ fontSize: 11, color: palette.successText }}>
                                                                         <Text style={{ fontWeight: '700' }}>預估總容量：</Text>{Math.round(profileAnalysisResult.estimatedVolumeMl || 0)}ml
                                                                     </Text>
                                                                 </View>
@@ -1172,22 +1171,22 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                         : 0;
                                                                     return (
                                                                         <>
-                                                                            <View style={{ backgroundColor: '#dbeafe', padding: 8, borderRadius: 4, marginBottom: 4 }}>
-                                                                                <Text style={{ fontSize: 11, color: '#1e40af', fontWeight: '700', marginBottom: 2 }}>
+                                                                            <View style={{ backgroundColor: palette.infoBg, padding: 8, borderRadius: 4, marginBottom: 4 }}>
+                                                                                <Text style={{ fontSize: 11, color: palette.infoText, fontWeight: '700', marginBottom: 2 }}>
                                                                                     輪廓計算容量：
                                                                                 </Text>
-                                                                                <Text style={{ fontSize: 14, color: '#1e3a8a', fontWeight: '700' }}>
+                                                                                <Text style={{ fontSize: 14, color: palette.infoText, fontWeight: '700' }}>
                                                                                     {Math.round(calculatedVolume)}ml
                                                                                 </Text>
                                                                             </View>
                                                                             {cylVol > 0 && (
-                                                                                <View style={{ backgroundColor: '#f3f4f6', padding: 6, borderRadius: 4 }}>
-                                                                                    <Text style={{ fontSize: 10, color: '#4b5563' }}>
+                                                                                <View style={{ backgroundColor: palette.surfaceSoft, padding: 6, borderRadius: 4 }}>
+                                                                                    <Text style={{ fontSize: 10, color: palette.muted }}>
                                                                                         同尺寸圓柱近似：{Math.round(cylVol)}ml（僅供比對；若輪廓值遠小於此，建議改用「已知容量」或重拍）
                                                                                     </Text>
                                                                                 </View>
                                                                             )}
-                                                                            <Text style={{ fontSize: 10, color: '#6b7280', fontStyle: 'italic', marginTop: 6 }}>僅供參考</Text>
+                                                                            <Text style={{ fontSize: 10, color: palette.muted, fontStyle: 'italic', marginTop: 6 }}>僅供參考</Text>
                                                                         </>
                                                                     );
                                                                 })()}
@@ -1196,9 +1195,9 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                     )}
 
                                                     {/* 拍攝提示 */}
-                                                    <View style={{ marginTop: 12, padding: 8, backgroundColor: '#f3f4f6', borderWidth: 1, borderColor: '#d1d5db', borderRadius: 4 }}>
-                                                        <Text style={{ fontSize: 10, color: '#4b5563', fontWeight: '700', marginBottom: 4 }}>📸 拍攝提示：</Text>
-                                                        <Text style={{ fontSize: 10, color: '#6b7280', lineHeight: 14 }}>
+                                                    <View style={{ marginTop: 12, padding: 8, backgroundColor: palette.surfaceSoft, borderWidth: 1, borderColor: palette.border, borderRadius: 4 }}>
+                                                        <Text style={{ fontSize: 10, color: palette.muted, fontWeight: '700', marginBottom: 4 }}>📸 拍攝提示：</Text>
+                                                        <Text style={{ fontSize: 10, color: palette.muted, lineHeight: 14 }}>
                                                             • 從正側面拍攝（與碗垂直）{'\n'}
                                                             • 確保碗口清晰可見{'\n'}
                                                             • 建議白色背景，光線充足{'\n'}
@@ -1224,7 +1223,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                         keyboardType="numeric"
                                                         placeholder="例如: 2000 (2公升)"
                                                     />
-                                                    <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                                                    <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
                                                         請輸入產品規格標示的容量（例：2L = 2000ml）
                                                     </Text>
                                                 </View>
@@ -1251,17 +1250,17 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                     </Pressable>
                                                                 </View>
                                                                 {knownVolumeMl && parseFloat(knownVolumeMl) > 0 && editingProfile?.volumeMl !== undefined && parseFloat(knownVolumeMl) !== editingProfile.volumeMl && (
-                                                                    <View style={{ marginTop: 8, padding: 8, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 6 }}>
-                                                                        <Text style={{ fontSize: 11, color: '#92400e' }}>容量已變更，建議重新設定滿量基準</Text>
+                                                                    <View style={[styles.messageBoxWarning, { marginTop: 8, padding: 8 }]}>
+                                                                        <Text style={styles.messageBoxWarningTextSecondary}>容量已變更，建議重新設定滿量基準</Text>
                                                                     </View>
                                                                 )}
                                                             </View>
                                                         ) : (
-                                                            <View style={{ padding: 12, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8 }}>
+                                                            <View style={styles.messageBoxWarning}>
                                                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                                        <AppIcon name="warning" size={18} color="#f59e0b" style={{ marginRight: 6 }} />
-                                                                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400e' }}>⚠️ 尚未設定</Text>
+                                                                        <AppIcon name="warning" size={18} color={palette.warningBorder} style={{ marginRight: 6 }} />
+                                                                        <Text style={styles.messageBoxWarningText}>⚠️ 尚未設定</Text>
                                                                     </View>
                                                                     <Pressable
                                                                         onPress={() => {
@@ -1280,12 +1279,12 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                             setShowFullWaterCalibration(true);
                                                                         }}
                                                                         hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
-                                                                        style={{ padding: 10, minHeight: 44, justifyContent: 'center', backgroundColor: '#f59e0b', borderRadius: 6 }}
+                                                                        style={{ padding: 10, minHeight: 44, justifyContent: 'center', backgroundColor: palette.warningBorder, borderRadius: 6 }}
                                                                     >
-                                                                        <Text style={{ fontSize: 11, color: '#fff', fontWeight: '600' }}>開始設定</Text>
+                                                                        <Text style={{ fontSize: 11, color: palette.onPrimary, fontWeight: '600' }}>開始設定</Text>
                                                                     </Pressable>
                                                                 </View>
-                                                                <Text style={{ fontSize: 11, color: '#92400e' }}>設定後才能開始記錄飲水量</Text>
+                                                                <Text style={styles.messageBoxWarningTextSecondary}>設定後才能開始記錄飲水量</Text>
                                                             </View>
                                                         )}
                                                     </View>
@@ -1302,7 +1301,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                         keyboardType="numeric"
                                                         placeholder="例如: 5"
                                                     />
-                                                    <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                                                    <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
                                                         一般食碗高度約 3-8cm
                                                     </Text>
                                                 </View>
@@ -1326,11 +1325,11 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                 const actualRadius = radiusVal / 2;
                                                                 return (
                                                                     <View>
-                                                                        <Text style={{ fontSize: 11, color: '#666' }}>
+                                                                        <Text style={{ fontSize: 11, color: palette.muted }}>
                                                                             預估體積: {Math.round(calculatedVol)}ml
                                                                         </Text>
-                                                                        <Text style={{ fontSize: 10, color: '#6b7280', fontStyle: 'italic', marginTop: 4 }}>僅供參考</Text>
-                                                                        <Text style={{ fontSize: 10, color: '#999', marginTop: 2 }}>
+                                                                        <Text style={{ fontSize: 10, color: palette.muted, fontStyle: 'italic', marginTop: 4 }}>僅供參考</Text>
+                                                                        <Text style={{ fontSize: 10, color: palette.muted, marginTop: 2 }}>
                                                                             計算：直徑 {radiusVal}cm → 半徑 {actualRadius.toFixed(1)}cm → π × {actualRadius.toFixed(1)}² × {heightVal} = {Math.round(calculatedVol)}ml
                                                                         </Text>
                                                                     </View>
@@ -1344,10 +1343,10 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                             keyboardType="numeric"
                                                             placeholder="例如: 12"
                                                         />
-                                                        <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                                                        <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
                                                             請測量食碗最寬處的直徑（從一邊到另一邊）。一般食碗直徑約 10-24cm
                                                         </Text>
-                                                        <Text style={{ fontSize: 11, color: '#ef4444', marginTop: 4, fontWeight: '700' }}>
+                                                        <Text style={{ fontSize: 11, color: palette.dangerText, marginTop: 4, fontWeight: '700' }}>
                                                             ⚠️ 重要：請測量「內徑」（內部有效容量），而非外徑。飲水機等容器請優先使用「已知容量」輸入方式。
                                                         </Text>
                                                         {knownVolumeMl && parseFloat(knownVolumeMl) > 0 && radius && height && parseFloat(radius) > 0 && parseFloat(height) > 0 && (() => {
@@ -1362,11 +1361,11 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                             const correctDiameter = Math.sqrt(knownVol / (Math.PI * parseFloat(height))) * 2;
                                                             if (diffPercent > 30) {
                                                                 return (
-                                                                    <View style={{ marginTop: 8, padding: 8, backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#dc2626', borderRadius: 4 }}>
-                                                                        <Text style={{ fontSize: 11, color: '#991b1b', fontWeight: '700', marginBottom: 4 }}>
+                                                                    <View style={{ marginTop: 8, padding: 8, backgroundColor: palette.dangerBg, borderWidth: 1, borderColor: palette.dangerText, borderRadius: 4 }}>
+                                                                        <Text style={{ fontSize: 11, color: palette.dangerText, fontWeight: '700', marginBottom: 4 }}>
                                                                             ⚠️ 輸入值與已知容量差異過大
                                                                         </Text>
-                                                                        <Text style={{ fontSize: 10, color: '#7f1d1d', lineHeight: 16 }}>
+                                                                        <Text style={{ fontSize: 10, color: palette.dangerText, lineHeight: 16 }}>
                                                                             已知容量：{knownVol}ml{'\n'}
                                                                             計算結果：{Math.round(inputVol)}ml{'\n'}
                                                                             差異：{diffPercent.toFixed(1)}%{'\n'}
@@ -1391,7 +1390,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                 keyboardType="numeric"
                                                                 placeholder="例如: 14"
                                                             />
-                                                            <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                                                            <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
                                                                 請測量食碗頂部最寬處的直徑
                                                             </Text>
                                                         </View>
@@ -1404,7 +1403,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                 keyboardType="numeric"
                                                                 placeholder="例如: 0 或 4"
                                                             />
-                                                            <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                                                            <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
                                                                 請測量食碗底部最寬處的直徑（尖底碗可輸入 0）
                                                             </Text>
                                                         </View>
@@ -1418,10 +1417,10 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                 <Text style={styles.formLabel}>長度 (cm)</Text>
                                                                 {length && width && height && parseFloat(length) > 0 && parseFloat(width) > 0 && parseFloat(height) > 0 && (
                                                                     <View>
-                                                                        <Text style={{ fontSize: 11, color: '#666' }}>
+                                                                        <Text style={{ fontSize: 11, color: palette.muted }}>
                                                                             預估體積: {Math.round(parseFloat(length) * parseFloat(width) * parseFloat(height))}ml
                                                                         </Text>
-                                                                        <Text style={{ fontSize: 10, color: '#6b7280', fontStyle: 'italic' }}>僅供參考</Text>
+                                                                        <Text style={{ fontSize: 10, color: palette.muted, fontStyle: 'italic' }}>僅供參考</Text>
                                                                     </View>
                                                                 )}
                                                             </View>
@@ -1443,7 +1442,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                 placeholder="例如: 10"
                                                             />
                                                         </View>
-                                                        <Text style={{ fontSize: 11, color: '#666', marginTop: -8, marginBottom: 8 }}>
+                                                        <Text style={{ fontSize: 11, color: palette.muted, marginTop: -8, marginBottom: 8 }}>
                                                             一般食碗長寬約 10-25cm
                                                         </Text>
                                                     </>
@@ -1472,11 +1471,11 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                         </View>
                                                     </View>
                                                 ) : (
-                                                    <View style={{ padding: 12, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8 }}>
+                                                    <View style={styles.messageBoxWarning}>
                                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                                <AppIcon name="warning" size={18} color="#f59e0b" style={{ marginRight: 6 }} />
-                                                                <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400e' }}>⚠️ 尚未設定</Text>
+                                                                <AppIcon name="warning" size={18} color={palette.warningBorder} style={{ marginRight: 6 }} />
+                                                                <Text style={styles.messageBoxWarningText}>⚠️ 尚未設定</Text>
                                                             </View>
                                                             <Pressable
                                                                 onPress={() => {
@@ -1493,27 +1492,27 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                                                     setShowFullWaterCalibration(true);
                                                                 }}
                                                                 hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
-                                                                style={{ padding: 10, minHeight: 44, justifyContent: 'center', backgroundColor: '#f59e0b', borderRadius: 6 }}
+                                                                style={{ padding: 10, minHeight: 44, justifyContent: 'center', backgroundColor: palette.warningBorder, borderRadius: 6 }}
                                                             >
-                                                                <Text style={{ fontSize: 11, color: '#fff', fontWeight: '600' }}>開始設定</Text>
+                                                                <Text style={{ fontSize: 11, color: palette.onPrimary, fontWeight: '600' }}>開始設定</Text>
                                                             </Pressable>
                                                         </View>
-                                                        <Text style={{ fontSize: 11, color: '#92400e' }}>設定後才能開始記錄飲水量</Text>
+                                                        <Text style={styles.messageBoxWarningTextSecondary}>設定後才能開始記錄飲水量</Text>
                                                     </View>
                                                 )}
                                             </View>
                                         )}
 
-                                        <View style={{ marginTop: 24, padding: 12, backgroundColor: '#f3f4f6', borderWidth: 1, borderColor: '#d1d5db', borderRadius: 4 }}>
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="lightbulb" size={14} color="#4b5563" style={{ marginRight: 4 }} /><Text style={{ fontSize: 13, fontWeight: '700', color: '#4b5563' }}>測量小秘訣</Text></View>
-                                            <Text style={{ fontSize: 11, color: '#4b5563', lineHeight: 16, marginBottom: 12 }}>
+                                        <View style={{ marginTop: 24, padding: 12, backgroundColor: palette.surfaceSoft, borderWidth: 1, borderColor: palette.border, borderRadius: 4 }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="lightbulb" size={14} color={palette.muted} style={{ marginRight: 4 }} /><Text style={{ fontSize: 13, fontWeight: '700', color: palette.muted }}>測量小秘訣</Text></View>
+                                            <Text style={{ fontSize: 11, color: palette.muted, lineHeight: 16, marginBottom: 12 }}>
                                                 {inputMethod === 'dimensions'
                                                     ? '精確的直徑與高度能讓 AI 換算更精準。若手邊沒有尺，可以使用 iOS 內建的「測距儀」協助。'
                                                     : '如果容器標示了容量（如 2L、2000ml），建議直接輸入已知容量，比測量尺寸更準確。'}
                                             </Text>
                                             {inputMethod === 'dimensions' && (
                                                 <Pressable
-                                                    style={{ padding: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#000', borderRadius: 4, alignItems: 'center' }}
+                                                    style={{ padding: 8, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.border, borderRadius: 4, alignItems: 'center' }}
                                                     onPress={handleOpenMeasure}
                                                 >
                                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}><AppIcon name="straighten" size={14} color="#000" style={{ marginRight: 4 }} /><Text style={{ fontSize: 12, fontWeight: '700' }}>開啟「測距儀」App</Text></View>
@@ -1525,40 +1524,40 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                         {(inputMethod === 'dimensions' || inputMethod === 'volume') && (
                                             <View style={{ marginTop: 20, marginBottom: 8 }}>
                                                 <Text style={styles.formLabel}>空碗俯視照（選填，校準參考）</Text>
-                                                <Text style={{ fontSize: 11, color: '#666', marginBottom: 8 }}>
+                                                <Text style={{ fontSize: 11, color: palette.muted, marginBottom: 8 }}>
                                                     從上方拍攝空碗，供食物記錄時 T0/T1 碗位比對使用。
                                                 </Text>
                                                 {topViewImage ? (
-                                                    <View style={{ padding: 12, backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#22c55e', borderRadius: 4 }}>
+                                                    <View style={{ padding: 12, backgroundColor: palette.successBg, borderWidth: 1, borderColor: palette.successBorder, borderRadius: 4 }}>
                                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                                                 <AppIcon name="check-circle" size={18} color="#166534" style={{ marginRight: 6 }} />
-                                                                <Text style={{ fontSize: 12, fontWeight: '700', color: '#166534' }}>已快取俯視照</Text>
+                                                                <Text style={{ fontSize: 12, fontWeight: '700', color: palette.successText }}>已快取俯視照</Text>
                                                             </View>
                                                             <View style={{ flexDirection: 'row', gap: 8 }}>
                                                                 <Pressable
                                                                     onPress={handleStartCaptureTopView}
-                                                                    style={{ padding: 4, borderWidth: 1, borderRadius: 4, borderColor: '#166534' }}
+                                                                    style={{ padding: 4, borderWidth: 1, borderRadius: 4, borderColor: palette.successBorder }}
                                                                 >
-                                                                    <Text style={{ fontSize: 10, color: '#166534' }}>重新拍攝</Text>
+                                                                    <Text style={{ fontSize: 10, color: palette.successText }}>重新拍攝</Text>
                                                                 </Pressable>
                                                                 <Pressable
                                                                     onPress={() => setTopViewImage(null)}
-                                                                    style={{ padding: 4, borderWidth: 1, borderRadius: 4, borderColor: '#dc2626' }}
+                                                                    style={{ padding: 4, borderWidth: 1, borderRadius: 4, borderColor: palette.dangerText }}
                                                                 >
-                                                                    <Text style={{ fontSize: 10, color: '#dc2626' }}>刪除</Text>
+                                                                    <Text style={{ fontSize: 10, color: palette.dangerText }}>刪除</Text>
                                                                 </Pressable>
                                                             </View>
                                                         </View>
                                                     </View>
                                                 ) : (
                                                     <Pressable
-                                                        style={{ padding: 12, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#3b82f6', borderRadius: 4, alignItems: 'center' }}
+                                                        style={{ padding: 12, backgroundColor: palette.infoBg, borderWidth: 1, borderColor: palette.infoBorder, borderRadius: 4, alignItems: 'center' }}
                                                         onPress={handleStartCaptureTopView}
                                                     >
                                                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                                             <AppIcon name="camera-alt" size={18} color="#1e40af" style={{ marginRight: 6 }} />
-                                                            <Text style={{ color: '#1e40af', fontSize: 12, fontWeight: '700' }}>拍攝空碗俯視照</Text>
+                                                            <Text style={{ color: palette.infoText, fontSize: 12, fontWeight: '700' }}>拍攝空碗俯視照</Text>
                                                         </View>
                                                     </Pressable>
                                                 )}
@@ -1593,7 +1592,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                             <View style={{ marginBottom: 16 }}>
                                 <Text style={styles.infoTitle}>已儲存的食碗</Text>
                                 {profiles.length === 0 && (
-                                    <Text style={{ fontSize: 13, color: '#666', textAlign: 'center', marginVertical: 20 }}>
+                                    <Text style={{ fontSize: 13, color: palette.muted, textAlign: 'center', marginVertical: 20 }}>
                                         尚未建立任何食碗設定。
                                     </Text>
                                 )}
@@ -1616,25 +1615,25 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                             <View style={{ flex: 1 }}>
                                                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
                                                     <Text style={styles.recordTitle}>{p.name}</Text>
-                                                    <View style={{ marginLeft: 8, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: p.vesselType === 'hydration' ? '#dbeafe' : p.feedingContainerMode === 'auto_feeder' ? '#e0e7ff' : '#fef3c7', borderRadius: 4 }}>
-                                                        <Text style={{ fontSize: 10, fontWeight: '700', color: p.vesselType === 'hydration' ? '#1e40af' : p.feedingContainerMode === 'auto_feeder' ? '#3730a3' : '#92400e' }}>{typeLabel}</Text>
+                                                    <View style={{ marginLeft: 8, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: p.vesselType === 'hydration' ? palette.infoBg : p.feedingContainerMode === 'auto_feeder' ? palette.surfaceSoft : palette.warningBg, borderRadius: 4 }}>
+                                                        <Text style={{ fontSize: 10, fontWeight: '700', color: p.vesselType === 'hydration' ? palette.infoText : p.feedingContainerMode === 'auto_feeder' ? palette.primaryStrong : palette.warningText }}>{typeLabel}</Text>
                                                     </View>
                                                 </View>
-                                                <Text style={{ fontSize: 11, color: '#666' }}>
+                                                <Text style={{ fontSize: 11, color: palette.muted }}>
                                                     {subtitle}
                                                 </Text>
                                                 {dimensionsInfo && p.feedingContainerMode !== 'auto_feeder' && (
-                                                    <Text style={{ fontSize: 9, color: '#999', marginTop: 2 }}>
+                                                    <Text style={{ fontSize: 9, color: palette.muted, marginTop: 2 }}>
                                                         輸入值{dimensionsInfo}
                                                     </Text>
                                                 )}
                                             </View>
                                             <View style={{ flexDirection: 'row' }}>
                                                 <Pressable onPress={() => openForm(p)} style={{ marginRight: 12 }}>
-                                                    <Text style={{ color: '#000', fontSize: 12 }}>編輯</Text>
+                                                    <Text style={{ color: palette.text, fontSize: 12 }}>編輯</Text>
                                                 </Pressable>
                                                 <Pressable onPress={() => handleDelete(p.id)}>
-                                                    <Text style={{ color: '#ef4444', fontSize: 12 }}>刪除</Text>
+                                                    <Text style={{ color: palette.dangerText, fontSize: 12 }}>刪除</Text>
                                                 </Pressable>
                                             </View>
                                         </View>

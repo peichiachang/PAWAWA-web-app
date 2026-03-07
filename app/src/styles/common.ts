@@ -13,6 +13,18 @@ export const palette = {
   onPrimary: '#FFFFFF',
   dangerBg: '#FFF1F1',
   dangerText: '#9C2222',
+  /** 提示／警告（琥珀色） */
+  warningBg: '#FEF3C7',
+  warningBorder: '#F59E0B',
+  warningText: '#92400E',
+  /** 成功／完成（綠色） */
+  successBg: '#F0FDF4',
+  successBorder: '#22C55E',
+  successText: '#166534',
+  /** 資訊／步驟（藍色） */
+  infoBg: '#EFF6FF',
+  infoBorder: '#3B82F6',
+  infoText: '#1E40AF',
 };
 
 export const styles = StyleSheet.create({
@@ -425,6 +437,77 @@ export const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 10,
   },
+  /** 訊息區塊：警告（琥珀） */
+  messageBoxWarning: {
+    borderWidth: 1,
+    borderColor: palette.warningBorder,
+    backgroundColor: palette.warningBg,
+    borderRadius: 8,
+    padding: 12,
+  },
+  messageBoxWarningText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: palette.warningText,
+  },
+  messageBoxWarningTextSecondary: {
+    fontSize: 11,
+    color: palette.warningText,
+    marginTop: 4,
+  },
+  /** 訊息區塊：成功（綠） */
+  messageBoxSuccess: {
+    borderWidth: 1,
+    borderColor: palette.successBorder,
+    backgroundColor: palette.successBg,
+    borderRadius: 8,
+    padding: 12,
+  },
+  messageBoxSuccessText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: palette.successText,
+  },
+  /** 訊息區塊：資訊（藍） */
+  messageBoxInfo: {
+    borderWidth: 1,
+    borderColor: palette.infoBorder,
+    backgroundColor: palette.infoBg,
+    borderRadius: 8,
+    padding: 12,
+  },
+  messageBoxInfoText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: palette.infoText,
+  },
+  messageBoxInfoTextSecondary: {
+    fontSize: 11,
+    color: palette.infoText,
+    lineHeight: 16,
+  },
+  /** 訊息區塊：錯誤（紅） */
+  messageBoxDanger: {
+    borderWidth: 1,
+    borderColor: palette.dangerText,
+    backgroundColor: palette.dangerBg,
+    borderRadius: 8,
+    padding: 12,
+  },
+  messageBoxDangerText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: palette.dangerText,
+  },
+  messageBoxDangerTextSecondary: {
+    fontSize: 10,
+    color: palette.dangerText,
+    lineHeight: 16,
+  },
+  /** 字級：與 formLabel / 內文一致 */
+  textXs: { fontSize: 10, color: palette.muted },
+  textSm: { fontSize: 11, color: palette.muted },
+  textBase: { fontSize: 12, color: palette.text },
   flowResult: {
     marginTop: 16,
   },

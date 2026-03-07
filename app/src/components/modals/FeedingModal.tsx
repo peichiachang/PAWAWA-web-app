@@ -872,7 +872,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                 {analyzingPhase === 't1' && (
                   <View style={{ padding: 12, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#3b82f6', borderRadius: 8, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
                     <ActivityIndicator size="small" color="#2563eb" style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#1e40af' }}>AI 分析中… 正在計算消耗量</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: palette.infoText }}>AI 分析中… 正在計算消耗量</Text>
                   </View>
                 )}
 
@@ -893,7 +893,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                       </Pressable>
                     ))}
                   </View>
-                  <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                  <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
                     {precisionMode === 'standard' && '影像估算 (誤差±20%)'}
                     {precisionMode === 'precise' && 'T0 測重 + T1 影像 (誤差±8%)'}
                   </Text>
@@ -904,8 +904,8 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                     <Text style={styles.formLabel}>① 選擇食碗</Text>
                     {feedingVessels.length === 0 && (
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <AppIcon name="warning" size={14} color="#f59e0b" style={{ marginRight: 4 }} />
-                        <Text style={{ fontSize: 11, color: '#f59e0b', fontWeight: '700' }}>請至個人 tab「食碗管理」新增食碗</Text>
+                        <AppIcon name="warning" size={14} color={palette.warningBorder} style={{ marginRight: 4 }} />
+                        <Text style={{ fontSize: 11, color: palette.warningBorder, fontWeight: '700' }}>請至個人 tab「食碗管理」新增食碗</Text>
                       </View>
                     )}
                   </View>
@@ -928,7 +928,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                           )}
                           {displayVolume > 0 ? (
                             displayVolume > 5000 ? (
-                              <Text style={{ color: '#ef4444', fontWeight: '700' }}> (容量 {Math.round(displayVolume)}ml ⚠️異常)</Text>
+                              <Text style={{ color: palette.dangerText, fontWeight: '700' }}> (容量 {Math.round(displayVolume)}ml ⚠️異常)</Text>
                             ) : (
                               (v.foodType === 'dry' || v.foodType == null)
                                 ? ` (容量 ${Math.round(displayVolume)}ml，放飯參考約 ${Math.round(displayVolume * 0.8 * 0.45)}g)`
@@ -944,13 +944,13 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                     {feedingVessels.length === 0 && (
                       <View style={{ width: '100%', padding: 12, backgroundColor: '#fff3cd', borderWidth: 1, borderColor: '#fcd34d', borderRadius: 4 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                          <AppIcon name="warning" size={14} color="#856404" style={{ marginRight: 4 }} />
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#856404' }}>尚未建立食碗</Text>
+                          <AppIcon name="warning" size={14} color={palette.warningText} style={{ marginRight: 4 }} />
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: palette.warningText }}>尚未建立食碗</Text>
                         </View>
-                        <Text style={{ fontSize: 11, color: '#856404', lineHeight: 16, marginBottom: 8 }}>
+                        <Text style={{ fontSize: 11, color: palette.warningText, lineHeight: 16, marginBottom: 8 }}>
                           完成校準後，AI 辨識誤差可從 ±20% 降至 ±12-15%
                         </Text>
-                        <Text style={{ fontSize: 12, color: '#666' }}>請至「個人」→ 食碗管理 新增食碗</Text>
+                        <Text style={{ fontSize: 12, color: palette.muted }}>請至「個人」→ 食碗管理 新增食碗</Text>
                       </View>
                     )}
                   </View>
@@ -972,7 +972,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                       <Text style={[styles.choiceBtnText, sessionFoodType === 'wet' && styles.choiceBtnTextActive]}>罐頭濕食</Text>
                     </Pressable>
                   </View>
-                  <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                  <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
                     {sessionFoodType === 'dry' ? '份量通常固定，可設預設值沿用' : '每次給量可能不同（半罐、1/4 罐等），可選填克數'}
                   </Text>
                   {sessionFoodType === 'wet' && (
@@ -1015,7 +1015,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                     const hasDefaultPortion = sessionFoodType === 'dry' && (currentVessel?.defaultPortionGrams ?? 0) > 0;
                     return (
                       <View style={{ marginTop: 12 }}>
-                        <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>輸入克數（選填，可提高準確度）</Text>
+                        <Text style={{ fontSize: 11, color: palette.muted, marginBottom: 4 }}>輸入克數（選填，可提高準確度）</Text>
                         {hasDefaultPortion && (
                           <Text style={{ fontSize: 11, color: '#166534', marginBottom: 4 }}>預設：{currentVessel?.defaultPortionGrams}g</Text>
                         )}
@@ -1059,7 +1059,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                       </Text>
                     </View>
                     {(currentVessel?.calibrationMethod === 'dimensions' || currentVessel?.calibrationMethod === 'side_profile') && currentVessel?.feedingContainerMode !== 'auto_feeder' && (
-                      <Text style={{ fontSize: 11, color: '#6b7280', fontStyle: 'italic', marginTop: 8 }}>僅供參考（此容器為測量尺寸／側面輪廓推估，非滿量基準校準）</Text>
+                      <Text style={{ fontSize: 11, color: palette.muted, fontStyle: 'italic', marginTop: 8 }}>僅供參考（此容器為測量尺寸／側面輪廓推估，非滿量基準校準）</Text>
                     )}
                   </View>
                 )}
@@ -1098,7 +1098,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                       </View>
                     </View>
                     {(currentVessel?.calibrationMethod === 'dimensions' || currentVessel?.calibrationMethod === 'side_profile') && currentVessel?.feedingContainerMode !== 'auto_feeder' && (
-                      <Text style={{ fontSize: 11, color: '#6b7280', fontStyle: 'italic', marginTop: 8 }}>僅供參考（此容器為測量尺寸／側面輪廓推估，非滿量基準校準）</Text>
+                      <Text style={{ fontSize: 11, color: palette.muted, fontStyle: 'italic', marginTop: 8 }}>僅供參考（此容器為測量尺寸／側面輪廓推估，非滿量基準校準）</Text>
                     )}
                   </View>
                 )}
@@ -1145,12 +1145,12 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                           </View>
 
                           {shouldWarn && (
-                            <View style={{ marginTop: 10, padding: 10, borderWidth: 2, borderColor: '#92400e', backgroundColor: '#fffbeb', borderRadius: 8 }}>
+                            <View style={{ marginTop: 10, padding: 10, borderWidth: 2, borderColor: palette.warningBorder, backgroundColor: palette.warningBg, borderRadius: 8 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                                <AppIcon name="warning" size={16} color="#92400e" style={{ marginRight: 6 }} />
-                                <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400e' }}>克數可能偏差</Text>
+                                <AppIcon name="warning" size={16} color={palette.warningText} style={{ marginRight: 6 }} />
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: palette.warningText }}>克數可能偏差</Text>
                               </View>
-                              <Text style={{ fontSize: 12, color: '#92400e', lineHeight: 18 }}>
+                              <Text style={{ fontSize: 12, color: palette.warningText, lineHeight: 18 }}>
                                 可能受碗色／曝光／反光影響導致克數估計不穩定。建議重拍（光線均勻、避免反光）或改用手動輸入。
                                 {'\n'}參考：信心度 {Math.round(confidence * 100)}%，上限估計 {Math.round(maxPossibleGrams)}g
                               </Text>
@@ -1160,7 +1160,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                       );
                     })()}
                     {(currentVessel?.calibrationMethod === 'dimensions' || currentVessel?.calibrationMethod === 'side_profile') && currentVessel?.feedingContainerMode !== 'auto_feeder' && (
-                      <Text style={{ fontSize: 11, color: '#6b7280', fontStyle: 'italic', marginTop: 8 }}>僅供參考（此容器為測量尺寸／側面輪廓推估，非滿量基準校準）</Text>
+                      <Text style={{ fontSize: 11, color: palette.muted, fontStyle: 'italic', marginTop: 8 }}>僅供參考（此容器為測量尺寸／側面輪廓推估，非滿量基準校準）</Text>
                     )}
 
                     {/* Spec v1：攝取程度（乾糧一次給一天） */}
@@ -1194,12 +1194,12 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                     {/* Data Attribution */}
                     <View style={{ marginTop: 20 }}>
                       {needsBoundaryConfirm && (
-                        <View style={{ marginBottom: 12, padding: 12, borderWidth: 2, borderColor: '#92400e', backgroundColor: '#fffbeb', borderRadius: 8 }}>
+                        <View style={{ marginBottom: 12, padding: 12, borderWidth: 2, borderColor: palette.warningBorder, backgroundColor: palette.warningBg, borderRadius: 8 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                            <AppIcon name="warning" size={16} color="#92400e" style={{ marginRight: 6 }} />
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400e' }}>邊界區需人工確認</Text>
+                            <AppIcon name="warning" size={16} color={palette.warningText} style={{ marginRight: 6 }} />
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: palette.warningText }}>邊界區需人工確認</Text>
                           </View>
-                          <Text style={{ fontSize: 12, color: '#92400e', lineHeight: 18, marginBottom: 8 }}>
+                          <Text style={{ fontSize: 12, color: palette.warningText, lineHeight: 18, marginBottom: 8 }}>
                             此次辨識落在淺碗邊界區（ratio={consumedRatio?.toFixed(3)}），請選擇較符合實際的進食程度。
                           </Text>
                           <View style={[styles.choiceRow, { flexWrap: 'wrap', gap: 8 }]}>
@@ -1248,7 +1248,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                       {canIdentifyTags && (
                         <View style={[styles.tagChoiceRow, { marginTop: 8, flexWrap: 'wrap', gap: 8 }]}>
                           {cats.length === 0 ? (
-                            <Text style={{ fontSize: 12, color: '#666' }}>尚無貓咪檔案，請先至個人新增</Text>
+                            <Text style={{ fontSize: 12, color: palette.muted }}>尚無貓咪檔案，請先至個人新增</Text>
                           ) : (
                             cats.map((cat) => {
                               const active = selectedTagId === cat.id;
@@ -1303,8 +1303,8 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                 )}
 
                 {t1Image && !t1Done && !isAnalyzing && !mismatchError && (
-                  <View style={{ padding: 12, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8, marginBottom: 12 }}>
-                    <Text style={{ fontSize: 13, color: '#92400e' }}>T1 已拍攝，但尚未取得分析結果。請檢查上方是否有錯誤訊息，或重拍 T1。</Text>
+                  <View style={{ padding: 12, backgroundColor: palette.warningBg, borderWidth: 1, borderColor: palette.warningBorder, borderRadius: 8, marginBottom: 12 }}>
+                    <Text style={{ fontSize: 13, color: palette.warningText }}>T1 已拍攝，但尚未取得分析結果。請檢查上方是否有錯誤訊息，或重拍 T1。</Text>
                   </View>
                 )}
 
@@ -1360,7 +1360,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                   {analyzingPhase === 'nutrition' && (
                     <View style={{ padding: 12, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#3b82f6', borderRadius: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
                       <ActivityIndicator size="small" color="#2563eb" style={{ marginRight: 8 }} />
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#1e40af' }}>成分表 OCR 辨識中…</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: palette.infoText }}>成分表 OCR 辨識中…</Text>
                     </View>
                   )}
                   <Pressable style={[styles.cameraUpload, analyzingPhase === 'nutrition' && { opacity: 0.7 }]} onPress={() => setCapturePhase('nutrition')} disabled={analyzingPhase === 'nutrition'}>

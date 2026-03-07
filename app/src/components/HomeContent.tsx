@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActiveModal, Level, FeedingOwnershipLog, HydrationOwnershipLog, VesselCalibration, INTAKE_LEVEL_RATIO } from '../types/app';
 import { EliminationOwnershipLog } from '../hooks/useElimination';
 import { CatIdentity, ClinicalSummary, MedicationLog, SymptomLog } from '../types/domain';
-import { styles } from '../styles/common';
+import { styles, palette } from '../styles/common';
 import { calculateAdaptiveDailyWaterGoal, calculateDailyKcalGoal, calculateDailyWaterGoalRange } from '../utils/health';
 import { TrendChart } from './TrendChart';
 import { DetailRecord } from './modals/RecordDetailModal';
@@ -238,7 +238,7 @@ export function HomeContent({
         <Text style={styles.sectionTitle}>最近記錄</Text>
       </View>
       {recentRecords.length === 0 ? (
-        <Text style={{ fontSize: 13, color: '#666' }}>尚無最近紀錄</Text>
+        <Text style={{ fontSize: 13, color: palette.muted }}>尚無最近紀錄</Text>
       ) : (
         recentRecords.map(record => (
           <RecordLogItem
@@ -285,7 +285,7 @@ export function HomeContent({
             <AppIcon name="add-circle" size={20} color="#000" style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>新增紀錄</Text>
           </View>
-          <Text style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
+          <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
           <View style={{ position: 'relative', zIndex: 20 }}>
             <Pressable
               style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 2, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff' }}
@@ -325,7 +325,7 @@ export function HomeContent({
         </View>
         {pendingT1Count != null && pendingT1Count > 0 && onOpenPendingT1 && (
           <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#3b82f6', borderRadius: 8 }}>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#1e40af', marginBottom: 6 }}>您有 {pendingT1Count} 筆放飯記錄尚未填寫收碗</Text>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: palette.infoText, marginBottom: 6 }}>您有 {pendingT1Count} 筆放飯記錄尚未填寫收碗</Text>
             <Pressable onPress={onOpenPendingT1} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, backgroundColor: '#3b82f6', borderRadius: 8 }}>
               <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>去填寫</Text>
             </Pressable>
@@ -336,7 +336,7 @@ export function HomeContent({
             <AppIcon name="add-circle" size={20} color="#000" style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>新增紀錄</Text>
           </View>
-          <Text style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
+          <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
           <View style={{ position: 'relative', zIndex: 20 }}>
             <Pressable
               style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 2, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff' }}
@@ -401,12 +401,12 @@ export function HomeContent({
                 <Text style={{ fontSize: 11, textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', opacity: 0.6 }}>總攝取熱量</Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>每日目標</Text>
+                    <Text style={{ fontSize: 11, color: palette.muted, marginBottom: 4 }}>每日目標</Text>
                     <Text style={{ fontSize: 48, fontWeight: '700', lineHeight: 48 }}>{Math.round(householdKcalGoal)}</Text>
                     <Text style={{ fontSize: 14, marginTop: 4 }}>kcal</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>目前攝取</Text>
+                    <Text style={{ fontSize: 11, color: palette.muted, marginBottom: 4 }}>目前攝取</Text>
                     <Text style={{ fontSize: 32, fontWeight: '700', lineHeight: 32 }}>{Math.round(todayKcal)}</Text>
                     <Text style={{ fontSize: 12, marginTop: 2 }}>kcal</Text>
                   </View>
@@ -414,22 +414,22 @@ export function HomeContent({
                 <View style={{ height: 8, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', marginBottom: 4 }}>
                   <View style={{ width: `${Math.min(100, Math.round((todayKcal / householdKcalGoal) * 100))}%`, height: '100%', backgroundColor: '#000' }} />
                 </View>
-                <Text style={{ fontSize: 11, color: '#666', textAlign: 'right' }}>{Math.round((todayKcal / householdKcalGoal) * 100)}% 達成</Text>
+                <Text style={{ fontSize: 11, color: palette.muted, textAlign: 'right' }}>{Math.round((todayKcal / householdKcalGoal) * 100)}% 達成</Text>
                 <Pressable style={{ borderTopWidth: 1, borderTopColor: '#dddddd', marginTop: 8, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }} onPress={() => onOpenModal('kcalAdvice')}>
-                  <AppIcon name="lightbulb" size={14} color="#666" style={{ marginRight: 4 }} />
-                  <Text style={{ fontSize: 11, color: '#666' }}>點擊查看建議</Text>
+                  <AppIcon name="lightbulb" size={14} color={palette.muted} style={{ marginRight: 4 }} />
+                  <Text style={{ fontSize: 11, color: palette.muted }}>點擊查看建議</Text>
                 </Pressable>
               </View>
               <View style={{ borderWidth: 2, borderColor: '#000000', padding: 16, marginBottom: 16 }}>
                 <Text style={{ fontSize: 11, textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', opacity: 0.6 }}>總飲水量</Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>每日目標</Text>
+                    <Text style={{ fontSize: 11, color: palette.muted, marginBottom: 4 }}>每日目標</Text>
                     <Text style={{ fontSize: 48, fontWeight: '700', lineHeight: 48 }}>{Math.round(householdWaterGoal)}</Text>
                     <Text style={{ fontSize: 14, marginTop: 4 }}>ml</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>目前攝取</Text>
+                    <Text style={{ fontSize: 11, color: palette.muted, marginBottom: 4 }}>目前攝取</Text>
                     <Text style={{ fontSize: 32, fontWeight: '700', lineHeight: 32 }}>{Math.round(todayWater)}</Text>
                     <Text style={{ fontSize: 12, marginTop: 2 }}>ml</Text>
                   </View>
@@ -437,10 +437,10 @@ export function HomeContent({
                 <View style={{ height: 8, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', marginBottom: 4 }}>
                   <View style={{ width: `${Math.min(100, Math.round((todayWater / householdWaterGoal) * 100))}%`, height: '100%', backgroundColor: '#000' }} />
                 </View>
-                <Text style={{ fontSize: 11, color: '#666', textAlign: 'right' }}>{Math.round((todayWater / householdWaterGoal) * 100)}% 達成</Text>
+                <Text style={{ fontSize: 11, color: palette.muted, textAlign: 'right' }}>{Math.round((todayWater / householdWaterGoal) * 100)}% 達成</Text>
                 <Pressable style={{ borderTopWidth: 1, borderTopColor: '#dddddd', marginTop: 8, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }} onPress={() => onOpenModal('waterAdvice')}>
-                  <AppIcon name="lightbulb" size={14} color="#666" style={{ marginRight: 4 }} />
-                  <Text style={{ fontSize: 11, color: '#666' }}>點擊查看建議</Text>
+                  <AppIcon name="lightbulb" size={14} color={palette.muted} style={{ marginRight: 4 }} />
+                  <Text style={{ fontSize: 11, color: palette.muted }}>點擊查看建議</Text>
                 </Pressable>
               </View>
             </>
@@ -498,7 +498,7 @@ export function HomeContent({
   if (!currentCat) {
     return (
       <View style={[styles.cardBlock, { padding: 24 }]}>
-        <Text style={{ fontSize: 14, color: '#666', textAlign: 'center' }}>找不到此貓咪資料，請從上方切換回家庭或選擇其他貓咪。</Text>
+        <Text style={{ fontSize: 14, color: palette.muted, textAlign: 'center' }}>找不到此貓咪資料，請從上方切換回家庭或選擇其他貓咪。</Text>
       </View>
     );
   }
@@ -532,7 +532,7 @@ export function HomeContent({
           <AppIcon name="add-circle" size={20} color="#000" style={{ marginRight: 8 }} />
           <Text style={styles.cardTitle}>新增紀錄</Text>
         </View>
-        <Text style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
+        <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
         <View style={{ position: 'relative', zIndex: 20 }}>
           <Pressable
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 2, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff' }}
@@ -572,7 +572,7 @@ export function HomeContent({
       </View>
       {pendingT1Count != null && pendingT1Count > 0 && onOpenPendingT1 && (
         <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#3b82f6', borderRadius: 8 }}>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: '#1e40af', marginBottom: 6 }}>您有 {pendingT1Count} 筆放飯記錄尚未填寫收碗</Text>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: palette.infoText, marginBottom: 6 }}>您有 {pendingT1Count} 筆放飯記錄尚未填寫收碗</Text>
           <Pressable onPress={onOpenPendingT1} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, backgroundColor: '#3b82f6', borderRadius: 8 }}>
             <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>去填寫</Text>
           </Pressable>
@@ -583,7 +583,7 @@ export function HomeContent({
           <AppIcon name="add-circle" size={20} color="#000" style={{ marginRight: 8 }} />
           <Text style={styles.cardTitle}>新增紀錄</Text>
         </View>
-        <Text style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
+        <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
         <View style={{ position: 'relative', zIndex: 20 }}>
           <Pressable
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 2, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff' }}
@@ -691,7 +691,7 @@ export function HomeContent({
                   <View style={{ height: 6, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', marginBottom: 2 }}>
                     <View style={{ width: `${Math.min(100, Math.round((currentKcal / individualKcalGoal) * 100))}%`, height: '100%', backgroundColor: '#000' }} />
                   </View>
-                  <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>{Math.round((currentKcal / individualKcalGoal) * 100)}% 達成</Text>
+                  <Text style={{ fontSize: 10, color: palette.muted, textAlign: 'right' }}>{Math.round((currentKcal / individualKcalGoal) * 100)}% 達成</Text>
                 </View>
               </View>
               <View style={{ flex: 1, borderWidth: 2, borderColor: '#000', padding: 12 }}>
@@ -711,12 +711,12 @@ export function HomeContent({
                     <View style={{ width: `${Math.min(100, waterProgressPct)}%`, height: '100%', backgroundColor: '#000' }} />
                   </View>
                   {isWaterObservationMode ? (
-                    <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>
+                    <Text style={{ fontSize: 10, color: palette.muted, textAlign: 'right' }}>
                       觀察：若連續多日 {'>'} {Math.round(waterRange.max)} ml，建議回診檢查控制狀態
                     </Text>
                   ) : (
                     <>
-                      <Text style={{ fontSize: 10, color: '#666', textAlign: 'right' }}>{waterProgressPct}% 達成</Text>
+                      <Text style={{ fontSize: 10, color: palette.muted, textAlign: 'right' }}>{waterProgressPct}% 達成</Text>
                       {isWaterGoalPersonalized && (
                         <Text style={{ fontSize: 9, color: '#888', textAlign: 'right', marginTop: 2 }}>目標已根據近期紀錄調整</Text>
                       )}
@@ -761,7 +761,7 @@ export function HomeContent({
           <Text style={styles.sectionTitle}>食物記錄</Text>
         </View>
         {recordLists.feedings.length === 0 ? (
-          <Text style={{ fontSize: 13, color: '#666' }}>尚無食物紀錄</Text>
+          <Text style={{ fontSize: 13, color: palette.muted }}>尚無食物紀錄</Text>
         ) : (
           recordLists.feedings.map((l) => (
             <Pressable key={l.id} style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'feeding' })}>
@@ -783,7 +783,7 @@ export function HomeContent({
           <Text style={styles.sectionTitle}>飲水紀錄</Text>
         </View>
         {recordLists.hydrations.length === 0 ? (
-          <Text style={{ fontSize: 13, color: '#666' }}>尚無飲水紀錄</Text>
+          <Text style={{ fontSize: 13, color: palette.muted }}>尚無飲水紀錄</Text>
         ) : (
           recordLists.hydrations.map((l) => (
             <Pressable key={l.id} style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'hydration' })}>
@@ -805,7 +805,7 @@ export function HomeContent({
           <Text style={styles.sectionTitle}>排泄紀錄</Text>
         </View>
         {recordLists.eliminations.length === 0 ? (
-          <Text style={{ fontSize: 13, color: '#666' }}>尚無排泄紀錄</Text>
+          <Text style={{ fontSize: 13, color: palette.muted }}>尚無排泄紀錄</Text>
         ) : (
           recordLists.eliminations.map((l) => (
             <Pressable key={l.id} style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'elimination' })}>
@@ -827,7 +827,7 @@ export function HomeContent({
           <Text style={styles.sectionTitle}>用藥紀錄</Text>
         </View>
         {recordLists.medications.length === 0 ? (
-          <Text style={{ fontSize: 13, color: '#666' }}>尚無用藥紀錄</Text>
+          <Text style={{ fontSize: 13, color: palette.muted }}>尚無用藥紀錄</Text>
         ) : (
           recordLists.medications.map((l) => (
             <Pressable key={l.id} style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'medication' })}>
@@ -854,7 +854,7 @@ export function HomeContent({
           <Text style={styles.sectionTitle}>異常症狀紀錄</Text>
         </View>
         {recordLists.symptoms.length === 0 ? (
-          <Text style={{ fontSize: 13, color: '#666' }}>尚無症狀紀錄</Text>
+          <Text style={{ fontSize: 13, color: palette.muted }}>尚無症狀紀錄</Text>
         ) : (
           recordLists.symptoms.map((l) => (
             <Pressable key={l.id} style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'symptom' })}>
