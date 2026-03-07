@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { styles, palette } from '../styles/common';
+import { AnimatedPressable } from '../components/AnimatedPressable';
+import { FadeInView } from '../components/FadeInView';
 
 interface Props {
   onGoToRegister: () => void;
@@ -44,22 +46,25 @@ export function LoginScreen({ onGoToRegister }: Props) {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 48 }} keyboardShouldPersistTaps="handled">
-      <Text style={[styles.appTitle, { marginBottom: 8 }]}>登入</Text>
-      <Text style={{ fontSize: 13, color: palette.muted, marginBottom: 24 }}>使用 Email 或手機號碼登入</Text>
+      <FadeInView duration={280}>
+        <Text style={[styles.appTitle, { marginBottom: 8 }]}>登入</Text>
+        <Text style={{ fontSize: 13, color: palette.muted, marginBottom: 24 }}>使用 Email 或手機號碼登入</Text>
+      </FadeInView>
 
+      <FadeInView delay={80} duration={260}>
       <View style={[styles.choiceRow, { marginBottom: 16 }]}>
-        <Pressable
+        <AnimatedPressable
           style={[styles.choiceBtn, accountType === 'email' && styles.choiceBtnActive]}
           onPress={() => { setAccountType('email'); clearError(); }}
         >
           <Text style={[styles.choiceBtnText, accountType === 'email' && styles.choiceBtnTextActive]}>Email</Text>
-        </Pressable>
-        <Pressable
+        </AnimatedPressable>
+        <AnimatedPressable
           style={[styles.choiceBtn, accountType === 'phone' && styles.choiceBtnActive]}
           onPress={() => { setAccountType('phone'); clearError(); }}
         >
           <Text style={[styles.choiceBtnText, accountType === 'phone' && styles.choiceBtnTextActive]}>手機號碼</Text>
-        </Pressable>
+        </AnimatedPressable>
       </View>
 
       <View style={styles.formGroup}>
@@ -102,17 +107,18 @@ export function LoginScreen({ onGoToRegister }: Props) {
         </View>
       ) : null}
 
-      <Pressable
+      <AnimatedPressable
         style={[styles.primaryBtn, submitting && { opacity: 0.7 }]}
         onPress={handleSubmit}
         disabled={submitting}
       >
         <Text style={styles.primaryBtnText}>{submitting ? '登入中…' : '登入'}</Text>
-      </Pressable>
+      </AnimatedPressable>
 
-      <Pressable onPress={onGoToRegister} style={{ marginTop: 24, alignItems: 'center' }}>
+      <AnimatedPressable onPress={onGoToRegister} style={{ marginTop: 24, alignItems: 'center' }}>
         <Text style={{ fontSize: 13, color: palette.primary, fontWeight: '600' }}>還沒有帳號？立即註冊</Text>
-      </Pressable>
+      </AnimatedPressable>
+      </FadeInView>
     </ScrollView>
   );
 }

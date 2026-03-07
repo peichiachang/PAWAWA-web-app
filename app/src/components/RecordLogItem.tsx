@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { FeedingOwnershipLog, HydrationOwnershipLog, INTAKE_LEVEL_LABEL } from '../types/app';
 import { EliminationOwnershipLog } from '../hooks/useElimination';
 import { CatIdentity, MedicationLog, SymptomLog } from '../types/domain';
@@ -7,6 +7,7 @@ import { styles } from '../styles/common';
 import { DetailRecord } from './modals/RecordDetailModal';
 import { AppIcon } from './AppIcon';
 import { getCatNameBySeries } from '../utils/catScope';
+import { AnimatedPressable } from './AnimatedPressable';
 
 function getCatName(cats: CatIdentity[], id: string | null): string {
   return getCatNameBySeries(cats, id);
@@ -69,7 +70,7 @@ export function RecordLogItem({ record, cats, onRecordPress }: RecordLogItemProp
 
   return (
     <View style={[styles.recordItem, { padding: 12, flexDirection: 'row', alignItems: 'center' }]}>
-      <Pressable
+      <AnimatedPressable
         style={{ flex: 1 }}
         onPress={() => onRecordPress?.(record)}
       >
@@ -80,14 +81,14 @@ export function RecordLogItem({ record, cats, onRecordPress }: RecordLogItemProp
         </View>
         <Text style={styles.recordData}>{dataStr}</Text>
         {descStr ? <Text style={styles.recordDesc}>{descStr}</Text> : null}
-      </Pressable>
-      <Pressable
+      </AnimatedPressable>
+      <AnimatedPressable
         onPress={() => onRecordPress?.(record)}
         style={{ padding: 8, marginLeft: 8 }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <AppIcon name="edit" size={20} color="#666" />
-      </Pressable>
+      </AnimatedPressable>
     </View>
   );
 }

@@ -3,6 +3,8 @@ import { Alert, Modal, Pressable, SafeAreaView, ScrollView, Text, View } from 'r
 import { CatIdentity } from '../../types/domain';
 import { styles } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
+import { AnimatedPressable } from '../AnimatedPressable';
+import { ease as layoutEase } from '../../utils/layoutAnimation';
 import { getDevDataMode, type DevDataMode } from '../../config/devDataMode';
 
 interface Props {
@@ -47,7 +49,7 @@ export function SettingsModal({ visible, cats, onClose, onSwitchDevDataMode }: P
                   <Text style={{ fontSize: 12, color: '#666' }}>目前：{currentMode === 'mock' ? '假資料' : '空狀態'}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 12 }}>
-                  <Pressable
+                  <AnimatedPressable
                     style={[
                       styles.recordItem,
                       { flex: 1, alignItems: 'center', backgroundColor: currentMode === 'mock' ? '#e8f5e9' : '#f5f5f5' },
@@ -64,6 +66,7 @@ export function SettingsModal({ visible, cats, onClose, onSwitchDevDataMode }: P
                             onPress: async () => {
                               try {
                                 await onSwitchDevDataMode('mock');
+                                layoutEase();
                                 setCurrentMode('mock');
                                 onClose();
                                 Alert.alert('完成', '已切換至假資料，請查看首頁與紀錄。');
@@ -78,8 +81,8 @@ export function SettingsModal({ visible, cats, onClose, onSwitchDevDataMode }: P
                   >
                     <AppIcon name="science" size={20} color="#000" style={{ marginBottom: 4 }} />
                     <Text style={styles.recordTitle}>假資料</Text>
-                  </Pressable>
-                  <Pressable
+                  </AnimatedPressable>
+                  <AnimatedPressable
                     style={[
                       styles.recordItem,
                       { flex: 1, alignItems: 'center', backgroundColor: currentMode === 'empty' ? '#e8f5e9' : '#f5f5f5' },
@@ -97,6 +100,7 @@ export function SettingsModal({ visible, cats, onClose, onSwitchDevDataMode }: P
                             onPress: async () => {
                               try {
                                 await onSwitchDevDataMode('empty');
+                                layoutEase();
                                 setCurrentMode('empty');
                                 onClose();
                                 Alert.alert('完成', '已切換至空狀態。');
@@ -111,7 +115,7 @@ export function SettingsModal({ visible, cats, onClose, onSwitchDevDataMode }: P
                   >
                     <AppIcon name="delete-outline" size={20} color="#000" style={{ marginBottom: 4 }} />
                     <Text style={styles.recordTitle}>空狀態</Text>
-                  </Pressable>
+                  </AnimatedPressable>
                 </View>
                 <Text style={{ fontSize: 11, color: '#666', marginTop: 8 }}>可隨時切換假資料與空狀態，用於測試介面呈現</Text>
               </View>

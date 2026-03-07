@@ -5,6 +5,8 @@ import { Level } from '../types/app';
 import { CatIdentity } from '../types/domain';
 import { palette, styles } from '../styles/common';
 import { extractCatSeries, getScopedCats } from '../utils/catScope';
+import { ease as layoutEase } from '../utils/layoutAnimation';
+import { AnimatedPressable } from './AnimatedPressable';
 
 interface Props {
   level: Level;
@@ -31,10 +33,12 @@ export function TopNav({ level, onLevelChange, cats, activeTab }: Props) {
   );
 
   function openMenu() {
+    layoutEase();
     setMenuVisible(true);
   }
 
   function selectLevel(key: Level) {
+    layoutEase();
     onLevelChange(key);
     setMenuVisible(false);
   }
@@ -44,7 +48,7 @@ export function TopNav({ level, onLevelChange, cats, activeTab }: Props) {
       <Text style={styles.appTitle}>PAWAWA</Text>
       {activeTab === 'home' && (
         <View style={styles.levelDropdownWrap}>
-          <Pressable
+          <AnimatedPressable
             onPress={openMenu}
             style={[styles.levelTab, styles.levelTabSingle]}
           >
@@ -61,7 +65,7 @@ export function TopNav({ level, onLevelChange, cats, activeTab }: Props) {
               color={palette.text}
               style={styles.levelArrow}
             />
-          </Pressable>
+          </AnimatedPressable>
           {menuVisible && (
             <>
               <Pressable

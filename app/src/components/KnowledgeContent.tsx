@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   CARE_KNOWLEDGE,
   CARE_LEVEL_LABEL,
@@ -10,18 +10,24 @@ import {
   DiseaseFocus,
 } from '../data/careKnowledge';
 import { AppIcon } from './AppIcon';
+import { AnimatedPressable } from './AnimatedPressable';
+import { ease as layoutEase } from '../utils/layoutAnimation';
 
 const DISEASES: DiseaseFocus[] = ['general', 'kidney', 'diabetes', 'fiv', 'liver', 'fip'];
 const LEVELS: CareLevel[] = ['basic', 'advanced', 'palliative'];
 
 function SectionCard({ section }: { section: CareSection }) {
   const [open, setOpen] = useState(false);
+  const toggle = () => {
+    layoutEase();
+    setOpen((v) => !v);
+  };
   return (
     <View style={ks.card}>
-      <Pressable style={ks.cardHeader} onPress={() => setOpen((v) => !v)}>
+      <AnimatedPressable style={ks.cardHeader} onPress={toggle}>
         <Text style={ks.cardTitle}>{section.title}</Text>
         <Text style={ks.toggle}>{open ? '−' : '+'}</Text>
-      </Pressable>
+      </AnimatedPressable>
       {open && (
         <View style={ks.cardBody}>
           {section.points.map((point, i) => (
@@ -63,7 +69,7 @@ export function KnowledgeContent() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={ks.pillScroll}>
         <View style={ks.pillRow}>
           {DISEASES.map((d) => (
-            <Pressable
+            <AnimatedPressable
               key={d}
               style={[ks.pill, disease === d && ks.pillActive]}
               onPress={() => handleDiseaseChange(d)}
@@ -72,7 +78,7 @@ export function KnowledgeContent() {
               <Text style={[ks.pillText, disease === d && ks.pillTextActive]}>
                 {DISEASE_LABEL[d]}
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           ))}
         </View>
       </ScrollView>
@@ -80,7 +86,7 @@ export function KnowledgeContent() {
       {/* Level tabs */}
       <View style={ks.levelTabs}>
         {visibleLevels.map((l) => (
-          <Pressable
+          <AnimatedPressable
             key={l}
             style={[ks.levelTab, level === l && ks.levelTabActive]}
             onPress={() => setLevel(l)}
@@ -88,7 +94,7 @@ export function KnowledgeContent() {
             <Text style={[ks.levelTabText, level === l && ks.levelTabTextActive]}>
               {CARE_LEVEL_LABEL[l]}
             </Text>
-          </Pressable>
+          </AnimatedPressable>
         ))}
       </View>
 

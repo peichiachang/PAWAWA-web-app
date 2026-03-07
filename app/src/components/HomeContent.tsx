@@ -10,6 +10,9 @@ import { TrendChart } from './TrendChart';
 import { DetailRecord } from './modals/RecordDetailModal';
 import { AppIcon } from './AppIcon';
 import { RecordLogItem } from './RecordLogItem';
+import { AnimatedPressable } from './AnimatedPressable';
+import { FadeInView } from './FadeInView';
+import { ease as layoutEase } from '../utils/layoutAnimation';
 import { extractCatSeries, getCatNameBySeries, matchesCatSeries, getScopedCats } from '../utils/catScope';
 import { toDateKey, isToday } from '../utils/date';
 import { getRecentDailyWaterIntakesForCat } from '../utils/hydrationUtils';
@@ -272,32 +275,33 @@ export function HomeContent({
             <Text style={{ fontSize: 12, color: '#92400e', lineHeight: 18, marginBottom: 12 }}>
               您目前還沒有建立貓咪檔案。建立檔案後，AI 才能為您的貓咪精準計算熱量與水分攝取目標。
             </Text>
-            <Pressable
-              style={{ padding: 10, backgroundColor: '#000', borderRadius: 4 }}
+            <AnimatedPressable
+              style={{ padding: 10, backgroundColor: palette.primary, borderRadius: 4 }}
               onPress={() => onOpenModal('addCat')}
             >
-              <Text style={{ color: '#fff', textAlign: 'center', fontWeight: '700', fontSize: 12 }}>立即建立第一隻貓咪</Text>
-            </Pressable>
+              <Text style={{ color: palette.onPrimary, textAlign: 'center', fontWeight: '700', fontSize: 12 }}>立即建立第一隻貓咪</Text>
+            </AnimatedPressable>
           </View>
         )}
+        <FadeInView duration={300} delay={50}>
         <View style={[styles.cardBlock, { marginBottom: 16 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-            <AppIcon name="add-circle" size={20} color="#000" style={{ marginRight: 8 }} />
+            <AppIcon name="add-circle" size={20} color={palette.text} style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>新增紀錄</Text>
           </View>
           <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
           <View style={{ position: 'relative', zIndex: 20 }}>
-            <Pressable
-              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 2, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff' }}
-              onPress={() => setAddRecordMenuOpen((v) => !v)}
+            <AnimatedPressable
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 2, borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surface }}
+              onPress={() => { layoutEase(); setAddRecordMenuOpen((v) => !v); }}
             >
-              <Text style={{ fontSize: 14, fontWeight: '600' }}>選擇記錄類型</Text>
-              <AppIcon name={addRecordMenuOpen ? 'expand-less' : 'expand-more'} size={22} color="#000" />
-            </Pressable>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: palette.text }}>選擇記錄類型</Text>
+              <AppIcon name={addRecordMenuOpen ? 'expand-less' : 'expand-more'} size={22} color={palette.text} />
+            </AnimatedPressable>
             {addRecordMenuOpen && (
               <>
-                <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -280, zIndex: 1 }} onPress={() => setAddRecordMenuOpen(false)} />
-                <View style={{ position: 'relative', marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', zIndex: 2 }}>
+                <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -280, zIndex: 1 }} onPress={() => { layoutEase(); setAddRecordMenuOpen(false); }} />
+                <View style={{ position: 'relative', marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.surface, borderRadius: 8, overflow: 'hidden', zIndex: 2 }}>
                   <ScrollView style={{ maxHeight: 256 }} keyboardShouldPersistTaps="handled">
                     {[
                       { modal: 'feeding' as ActiveModal, label: '食物記錄', icon: 'restaurant' },
@@ -308,14 +312,14 @@ export function HomeContent({
                       { modal: 'symptom' as ActiveModal, label: '異常症狀', icon: 'healing' },
                       { modal: 'blood' as ActiveModal, label: '報告掃描', icon: 'biotech' },
                     ].map(({ modal, label, icon }) => (
-                      <Pressable
+                      <AnimatedPressable
                         key={modal}
-                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: palette.border }}
                         onPress={() => { onOpenModal(modal); setAddRecordMenuOpen(false); }}
                       >
-                        <AppIcon name={icon as any} size={20} color="#000" style={{ marginRight: 10 }} />
-                        <Text style={{ fontSize: 14, fontWeight: '500' }}>{label}</Text>
-                      </Pressable>
+                        <AppIcon name={icon as any} size={20} color={palette.text} style={{ marginRight: 10 }} />
+                        <Text style={{ fontSize: 14, fontWeight: '500', color: palette.text }}>{label}</Text>
+                      </AnimatedPressable>
                     ))}
                   </ScrollView>
                 </View>
@@ -323,32 +327,33 @@ export function HomeContent({
             )}
           </View>
         </View>
+        </FadeInView>
         {pendingT1Count != null && pendingT1Count > 0 && onOpenPendingT1 && (
-          <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#3b82f6', borderRadius: 8 }}>
+          <View style={{ marginBottom: 16, padding: 14, backgroundColor: palette.infoBg, borderWidth: 2, borderColor: palette.infoBorder, borderRadius: 8 }}>
             <Text style={{ fontSize: 13, fontWeight: '600', color: palette.infoText, marginBottom: 6 }}>您有 {pendingT1Count} 筆放飯記錄尚未填寫收碗</Text>
-            <Pressable onPress={onOpenPendingT1} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, backgroundColor: '#3b82f6', borderRadius: 8 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>去填寫</Text>
-            </Pressable>
+            <AnimatedPressable onPress={onOpenPendingT1} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, backgroundColor: palette.infoBorder, borderRadius: 8 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: palette.onPrimary }}>去填寫</Text>
+            </AnimatedPressable>
           </View>
         )}
         <View style={[styles.cardBlock, { marginBottom: 16 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-            <AppIcon name="add-circle" size={20} color="#000" style={{ marginRight: 8 }} />
+            <AppIcon name="add-circle" size={20} color={palette.text} style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>新增紀錄</Text>
           </View>
           <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 12 }}>記錄食物、飲水、排泄等，掌握貓咪健康</Text>
           <View style={{ position: 'relative', zIndex: 20 }}>
-            <Pressable
-              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 2, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff' }}
-              onPress={() => setAddRecordMenuOpen((v) => !v)}
+            <AnimatedPressable
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 2, borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surface }}
+              onPress={() => { layoutEase(); setAddRecordMenuOpen((v) => !v); }}
             >
-              <Text style={{ fontSize: 14, fontWeight: '600' }}>選擇記錄類型</Text>
-              <AppIcon name={addRecordMenuOpen ? 'expand-less' : 'expand-more'} size={22} color="#000" />
-            </Pressable>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: palette.text }}>選擇記錄類型</Text>
+              <AppIcon name={addRecordMenuOpen ? 'expand-less' : 'expand-more'} size={22} color={palette.text} />
+            </AnimatedPressable>
             {addRecordMenuOpen && (
               <>
-                <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -280, zIndex: 1 }} onPress={() => setAddRecordMenuOpen(false)} />
-                <View style={{ position: 'relative', marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', zIndex: 2 }}>
+                <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -280, zIndex: 1 }} onPress={() => { layoutEase(); setAddRecordMenuOpen(false); }} />
+                <View style={{ position: 'relative', marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.surface, borderRadius: 8, overflow: 'hidden', zIndex: 2 }}>
                   <ScrollView style={{ maxHeight: 256 }} keyboardShouldPersistTaps="handled">
                     {[
                       { modal: 'feeding' as ActiveModal, label: '食物記錄', icon: 'restaurant' },
@@ -359,14 +364,14 @@ export function HomeContent({
                       { modal: 'symptom' as ActiveModal, label: '異常症狀', icon: 'healing' },
                       { modal: 'blood' as ActiveModal, label: '報告掃描', icon: 'biotech' },
                     ].map(({ modal, label, icon }) => (
-                      <Pressable
+                      <AnimatedPressable
                         key={modal}
-                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: palette.border }}
                         onPress={() => { onOpenModal(modal); setAddRecordMenuOpen(false); }}
                       >
-                        <AppIcon name={icon as any} size={20} color="#000" style={{ marginRight: 10 }} />
-                        <Text style={{ fontSize: 14, fontWeight: '500' }}>{label}</Text>
-                      </Pressable>
+                        <AppIcon name={icon as any} size={20} color={palette.text} style={{ marginRight: 10 }} />
+                        <Text style={{ fontSize: 14, fontWeight: '500', color: palette.text }}>{label}</Text>
+                      </AnimatedPressable>
                     ))}
                   </ScrollView>
                 </View>
