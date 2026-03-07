@@ -2,8 +2,9 @@ import React from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { CatIdentity } from '../types/domain';
 import { ActiveModal } from '../types/app';
-import { styles } from '../styles/common';
+import { styles, palette } from '../styles/common';
 import { AppIcon } from './AppIcon';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Props {
     cats: CatIdentity[];
@@ -14,28 +15,43 @@ interface Props {
 }
 
 export function ProfileContent({ cats, onOpenModal, onEditCat, onOpenVesselCalibration }: Props) {
+    const { user, logout } = useAuth();
+    const accountDisplay = user?.email || user?.phone || user?.id || '';
+
+    const handleLogout = () => {
+        Alert.alert('登出', '確定要登出嗎？', [
+            { text: '取消', style: 'cancel' },
+            { text: '登出', style: 'destructive', onPress: () => logout() },
+        ]);
+    };
+
     return (
         <ScrollView>
             {/* Header with System Button */}
-            <View style={{ padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 2, borderBottomColor: '#000' }}>
-                <Text style={{ fontSize: 18, fontWeight: '700' }}>個人檔案</Text>
+            <View style={{ padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 2, borderBottomColor: palette.border }}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: palette.text }}>個人檔案</Text>
                 <Pressable
                     onPress={() => onOpenModal('settings')}
-                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderWidth: 2, borderColor: '#000', borderRadius: 20, backgroundColor: 'white' }}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderWidth: 2, borderColor: palette.border, borderRadius: 20, backgroundColor: palette.surface }}
                 >
-                    <AppIcon name="settings" size={18} color="#000" style={{ marginRight: 6 }} />
-                    <Text style={{ fontSize: 13, fontWeight: '500' }}>系統</Text>
+                    <AppIcon name="settings" size={18} color={palette.text} style={{ marginRight: 6 }} />
+                    <Text style={{ fontSize: 13, fontWeight: '500', color: palette.text }}>系統</Text>
                 </Pressable>
             </View>
 
             <View style={{ padding: 16 }}>
-                {/* User Info */}
-                <View style={{ padding: 12, backgroundColor: '#f5f5f5', borderWidth: 1, borderColor: '#ddd', marginBottom: 16, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <AppIcon name="person" size={32} color="#000" />
-                    <View>
-                        <Text style={{ fontSize: 14, fontWeight: '500' }}>專業貓奴</Text>
-                        <Text style={{ fontSize: 11, color: '#666' }}>care@pawawa.cat</Text>
+                {/* User Info + 登出 */}
+                <View style={{ padding: 12, backgroundColor: palette.surfaceSoft, borderWidth: 1, borderColor: palette.border, marginBottom: 16, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                        <AppIcon name="person" size={32} color={palette.text} />
+                        <View>
+                            <Text style={{ fontSize: 14, fontWeight: '500', color: palette.text }}>{accountDisplay || '已登入'}</Text>
+                            <Text style={{ fontSize: 11, color: palette.muted }}>ID: {user?.id?.slice(0, 8)}…</Text>
+                        </View>
                     </View>
+                    <Pressable onPress={handleLogout} style={{ paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: palette.dangerText, borderRadius: 8 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: palette.dangerText }}>登出</Text>
+                    </Pressable>
                 </View>
 
                 {/* My Household */}

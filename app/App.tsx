@@ -42,6 +42,8 @@ import { FeedLibraryModal } from './src/components/modals/FeedLibraryModal';
 import { scanCanLabel } from './src/services/canLabelScanApi';
 import { useVessels } from './src/hooks/useVessels';
 import { useRecordReminders } from './src/hooks/useRecordReminders';
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { AuthGateScreen } from './src/screens/AuthGateScreen';
 
 import { CATS_STORAGE_KEY, VITALS_HISTORY_KEY } from './src/constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -501,10 +503,20 @@ function AppMain() {
   );
 }
 
-export default function App() {
+function AppRoot() {
+  const { user, loading } = useAuth();
+  if (!loading && !user) return <AuthGateScreen />;
   return (
     <GlobalCameraProvider>
       <AppMain />
     </GlobalCameraProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppRoot />
+    </AuthProvider>
   );
 }

@@ -22,6 +22,10 @@ export const CAN_LIBRARY_KEY = 'carecat:can_library_v1';
 /** 飼料／成份表庫（掃描一次永久儲存，記錄時可選） */
 export const FEEDING_FOOD_LIBRARY_KEY = 'carecat:feeding:food_library_v1';
 
+/** 登入後 token 與使用者快取（供 AuthContext 使用） */
+export const AUTH_TOKEN_KEY = 'carecat:auth:token';
+export const AUTH_USER_KEY = 'carecat:auth:user';
+
 export const FEEDING_TAG_OPTIONS = [
   { id: 'A', label: 'Tag A' },
   { id: 'B', label: 'Tag B' },
