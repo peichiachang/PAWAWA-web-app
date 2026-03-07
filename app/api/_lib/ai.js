@@ -106,10 +106,21 @@ async function handleFeedingGemini(body) {
   const t0Part = buildInlineImagePart(body.t0ImageBase64, body.t0MimeType);
   const t1Part = buildInlineImagePart(body.t1ImageBase64, body.t1MimeType);
   const imageParts = [t0Part, t1Part].filter(Boolean);
+  const t0RefGrams =
+    body.t0RefGrams != null && Number.isFinite(Number(body.t0RefGrams))
+      ? Math.round(Number(body.t0RefGrams))
+      : body.volumeMl != null && body.volumeMl > 0
+        ? Math.round(body.volumeMl * 0.8 * 0.45)
+        : null;
+  const refHint =
+    t0RefGrams != null && t0RefGrams > 0
+      ? `\nThe bowl when full holds approximately ${t0RefGrams} grams of dry food. Estimate how much was EATEN (0 to ${t0RefGrams}g). consumedGram and consumedRatio should be consistent: consumedRatio ≈ consumedGram / ${t0RefGrams}.\n`
+      : '';
   const prompt = `
 You are a cat feeding vision analyzer. Return JSON only.
 Compare T0 (full bowl) and T1 (after eating) food amount in the same bowl.
 Important: "consumedGram" = estimated amount EATEN (T0 minus T1), NOT the total amount in the bowl.
+${refHint}
 Return:
 {
   "consumedGram": number (grams eaten, 0 if almost none, about half of T0 if half eaten),
@@ -120,12 +131,19 @@ Return:
 }
 `;
   const raw = await callGeminiForJson(prompt, imageParts);
-  const grams = Math.max(0, Math.round(normalizeNumber(raw.consumedGram ?? raw.totalGram, 0)));
+  let grams = Math.max(0, Math.round(normalizeNumber(raw.consumedGram ?? raw.totalGram, 0)));
+  if (t0RefGrams != null && t0RefGrams > 0 && grams > t0RefGrams) {
+    grams = t0RefGrams;
+  }
+  let ratio = Number(Math.max(0, Math.min(1, normalizeNumber(raw.consumedRatio, 0.5))).toFixed(2));
+  if (t0RefGrams != null && t0RefGrams > 0) {
+    ratio = Number(Math.max(0, Math.min(1, grams / t0RefGrams)).toFixed(2));
+  }
   return {
     bowlsDetected: 1,
     assignments: [{ bowlId: 'A', tag: 'Household', estimatedIntakeGram: grams }],
     totalGram: grams,
-    consumedRatio: Number(Math.max(0, Math.min(1, normalizeNumber(raw.consumedRatio, 0.5))).toFixed(2)),
+    consumedRatio: ratio,
     isBowlMatch: normalizeBoolean(raw.isBowlMatch, true),
     mismatchReason: String(raw.mismatchReason || ''),
     confidence: Number(normalizeNumber(raw.confidence, 0.8).toFixed(2)),

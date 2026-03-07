@@ -188,6 +188,8 @@ export interface VesselCalibration {
   foodType?: FoodType;
   /** 乾飼料預設份量（克），設定後沿用，不用每次輸入 */
   defaultPortionGrams?: number;
+  /** 滿碗克數（可選）：乾飼料裝滿時約幾克；有設時優先於 volumeMl×0.8×0.45 作為放飯參考與 AI 錨定 */
+  maxGramsWhenFull?: number;
   /** 食碗容器類型：食碗模式（一般碗）／自動餵食器模式。僅 vesselType === 'feeding' 時使用 */
   feedingContainerMode?: 'bowl' | 'auto_feeder';
   /** 自動餵食器模式：每日出糧次數。僅 feedingContainerMode === 'auto_feeder' 時使用 */

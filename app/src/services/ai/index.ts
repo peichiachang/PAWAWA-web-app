@@ -94,15 +94,28 @@ function createHttpAiService(baseUrl: string): AiRecognitionService {
   }
 
   return {
-    analyzeFeedingImages: (input) =>
-      post('/ai/feeding', {
+    analyzeFeedingImages: (input) => {
+      const vessel = input.vessel;
+      const volumeMl = vessel?.volumeMl ?? null;
+      const t0RefGrams =
+        input.t0.manualWeight != null && input.t0.manualWeight > 0
+          ? input.t0.manualWeight
+          : vessel?.maxGramsWhenFull != null && vessel.maxGramsWhenFull > 0
+            ? Math.round(vessel.maxGramsWhenFull)
+            : volumeMl != null && volumeMl > 0
+              ? Math.round(volumeMl * 0.8 * 0.45)
+              : null;
+      return post('/ai/feeding', {
         t0ImageRef: input.t0.imageRef || input.t0.uri || '',
         t0ImageBase64: input.t0.imageBase64 || null,
         t0MimeType: input.t0.mimeType || 'image/jpeg',
         t1ImageRef: input.t1.imageRef || input.t1.uri || '',
         t1ImageBase64: input.t1.imageBase64 || null,
         t1MimeType: input.t1.mimeType || 'image/jpeg',
-      }),
+        volumeMl: volumeMl ?? undefined,
+        t0RefGrams: t0RefGrams ?? undefined,
+      });
+    },
     extractNutritionLabel: (input) =>
       post('/ai/nutrition-ocr', mapImage(input)),
     analyzeHydrationImages: (input) =>

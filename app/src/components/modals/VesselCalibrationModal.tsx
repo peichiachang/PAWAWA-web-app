@@ -66,7 +66,6 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
     /** 自動餵食器模式：每份克數、每日次數 */
     const [portionGrams, setPortionGrams] = useState('');
     const [dailyPortionCount, setDailyPortionCount] = useState('');
-
     const handleOpenMeasure = async () => {
         if (Platform.OS !== 'ios') {
             Alert.alert('提示', '測距儀功能僅支援 iOS 裝置。');
@@ -1607,9 +1606,11 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                                             ? ` (頂${p.dimensions.topRadius}cm, 底${p.dimensions.bottomRadius || 0}cm, 高${p.dimensions.height}cm)`
                                             : '';
                                     const typeLabel = p.vesselType === 'hydration' ? '水碗' : (p.feedingContainerMode === 'auto_feeder' ? '自動餵食器' : '食碗');
+                                    const shapeLabel = p.shape === 'cylinder' ? '圓柱' : p.shape === 'trapezoid' ? '梯形' : '球形';
+                                    const refGrams = displayVolume > 0 && displayVolume <= 5000 ? Math.round(displayVolume * 0.8 * 0.45) : null;
                                     const subtitle = p.feedingContainerMode === 'auto_feeder'
                                         ? `每份 ${p.defaultPortionGrams ?? 0}g，每日 ${p.dailyPortionCount ?? 0} 次`
-                                        : `${p.shape === 'cylinder' ? '圓柱' : p.shape === 'trapezoid' ? '梯形' : '球形'} | 約 ${Math.round(displayVolume)}ml${displayVolume > 5000 ? ' ⚠️異常' : ''}`;
+                                        : `${shapeLabel} | 容量約 ${Math.round(displayVolume)}ml${refGrams != null ? `（放飯參考約 ${refGrams}g）` : ''}${displayVolume > 5000 ? ' ⚠️異常' : ''}`;
                                     return (
                                         <View key={p.id} style={[styles.recordItem, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
                                             <View style={{ flex: 1 }}>

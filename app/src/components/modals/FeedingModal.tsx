@@ -338,7 +338,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
     setCannedCanSelectOpen(false);
   }
 
-  const t0RefGramsForBoundary = t0Image?.manualWeight || (currentVessel?.volumeMl ? currentVessel.volumeMl * 0.8 * 0.45 : 500);
+  const t0RefGramsForBoundary = t0Image?.manualWeight ?? currentVessel?.maxGramsWhenFull ?? (currentVessel?.volumeMl ? currentVessel.volumeMl * 0.8 * 0.45 : 500);
 
   const gramsByLevel = (level: ConsumptionLevel): number => {
     const map: Record<ConsumptionLevel, number> = {
@@ -928,9 +928,11 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                           )}
                           {displayVolume > 0 ? (
                             displayVolume > 5000 ? (
-                              <Text style={{ color: '#ef4444', fontWeight: '700' }}> ({Math.round(displayVolume)}ml ⚠️異常)</Text>
+                              <Text style={{ color: '#ef4444', fontWeight: '700' }}> (容量 {Math.round(displayVolume)}ml ⚠️異常)</Text>
                             ) : (
-                              ` (${Math.round(displayVolume)}ml)`
+                              (v.foodType === 'dry' || v.foodType == null)
+                                ? ` (容量 ${Math.round(displayVolume)}ml，放飯參考約 ${Math.round(displayVolume * 0.8 * 0.45)}g)`
+                                : ` (容量 ${Math.round(displayVolume)}ml)`
                             )
                           ) : (
                             ' (未校準)'

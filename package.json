@@ -17,7 +17,8 @@
     "test:consumption-consistency": "cd app && node scripts/test-consumption-level-consistency.mjs 10",
     "test:prompt-ab": "cd app && node scripts/test-prompt-ab.mjs 10",
     "test:feeding-accuracy": "cd app && node scripts/evaluate-feeding-accuracy.mjs",
-    "test:vision-direct": "cd app && node scripts/test-vision-direct.mjs"
+    "test:vision-direct": "cd app && node scripts/test-vision-direct.mjs",
+    "test:feeding-30": "cd app && node scripts/run-feeding-30.mjs"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
