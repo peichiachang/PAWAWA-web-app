@@ -44,6 +44,7 @@ import { useVessels } from './src/hooks/useVessels';
 import { useRecordReminders } from './src/hooks/useRecordReminders';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { AuthGateScreen } from './src/screens/AuthGateScreen';
+import { SKIP_AUTH_FOR_TESTING } from './src/config/skipAuthForTesting';
 
 import { CATS_STORAGE_KEY, VITALS_HISTORY_KEY } from './src/constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -505,7 +506,7 @@ function AppMain() {
 
 function AppRoot() {
   const { user, loading } = useAuth();
-  if (!loading && !user) return <AuthGateScreen />;
+  if (!SKIP_AUTH_FOR_TESTING && !loading && !user) return <AuthGateScreen />;
   return (
     <GlobalCameraProvider>
       <AppMain />
