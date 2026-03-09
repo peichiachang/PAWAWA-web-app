@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { FlatList, Modal, Pressable, Text, View } from 'react-native';
 import { ActiveModal, FeedingOwnershipLog, HydrationOwnershipLog } from '../types/app';
 import { EliminationOwnershipLog } from '../hooks/useElimination';
 import { CatIdentity, MedicationLog, SymptomLog } from '../types/domain';
@@ -28,10 +28,6 @@ interface Props {
   onOpenPendingT1?: () => void;
 }
 
-function getCatName(cats: CatIdentity[], id: string | null): string {
-  return getCatNameBySeries(cats, id);
-}
-
 export function RecordsContent({
   onOpenModal,
   feedingHistory,
@@ -48,7 +44,6 @@ export function RecordsContent({
   const [typeFilter, setTypeFilter] = useState<RecordTypeFilter>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [filterSheet, setFilterSheet] = useState<'scope' | 'type' | 'date' | null>(null);
-  const [addRecordDropdownOpen, setAddRecordDropdownOpen] = useState(false);
 
   const filteredRecords = useMemo(() => {
     const now = Date.now();
@@ -122,29 +117,28 @@ export function RecordsContent({
     return unified.sort((a, b) => b.createdAt - a.createdAt);
   }, [feedingHistory, hydrationHistory, eliminationHistory, medicationHistory, symptomHistory, scope, typeFilter, dateFilter]);
 
-  const scopeLabel = scope === 'household' ? '家庭' : getCatName(cats, scope);
+  const scopeLabel = scope === 'household' ? '家庭' : getCatNameBySeries(cats, scope);
   const typeLabels: Record<RecordTypeFilter, string> = { all: '全部', feeding: '食物記錄', hydration: '飲水紀錄', elimination: '排泄紀錄', medication: '用藥紀錄', symptom: '異常症狀' };
   const dateLabels: Record<DateFilter, string> = { all: '全部', '7d': '最近 7 天', '30d': '最近 30 天' };
-
-  const sheetOptionStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, paddingVertical: 14, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#eee' };
 
   const renderFilterSheetContent = () => {
     if (filterSheet === 'scope') {
       return (
         <>
-          <Text style={{ fontSize: 14, fontWeight: '700', marginBottom: 16 }}>篩選範圍</Text>
-          <Pressable style={sheetOptionStyle} onPress={() => { setScope('household'); setFilterSheet(null); }}>
-            <Text style={{ fontSize: 15 }}>家庭</Text>
+          <Text style={styles.recordsSheetTitle}>篩選範圍</Text>
+          <Pressable style={styles.recordsSheetOption} onPress={() => { setScope('household'); setFilterSheet(null); }}>
+            <Text style={styles.recordsSheetOptionText}>家庭</Text>
             {scope === 'household' && <AppIcon name="check-circle" size={20} color="#000" />}
           </Pressable>
           {getScopedCats(cats).map(c => {
             const series = extractCatSeries(c.id) || c.id;
             return (
-            <Pressable key={c.id} style={sheetOptionStyle} onPress={() => { setScope(series); setFilterSheet(null); }}>
-              <Text style={{ fontSize: 15 }}>{c.name}</Text>
-              {extractCatSeries(scope) === extractCatSeries(series) && <AppIcon name="check-circle" size={20} color="#000" />}
-            </Pressable>
-          )})}
+              <Pressable key={c.id} style={styles.recordsSheetOption} onPress={() => { setScope(series); setFilterSheet(null); }}>
+                <Text style={styles.recordsSheetOptionText}>{c.name}</Text>
+                {extractCatSeries(scope) === extractCatSeries(series) && <AppIcon name="check-circle" size={20} color="#000" />}
+              </Pressable>
+            );
+          })}
         </>
       );
     }
@@ -159,10 +153,10 @@ export function RecordsContent({
       ];
       return (
         <>
-          <Text style={{ fontSize: 14, fontWeight: '700', marginBottom: 16 }}>篩選類型</Text>
+          <Text style={styles.recordsSheetTitle}>篩選類型</Text>
           {opts.map(({ value, label }) => (
-            <Pressable key={value} style={sheetOptionStyle} onPress={() => { setTypeFilter(value); setFilterSheet(null); }}>
-              <Text style={{ fontSize: 15 }}>{label}</Text>
+            <Pressable key={value} style={styles.recordsSheetOption} onPress={() => { setTypeFilter(value); setFilterSheet(null); }}>
+              <Text style={styles.recordsSheetOptionText}>{label}</Text>
               {typeFilter === value && <AppIcon name="check-circle" size={20} color="#000" />}
             </Pressable>
           ))}
@@ -177,10 +171,10 @@ export function RecordsContent({
       ];
       return (
         <>
-          <Text style={{ fontSize: 14, fontWeight: '700', marginBottom: 16 }}>篩選日期</Text>
+          <Text style={styles.recordsSheetTitle}>篩選日期</Text>
           {opts.map(({ value, label }) => (
-            <Pressable key={value} style={sheetOptionStyle} onPress={() => { setDateFilter(value); setFilterSheet(null); }}>
-              <Text style={{ fontSize: 15 }}>{label}</Text>
+            <Pressable key={value} style={styles.recordsSheetOption} onPress={() => { setDateFilter(value); setFilterSheet(null); }}>
+              <Text style={styles.recordsSheetOptionText}>{label}</Text>
               {dateFilter === value && <AppIcon name="check-circle" size={20} color="#000" />}
             </Pressable>
           ))}
@@ -193,107 +187,79 @@ export function RecordsContent({
   const filterCell = (label: string, value: string, onPress: () => void) => (
     <Pressable
       onPress={onPress}
-      style={{ flex: 1, minWidth: 0, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 4, borderWidth: 1, borderColor: '#000', marginBottom: 8 }}
+      style={styles.recordsFilterCell}
     >
-      <Text style={{ fontSize: 10, color: '#666', marginBottom: 2 }} numberOfLines={1}>{label}</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center', maxWidth: '100%' }}>
-        <Text style={{ fontSize: 11, fontWeight: '600', marginRight: 2 }} numberOfLines={1} ellipsizeMode="tail">{value}</Text>
+      <Text style={styles.recordsFilterCellLabel} numberOfLines={1}>{label}</Text>
+      <View style={styles.recordsFilterCellValueRow}>
+        <Text style={styles.recordsFilterCellValue} numberOfLines={1} ellipsizeMode="tail">{value}</Text>
         <AppIcon name="expand-more" size={12} color="#000" />
       </View>
     </Pressable>
   );
 
-  return (
-    <View>
+  const listHeaderComponent = (
+    <View style={styles.recordsListHeader}>
       {pendingT1Count > 0 && onOpenPendingT1 && (
-        <View style={{ marginBottom: 16, padding: 14, backgroundColor: '#eff6ff', borderWidth: 2, borderColor: '#3b82f6', borderRadius: 8 }}>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: '#1e40af', marginBottom: 6 }}>您有 {pendingT1Count} 筆放飯記錄尚未填寫收碗（待補填）</Text>
-          <Text style={{ fontSize: 12, color: '#1e3a8a', marginBottom: 10 }}>填寫收碗狀態與攝取程度後，該筆記錄才會納入胃口趨勢</Text>
-          <Pressable onPress={onOpenPendingT1} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, backgroundColor: '#3b82f6', borderRadius: 8 }}>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>去填寫</Text>
+        <View style={styles.recordsPendingT1Box}>
+          <Text style={styles.recordsPendingT1Title}>您有 {pendingT1Count} 筆放飯記錄尚未填寫收碗（待補填）</Text>
+          <Text style={styles.recordsPendingT1Desc}>填寫收碗狀態與攝取程度後，該筆記錄才會納入胃口趨勢</Text>
+          <Pressable onPress={onOpenPendingT1} style={styles.recordsPendingT1Button}>
+            <Text style={styles.recordsPendingT1ButtonText}>去填寫</Text>
           </Pressable>
         </View>
       )}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { fontSize: 18, marginBottom: 12 }]}>新增記錄</Text>
-        <View style={{ position: 'relative', zIndex: 20 }}>
-          <Pressable
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: '#000', borderRadius: 8, backgroundColor: '#fff' }}
-            onPress={() => setAddRecordDropdownOpen((v) => !v)}
-          >
-            <Text style={{ fontSize: 14, color: '#333' }}>請選擇要新增的記錄類型</Text>
-            <AppIcon name={addRecordDropdownOpen ? 'expand-less' : 'expand-more'} size={22} color="#000" />
-          </Pressable>
-          {addRecordDropdownOpen && (
-            <>
-              <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -260, zIndex: 1 }} onPress={() => setAddRecordDropdownOpen(false)} />
-              <View style={{ position: 'relative', marginTop: 4, maxHeight: 260, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', zIndex: 2 }}>
-                <ScrollView style={{ maxHeight: 256 }} keyboardShouldPersistTaps="handled">
-                  {[
-                    { modal: 'feeding' as ActiveModal, label: '食物記錄', icon: 'restaurant' },
-                    { modal: 'water' as ActiveModal, label: '飲水記錄', icon: 'opacity' },
-                    { modal: 'elimination' as ActiveModal, label: '排泄記錄', icon: 'sanitizer' },
-                    { modal: 'weightRecord' as ActiveModal, label: '體重記錄', icon: 'monitor-weight' },
-                    { modal: 'medication' as ActiveModal, label: '用藥記錄', icon: 'medication' },
-                    { modal: 'symptom' as ActiveModal, label: '異常症狀', icon: 'healing' },
-                    { modal: 'blood' as ActiveModal, label: '報告掃描', icon: 'biotech' },
-                  ].map(({ modal, label, icon }) => (
-                    <Pressable
-                      key={modal}
-                      style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#eee' }}
-                      onPress={() => { onOpenModal(modal); setAddRecordDropdownOpen(false); }}
-                    >
-                      <AppIcon name={icon as any} size={20} color="#000" style={{ marginRight: 10 }} />
-                      <Text style={{ fontSize: 14, fontWeight: '500' }}>{label}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-            </>
-          )}
+      <Pressable style={styles.section} onPress={() => onOpenModal('recordMode')}>
+        <Text style={[styles.sectionTitle, styles.recordsAddRecordTitle]}>新增記錄</Text>
+        <View style={styles.recordsAddRecordRow}>
+          <Text style={styles.recordsAddRecordLabel}>以紀錄模式開啟（可切換類型）</Text>
+          <AppIcon name="expand-more" size={22} color="#000" />
         </View>
-      </View>
+      </Pressable>
 
-      <View style={{ marginTop: 32, borderTopWidth: 1, borderTopColor: '#ddd', paddingTop: 16, paddingHorizontal: 16, paddingBottom: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <View style={styles.recordsSection}>
+        <View style={styles.recordsSectionTop}>
+          <View style={styles.recordsSectionTitleRow}>
             <AppIcon name="history" size={20} color="#000" style={{ marginRight: 8 }} />
-            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>完整紀錄</Text>
+            <Text style={[styles.sectionTitle, styles.recordsSectionTitle]}>完整紀錄</Text>
           </View>
-          <Pressable style={{ paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: '#3b82f6', borderRadius: 8 }} onPress={() => onOpenModal('feedingLateEntry')}>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: '#1e40af' }}>＋ 補填記錄</Text>
+          <Pressable style={styles.recordsLateEntryButton} onPress={() => onOpenModal('feedingLateEntry')}>
+            <Text style={styles.recordsLateEntryButtonText}>＋ 補填記錄</Text>
           </Pressable>
         </View>
 
-        <View style={{ flexDirection: 'row', width: '100%', gap: 6 }}>
+        <View style={styles.recordsFilterRow}>
           {filterCell('範圍', scopeLabel, () => setFilterSheet('scope'))}
           {filterCell('類型', typeLabels[typeFilter], () => setFilterSheet('type'))}
           {filterCell('日期', dateLabels[dateFilter], () => setFilterSheet('date'))}
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#ddd' }}>
-          <Text style={{ fontSize: 12, color: '#666' }}>共 {filteredRecords.length} 筆</Text>
+        <View style={styles.recordsCountRow}>
+          <Text style={styles.recordsCountText}>共 {filteredRecords.length} 筆</Text>
         </View>
-
-        {filteredRecords.length === 0 ? (
-          <Text style={{ fontSize: 13, color: '#666' }}>尚無符合條件的紀錄</Text>
-        ) : (
-          <View style={{ paddingBottom: 40, width: '100%' }}>
-            {filteredRecords.map(record => (
-              <RecordLogItem key={record.id} record={record} cats={cats} onRecordPress={onRecordPress} />
-            ))}
-          </View>
-        )}
       </View>
+    </View>
+  );
 
+  return (
+    <View style={styles.recordsContainer}>
+      <FlatList
+        style={styles.recordsFlatList}
+        data={filteredRecords}
+        keyExtractor={(r) => r.id}
+        renderItem={({ item }) => <RecordLogItem record={item} cats={cats} onRecordPress={onRecordPress} />}
+        ListHeaderComponent={listHeaderComponent}
+        ListEmptyComponent={<Text style={styles.recordsEmptyText}>尚無符合條件的紀錄</Text>}
+        contentContainerStyle={styles.recordsListContent}
+        showsVerticalScrollIndicator
+      />
       <Modal
         visible={filterSheet !== null}
         transparent
         animationType="slide"
         onRequestClose={() => setFilterSheet(null)}
       >
-        <Pressable style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }} onPress={() => setFilterSheet(null)}>
-          <Pressable style={{ backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 36 }} onPress={e => e.stopPropagation()}>
+        <Pressable style={styles.recordsFilterModalBackdrop} onPress={() => setFilterSheet(null)}>
+          <Pressable style={styles.recordsFilterModalSheet} onPress={e => e.stopPropagation()}>
             {renderFilterSheetContent()}
           </Pressable>
         </Pressable>

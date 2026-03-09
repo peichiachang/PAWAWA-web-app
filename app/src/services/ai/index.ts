@@ -1,4 +1,4 @@
-import { NativeModules } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 import { AiImageInput, AiRecognitionService } from '../../types/ai';
 import { mockAiService } from './mockAiService';
 import { geminiService } from './geminiService';
@@ -31,9 +31,14 @@ function detectDevHost(): string | null {
 }
 
 function resolveApiBaseUrl(): string {
-  const configured = process.env.EXPO_PUBLIC_API_BASE_URL;
-  if (configured && configured.trim().length > 0) {
-    return configured.trim();
+  const configured = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+  if (configured && configured.length > 0) {
+    return configured;
+  }
+
+  // 原生版正式環境必須設定 API 基底 URL（SDD §5.2）
+  if (Platform.OS !== 'web' && !__DEV__) {
+    throw new Error('原生版正式環境必須設定 EXPO_PUBLIC_API_BASE_URL');
   }
 
   // Production web defaults to same-origin serverless API.

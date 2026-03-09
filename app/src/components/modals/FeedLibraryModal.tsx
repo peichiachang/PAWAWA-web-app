@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Modal, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
 import { FeedLibraryItem, getFeedDisplayName } from '../../types/app';
 import { styles, palette } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
@@ -97,6 +97,7 @@ export function FeedLibraryModal({ visible, feedLibrary, onAdd, onRemove, onClos
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
       <SafeAreaView style={styles.modalBackdrop}>
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
@@ -176,6 +177,7 @@ export function FeedLibraryModal({ visible, feedLibrary, onAdd, onRemove, onClos
           </ScrollView>
         </View>
       </SafeAreaView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

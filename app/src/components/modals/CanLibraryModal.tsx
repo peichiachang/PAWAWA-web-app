@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
 import { CannedItem, CapturedImage, CanLabelScanResult, getCannedDisplayName } from '../../types/app';
 import { styles, palette } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
@@ -128,6 +128,7 @@ export function CanLibraryModal({ visible, canLibrary, onAdd, onRemove, onClose,
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
       <SafeAreaView style={styles.modalBackdrop}>
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
@@ -221,6 +222,7 @@ export function CanLibraryModal({ visible, canLibrary, onAdd, onRemove, onClose,
           </ScrollView>
         </View>
       </SafeAreaView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

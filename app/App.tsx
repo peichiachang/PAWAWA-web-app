@@ -1,9 +1,8 @@
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState, useEffect } from 'react';
-import { Alert, SafeAreaView, ScrollView, View, Text, Platform } from 'react-native';
+import { useCallback, useMemo, useState, useEffect } from 'react';
+import { Alert, SafeAreaView, ScrollView, View, Text, Platform, Modal } from 'react-native';
 import { getAiRecognitionService } from './src/services/ai';
-import { buildClinicalSummary } from './src/services/clinicalSummary';
-import { calculateAdaptiveDailyWaterGoal, calculateDailyKcalIntake, calculateDailyKcalGoal } from './src/utils/health';
+import { calculateAdaptiveDailyWaterGoal, calculateDailyKcalGoal } from './src/utils/health';
 import { ActiveModal, BottomTab, Level } from './src/types/app';
 import { useFeeding } from './src/hooks/useFeeding';
 import { useHydration } from './src/hooks/useHydration';
@@ -34,24 +33,26 @@ import { MedicationModal } from './src/components/modals/MedicationModal';
 import { SymptomModal } from './src/components/modals/SymptomModal';
 import { RecordDetailModal, DetailRecord } from './src/components/modals/RecordDetailModal';
 import { GlobalCameraProvider, useGlobalCamera } from './src/components/GlobalCameraProvider';
-import { styles } from './src/styles/common';
+import { styles, palette } from './src/styles/common';
 import { VesselCalibrationModal } from './src/components/modals/VesselCalibrationModal';
 import { WeightRecordModal } from './src/components/modals/WeightRecordModal';
 import { CanLibraryModal } from './src/components/modals/CanLibraryModal';
 import { FeedLibraryModal } from './src/components/modals/FeedLibraryModal';
+import { RecognitionTestScreen } from './src/screens/RecognitionTestScreen';
+import { RecordModeModal } from './src/components/modals/RecordModeModal';
 import { scanCanLabel } from './src/services/canLabelScanApi';
-import { useVessels } from './src/hooks/useVessels';
+import { VesselsProvider, useVesselsContext } from './src/contexts/VesselsContext';
 import { useRecordReminders } from './src/hooks/useRecordReminders';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { AuthGateScreen } from './src/screens/AuthGateScreen';
 import { SKIP_AUTH_FOR_TESTING } from './src/config/skipAuthForTesting';
 
-import { CATS_STORAGE_KEY, VITALS_HISTORY_KEY } from './src/constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CatFormData, CatIdentity, ClinicalSummary, VitalsLog } from './src/types/domain';
+import { useCats } from './src/hooks/useCats';
+import { useVitals } from './src/hooks/useVitals';
+import { useAppSummaries } from './src/hooks/useAppSummaries';
+import { CatFormData, CatIdentity, VitalsLog } from './src/types/domain';
 import { applyDevDataMode } from './src/config/devDataMode';
-import { getScopedCats, matchesCatSeries } from './src/utils/catScope';
-import { isToday } from './src/utils/date';
+import { getScopedCats } from './src/utils/catScope';
 import { getRecentDailyWaterIntakesForCat } from './src/utils/hydrationUtils';
 
 function AppMain() {
@@ -69,21 +70,19 @@ function AppMain() {
   /** 要編輯的貓咪（個人 tab 點擊家庭成員時帶入；未設時編輯 modal 用 currentCat） */
   const [selectedCatForEdit, setSelectedCatForEdit] = useState<CatIdentity | null>(null);
 
-  // 共享的 vessels hook（用於 VesselCalibrationModal）
-  const sharedVessels = useVessels();
+  const sharedVessels = useVesselsContext();
   
   const handleOpenVesselCalibration = () => {
     console.log('[App] handleOpenVesselCalibration called');
     setVesselCalibrationVisible(true);
   };
 
-  // Dynamic Data States
-  const [cats, setCats] = useState<CatIdentity[]>([]);
-  const [vitalsLogs, setVitalsLogs] = useState<VitalsLog[]>([]);
+  const { cats, setCats, saveCats, reload: reloadCats } = useCats();
+  const { vitalsLogs, setVitalsLogs, saveVitals, reload: reloadVitals } = useVitals();
 
-  const feeding = useFeeding(ai, launchCamera, sharedVessels, cats);
+  const feeding = useFeeding(ai, launchCamera, cats);
   const pendingT1VesselIds = useMemo(() => feeding.getPendingT1VesselIds(), [feeding.ownershipLogs]);
-  const hydration = useHydration(ai, launchCamera, sharedVessels, cats);
+  const hydration = useHydration(ai, launchCamera, cats);
   const elimination = useElimination(ai, launchCamera);
   const medication = useMedication();
   const symptoms = useSymptoms();
@@ -125,69 +124,45 @@ function AppMain() {
     };
   }, []);
 
-  // 一次性儲存遷移（舊 key → 新 key），再載入資料
+  // 一次性儲存遷移（舊 key → 新 key），再觸發 cats/vitals 重新載入
   useEffect(() => {
     async function loadData() {
       try {
         const { runStorageMigration } = await import('./src/storage/migration');
         await runStorageMigration();
-
-        const storedCats = await AsyncStorage.getItem(CATS_STORAGE_KEY);
-        if (storedCats) setCats(JSON.parse(storedCats));
-
-        const storedVitals = await AsyncStorage.getItem(VITALS_HISTORY_KEY);
-        if (storedVitals) setVitalsLogs(JSON.parse(storedVitals));
-
+        await reloadCats();
+        await reloadVitals();
         bloodReport.loadSavedReports();
       } catch (e) {
         console.error('Failed to load data', e);
       }
     }
     loadData();
-  }, []);
+  }, [reloadCats, reloadVitals]);
 
-  const indexedCats = useMemo(() => {
-    const scoped = getScopedCats(cats);
-    const matched = scoped.filter((cat) => /^cat_\d+_/.test(cat.id));
-    return matched.length > 0 ? matched : scoped;
-  }, [cats]);
+  const {
+    indexedCats,
+    summaryByCatId,
+    todayHouseholdKcal,
+    todayHouseholdWater,
+    currentCat,
+    currentSummary,
+  } = useAppSummaries({
+    cats,
+    vitalsLogs,
+    level,
+    feedingOwnershipLogs: feeding.ownershipLogs,
+    hydrationOwnershipLogs: hydration.ownershipLogs,
+    medicationLogs: medication.logs,
+  });
 
-  const summaries = useMemo(
-    () => indexedCats.map((cat) => buildClinicalSummary(cat, vitalsLogs, feeding.ownershipLogs, hydration.ownershipLogs, medication.logs, indexedCats.length)),
-    [indexedCats, vitalsLogs, feeding.ownershipLogs, hydration.ownershipLogs, medication.logs]
-  );
-  const summaryByCatId = useMemo(
-    () => Object.fromEntries(summaries.map((item) => [item.catId, item])),
-    [summaries]
-  );
-
-  const todayHouseholdKcal = useMemo(() => {
-    return feeding.ownershipLogs
-      .filter(item => isToday(item.createdAt))
-      .reduce((sum, item) => sum + (item.kcal ?? calculateDailyKcalIntake(item.totalGram, 3.5)), 0);
-  }, [feeding.ownershipLogs]);
-
-  const todayHouseholdWater = useMemo(() => {
-    return hydration.ownershipLogs
-      .filter(item => isToday(item.createdAt))
-      .reduce((sum, item) => sum + (item.actualWaterMl || item.totalMl || 0), 0);
-  }, [hydration.ownershipLogs]);
-
-  const currentCat = useMemo(() => {
-    if (level === 'household') return null;
-    const scopedCats = getScopedCats(cats);
-    const selected = scopedCats.find((cat) => matchesCatSeries(cat.id, level));
-    return selected || null;
-  }, [cats, level]);
-  const currentSummary = currentCat ? summaryByCatId[currentCat.id] : null;
-
-  function openModal(modal: ActiveModal) {
+  const openModal = useCallback((modal: ActiveModal) => {
     if (modal === 'feeding') feeding.openReset();
     if (modal === 'water') hydration.openReset();
     if (modal === 'elimination') elimination.reset();
     if (modal === 'blood') bloodReport.reset();
     setActiveModal(modal);
-  }
+  }, [feeding, hydration, elimination, bloodReport]);
 
   /** 開啟編輯貓咪檔案：可傳入要編輯的貓（個人 tab 點擊時）；不傳則編輯目前看板貓 currentCat */
   function openEditCat(cat?: CatIdentity) {
@@ -200,6 +175,18 @@ function AppMain() {
     if (activeModal === 'addCat' || activeModal === 'editCat') setSelectedCatForEdit(null);
     setActiveModal(null);
   }
+
+  const handleRecordPress = useCallback((record: DetailRecord) => {
+    setSelectedRecord(record);
+    openModal('recordDetail');
+  }, [openModal]);
+
+  const handleOpenPendingT1 = useCallback(() => {
+    if (pendingT1VesselIds.length > 0) {
+      setCompleteT1VesselId(pendingT1VesselIds[0]);
+      openModal('feeding');
+    }
+  }, [pendingT1VesselIds, openModal]);
 
   function onBottomTabPress(tab: BottomTab) {
     setBottomTab(tab);
@@ -227,8 +214,7 @@ function AppMain() {
           spayedNeutered: data.spayedNeutered,
           chronicConditions: data.chronicConditions || [],
         } : c);
-        setCats(updated);
-        await AsyncStorage.setItem(CATS_STORAGE_KEY, JSON.stringify(updated));
+        await saveCats(updated);
         Alert.alert('更新成功', `已更新 ${data.name} 的檔案。`);
         return;
       }
@@ -257,11 +243,9 @@ function AppMain() {
         allergyBlacklist: [],
       };
 
-      const updated = [...cats, newCat];
-      setCats(updated);
-      await AsyncStorage.setItem(CATS_STORAGE_KEY, JSON.stringify(updated));
+      const updatedCats = [...cats, newCat];
+      await saveCats(updatedCats);
 
-      // Create initial vitals log
       const initialVitals: VitalsLog = {
         id: `v_${Date.now()}`,
         catId: newCat.id,
@@ -270,9 +254,7 @@ function AppMain() {
         medicineFlag: false,
         timestamp: new Date().toISOString(),
       };
-      const updatedVitals = [initialVitals, ...vitalsLogs];
-      setVitalsLogs(updatedVitals);
-      await AsyncStorage.setItem(VITALS_HISTORY_KEY, JSON.stringify(updatedVitals));
+      await saveVitals([initialVitals, ...vitalsLogs]);
 
       Alert.alert('新增成功', `已建立 ${newCat.name} 的檔案。`);
     } catch (error) {
@@ -294,12 +276,9 @@ function AppMain() {
       medicineFlag: false,
       timestamp: new Date().toISOString(),
     };
-    const updatedVitals = [newLog, ...vitalsLogs];
-    setVitalsLogs(updatedVitals);
-    await AsyncStorage.setItem(VITALS_HISTORY_KEY, JSON.stringify(updatedVitals));
+    await saveVitals([newLog, ...vitalsLogs]);
     const updatedCats = cats.map((c) => (c.id === catId ? { ...c, currentWeightKg: weightKg } : c));
-    setCats(updatedCats);
-    await AsyncStorage.setItem(CATS_STORAGE_KEY, JSON.stringify(updatedCats));
+    await saveCats(updatedCats);
     Alert.alert('已儲存', `${cat.name} 本次體重 ${weightKg.toFixed(1)} kg 已記錄。`);
   }
 
@@ -307,13 +286,29 @@ function AppMain() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.appFrame}>
         {sharedVessels.loadErrorToast && (
-          <View style={{ backgroundColor: '#fee2e2', borderBottomWidth: 1, borderBottomColor: '#fca5a5', paddingVertical: 8, paddingHorizontal: 16 }}>
-            <Text style={{ fontSize: 12, color: '#991b1b' }}>{sharedVessels.loadErrorToast}</Text>
+          <View style={{ backgroundColor: palette.dangerBg, borderBottomWidth: 1, borderBottomColor: palette.border, paddingVertical: 8, paddingHorizontal: 16 }}>
+            <Text style={{ fontSize: 12, color: palette.dangerText }}>{sharedVessels.loadErrorToast}</Text>
           </View>
         )}
         <TopNav level={level} onLevelChange={setLevel} cats={indexedCats} activeTab={bottomTab} />
-        <ScrollView contentContainerStyle={styles.mainContent}>
-          {bottomTab === 'home' && (
+        {bottomTab === 'records' ? (
+          <View style={styles.mainScroll}>
+            <RecordsContent
+              onOpenModal={openModal}
+              feedingHistory={feeding.ownershipLogs}
+              hydrationHistory={hydration.ownershipLogs}
+              eliminationHistory={elimination.ownershipLogs}
+              medicationHistory={medication.logs}
+              symptomHistory={symptoms.logs}
+              cats={indexedCats}
+              onRecordPress={handleRecordPress}
+              pendingT1Count={pendingT1VesselIds.length}
+              onOpenPendingT1={pendingT1VesselIds.length > 0 ? handleOpenPendingT1 : undefined}
+            />
+          </View>
+        ) : (
+          <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainContent} showsVerticalScrollIndicator={true}>
+            {bottomTab === 'home' && (
             <HomeContent
               level={level}
               onLevelChange={setLevel}
@@ -331,23 +326,9 @@ function AppMain() {
               symptomHistory={symptoms.logs}
               vesselProfiles={sharedVessels.vesselProfiles}
               onEditCat={() => openEditCat()}
-              onRecordPress={(record) => { setSelectedRecord(record); openModal('recordDetail'); }}
+              onRecordPress={handleRecordPress}
               pendingT1Count={pendingT1VesselIds.length}
-              onOpenPendingT1={pendingT1VesselIds.length > 0 ? () => { setCompleteT1VesselId(pendingT1VesselIds[0]); openModal('feeding'); } : undefined}
-            />
-          )}
-          {bottomTab === 'records' && (
-            <RecordsContent
-              onOpenModal={openModal}
-              feedingHistory={feeding.ownershipLogs}
-              hydrationHistory={hydration.ownershipLogs}
-              eliminationHistory={elimination.ownershipLogs}
-              medicationHistory={medication.logs}
-              symptomHistory={symptoms.logs}
-              cats={indexedCats}
-              onRecordPress={(record) => { setSelectedRecord(record); openModal('recordDetail'); }}
-              pendingT1Count={pendingT1VesselIds.length}
-              onOpenPendingT1={pendingT1VesselIds.length > 0 ? () => { setCompleteT1VesselId(pendingT1VesselIds[0]); openModal('feeding'); } : undefined}
+              onOpenPendingT1={pendingT1VesselIds.length > 0 ? handleOpenPendingT1 : undefined}
             />
           )}
           {bottomTab === 'knowledge' && <KnowledgeContent />}
@@ -359,12 +340,22 @@ function AppMain() {
               onOpenVesselCalibration={handleOpenVesselCalibration}
             />
           )}
-        </ScrollView>
+          </ScrollView>
+        )}
         <BottomNav activeTab={bottomTab} onTabPress={onBottomTabPress} />
       </View>
       <StatusBar style="dark" />
 
       {/* 調整：即使相機開啟也保留這些 Modal 在背景，由 GlobalCameraProvider 的相機視圖疊在最上層 */}
+      <RecordModeModal
+        visible={activeModal === 'recordMode'}
+        onClose={closeModal}
+        onSwitchToModal={(modal) => setActiveModal(modal)}
+        feeding={feeding}
+        hydration={hydration}
+        cats={indexedCats}
+        initialTab="feeding"
+      />
       <FeedingModal
         visible={activeModal === 'feeding' || activeModal === 'feedingLateEntry'}
         feeding={feeding}
@@ -373,10 +364,10 @@ function AppMain() {
         initialMode={completeT1VesselId ? 'complete_t1' : activeModal === 'feedingLateEntry' ? 'late_entry' : 'normal'}
         initialVesselIdForT1={completeT1VesselId ?? undefined}
       />
-      <HydrationModal 
-        visible={activeModal === 'water'} 
-        hydration={hydration} 
-              cats={indexedCats}
+      <HydrationModal
+        visible={activeModal === 'water'}
+        hydration={hydration}
+        cats={indexedCats}
         onClose={closeModal}
       />
       <EliminationModal
@@ -392,10 +383,8 @@ function AppMain() {
         onClose={closeModal}
         onSwitchDevDataMode={async (mode) => {
           await applyDevDataMode(mode);
-          const storedCats = await AsyncStorage.getItem(CATS_STORAGE_KEY);
-          setCats(storedCats ? JSON.parse(storedCats) : []);
-          const storedVitals = await AsyncStorage.getItem(VITALS_HISTORY_KEY);
-          setVitalsLogs(storedVitals ? JSON.parse(storedVitals) : []);
+          await reloadCats();
+          await reloadVitals();
           await feeding.reloadOwnershipLogs();
           await hydration.reloadOwnershipLogs();
           await elimination.reloadOwnershipLogs();
@@ -500,6 +489,9 @@ function AppMain() {
         onSave={sharedVessels.saveVesselProfiles}
         ai={ai}
       />
+      <Modal visible={activeModal === 'recognitionTest'} animationType="slide" presentationStyle="pageSheet">
+        <RecognitionTestScreen onClose={closeModal} />
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -509,7 +501,9 @@ function AppRoot() {
   if (!SKIP_AUTH_FOR_TESTING && !loading && !user) return <AuthGateScreen />;
   return (
     <GlobalCameraProvider>
-      <AppMain />
+      <VesselsProvider>
+        <AppMain />
+      </VesselsProvider>
     </GlobalCameraProvider>
   );
 }

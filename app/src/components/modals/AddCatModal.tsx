@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Pressable, ScrollView, Text, View, TextInput, Alert, Switch, SafeAreaView } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View, TextInput, Alert, Switch, SafeAreaView } from 'react-native';
 import { styles } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
 import { ChronicCondition, CatIdentity, CatFormData, Gender } from '../../types/domain';
@@ -101,6 +101,7 @@ export function AddCatModal({ visible, onClose, onSave, initialData, mode = 'add
 
     return (
         <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
             <SafeAreaView style={styles.modalBackdrop}>
                 <View style={styles.modalCard}>
                     <View style={styles.modalHeader}>
@@ -254,6 +255,7 @@ export function AddCatModal({ visible, onClose, onSave, initialData, mode = 'add
                     </ScrollView>
                 </View>
             </SafeAreaView>
+            </KeyboardAvoidingView>
         </Modal>
     );
 }

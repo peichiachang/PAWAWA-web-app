@@ -22,6 +22,11 @@ export function getApiBaseUrl(): string {
   const configured = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
   if (configured) return configured.replace(/\/$/, '');
 
+  // 原生版正式環境必須設定 API 基底 URL（SDD §5.2）
+  if (Platform.OS !== 'web' && !__DEV__) {
+    throw new Error('原生版正式環境必須設定 EXPO_PUBLIC_API_BASE_URL');
+  }
+
   if (!__DEV__) return '/api';
 
   const devHost = detectDevHost();

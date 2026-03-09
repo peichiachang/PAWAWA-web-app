@@ -389,6 +389,9 @@ Return JSON:
 
       parsed.consumptionLevel = normalizedLevel;
       totalGram = levelToGram[normalizedLevel];
+      if (consumedRatio > 0) {
+        t0EstimatedGram = Math.round(totalGram / consumedRatio);
+      }
     }
 
     parsed.confidence = clamp(Number(parsed.confidence ?? 0.5), 0, 1);

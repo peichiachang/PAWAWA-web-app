@@ -1,8 +1,9 @@
 /**
- * 掛載時淡入（使用 React Native 內建 Animated）
+ * 掛載時淡入（使用 react-native-reanimated，在 UI thread 執行）
  */
-import React, { useEffect, useRef } from 'react';
-import { Animated, type ViewStyle } from 'react-native';
+import React, { useEffect } from 'react';
+import type { ViewStyle } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay } from 'react-native-reanimated';
 
 interface FadeInViewProps {
   children: React.ReactNode;
@@ -12,14 +13,17 @@ interface FadeInViewProps {
 }
 
 export function FadeInView({ children, style, duration = 220, delay = 0 }: FadeInViewProps) {
-  const opacity = useRef(new Animated.Value(0)).current;
+  const opacity = useSharedValue(0);
 
   useEffect(() => {
-    const run = () => Animated.timing(opacity, { toValue: 1, duration, useNativeDriver: true }).start();
-    const id = delay > 0 ? setTimeout(run, delay) : undefined;
-    if (delay === 0) run();
-    return () => { if (id != null) clearTimeout(id); };
+    opacity.value = delay > 0
+      ? withDelay(delay, withTiming(1, { duration }))
+      : withTiming(1, { duration });
   }, [opacity, duration, delay]);
 
-  return <Animated.View style={[style, { opacity }]}>{children}</Animated.View>;
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return <Animated.View style={[style, animatedStyle]}>{children}</Animated.View>;
 }

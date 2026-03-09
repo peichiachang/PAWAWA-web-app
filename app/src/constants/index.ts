@@ -32,10 +32,9 @@ export const FEEDING_TAG_OPTIONS = [
   { id: 'C', label: 'Tag C' },
 ];
 
+/** 層級選單：僅固定「家庭」；個體貓咪由 TopNav 依 getScopedCats(cats) 動態產生 */
 export const LEVEL_ITEMS: Array<{ key: Level; icon: string; name: string; desc: string }> = [
   { key: 'household', icon: 'home', name: '家庭', desc: '主要看板' },
-  { key: 'cat_001', icon: 'pets', name: 'Milo', desc: '個體監控' },
-  { key: 'cat_002', icon: 'pets', name: 'Luna', desc: '個體監控' },
 ];
 
 export const BOTTOM_ITEMS: Array<{ key: BottomTab; icon: string; label: string }> = [

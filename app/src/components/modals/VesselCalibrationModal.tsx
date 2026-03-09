@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
 import { VesselCalibration, VesselShape, VesselType, CapturedImage } from '../../types/app';
 import { styles, palette } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
@@ -66,25 +66,6 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
     /** 自動餵食器模式：每份克數、每日次數 */
     const [portionGrams, setPortionGrams] = useState('');
     const [dailyPortionCount, setDailyPortionCount] = useState('');
-    const handleOpenMeasure = async () => {
-        if (Platform.OS !== 'ios') {
-            Alert.alert('提示', '測距儀功能僅支援 iOS 裝置。');
-            return;
-        }
-
-        const url = 'measure://';
-
-        try {
-            const supported = await Linking.canOpenURL(url);
-            if (supported) {
-                await Linking.openURL(url);
-            } else {
-                Alert.alert('無法開啟', '請確認您的裝置已安裝 iOS 內建的「測距儀」App。');
-            }
-        } catch {
-            Alert.alert('無法開啟', '請確認您的裝置已安裝 iOS 內建的「測距儀」App。');
-        }
-    };
 
     // 側面輪廓拍攝：改為內嵌相機，拍完照片直接帶入本畫面 state，不再用全域 launchCamera
     const handleStartCaptureSideProfile = () => {
@@ -572,6 +553,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
         const showInlineCamera = showSideCamera || showTopCamera;
         return (
             <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
                 <SafeAreaView style={styles.modalBackdrop}>
                     <View style={styles.modalCard}>
                         <View style={styles.modalHeader}>
@@ -1505,19 +1487,11 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
 
                                         <View style={{ marginTop: 24, padding: 12, backgroundColor: palette.surfaceSoft, borderWidth: 1, borderColor: palette.border, borderRadius: 4 }}>
                                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="lightbulb" size={14} color={palette.muted} style={{ marginRight: 4 }} /><Text style={{ fontSize: 13, fontWeight: '700', color: palette.muted }}>測量小秘訣</Text></View>
-                                            <Text style={{ fontSize: 11, color: palette.muted, lineHeight: 16, marginBottom: 12 }}>
+                                            <Text style={{ fontSize: 11, color: palette.muted, lineHeight: 16 }}>
                                                 {inputMethod === 'dimensions'
-                                                    ? '精確的直徑與高度能讓 AI 換算更精準。若手邊沒有尺，可以使用 iOS 內建的「測距儀」協助。'
+                                                    ? '精確的直徑與高度能讓 AI 換算更精準。'
                                                     : '如果容器標示了容量（如 2L、2000ml），建議直接輸入已知容量，比測量尺寸更準確。'}
                                             </Text>
-                                            {inputMethod === 'dimensions' && (
-                                                <Pressable
-                                                    style={{ padding: 8, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.border, borderRadius: 4, alignItems: 'center' }}
-                                                    onPress={handleOpenMeasure}
-                                                >
-                                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}><AppIcon name="straighten" size={14} color="#000" style={{ marginRight: 4 }} /><Text style={{ fontSize: 12, fontWeight: '700' }}>開啟「測距儀」App</Text></View>
-                                                </Pressable>
-                                            )}
                                         </View>
 
                                         {/* 空碗俯視照（測量尺寸、已知容量時可拍攝，作為食物記錄校準參考） */}
@@ -1575,6 +1549,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                         )}
                     </View>
                 </SafeAreaView>
+                </KeyboardAvoidingView>
             </Modal>
         );
     }
@@ -1582,6 +1557,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
     return (
         <>
             <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
                 <SafeAreaView style={styles.modalBackdrop}>
                     <View style={styles.modalCard}>
                         <View style={styles.modalHeader}>
@@ -1647,6 +1623,7 @@ export function VesselCalibrationModal({ visible, profiles, onClose, onSave, ai 
                         </ScrollView>
                     </View>
                 </SafeAreaView>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* 滿量基準校準 Modal（水碗用 ml、自動餵食器用 g 顯示） */}

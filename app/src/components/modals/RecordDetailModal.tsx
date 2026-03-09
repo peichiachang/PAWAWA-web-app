@@ -4,6 +4,7 @@ import { EliminationOwnershipLog } from '../../hooks/useElimination';
 import { CatIdentity, MedicationLog, SymptomLog } from '../../types/domain';
 import { styles } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
+import { getBristolLabel } from '../../constants/bristol';
 
 export type DetailRecord =
   | (FeedingOwnershipLog & { _type: 'feeding' })
@@ -87,13 +88,12 @@ export function RecordDetailModal({ visible, record, cats, onClose }: Props) {
     }
     if (record._type === 'elimination') {
       const l = record as EliminationOwnershipLog & { _type: 'elimination' };
-      const bristolDesc = ['', '硬塊狀', '香腸狀有裂縫', '香腸狀有裂縫', '香腸狀或蛇形', '軟塊有清晰邊緣', '糊狀', '水狀'];
       return (
         <>
           <Row label="日期" value={dateStr} />
           <Row label="時間" value={timeStr} />
           <Row label="貓咪" value={getCatName(l.selectedTagId)} />
-          <Row label="Bristol 類型" value={`Type ${l.bristolType}${bristolDesc[l.bristolType] ? ` — ${bristolDesc[l.bristolType]}` : ''}`} />
+          <Row label="Bristol 類型" value={`Type ${l.bristolType} — ${getBristolLabel(l.bristolType)}`} />
           <Row label="形狀" value={l.shapeType || '—'} />
           <Row label="顏色" value={l.color || '—'} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}>

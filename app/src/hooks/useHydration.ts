@@ -6,20 +6,16 @@ import { calculateActualWaterIntakeMl } from '../utils/health';
 import { CapturedImage, StoredHydrationW0, HydrationOwnershipLog } from '../types/app';
 import { HYDRATION_W0_TTL_MS } from '../constants';
 import { getW0Map, setW0Map, getHydrationHistory, saveHydrationHistory } from '../storage/hydrationStorage';
-import { useVessels } from './useVessels';
+import { useVesselsContext } from '../contexts/VesselsContext';
 import type { CatIdentity } from '../types/domain';
-
-export type VesselsFromParent = ReturnType<typeof useVessels>;
 
 export function useHydration(
   ai: AiRecognitionService,
   // launchCamera 目前僅為向後相容，實際拍攝改由 HydrationModal 內嵌相機處理
   _launchCamera: (title: string) => Promise<CapturedImage | null>,
-  vesselsFromParent?: ReturnType<typeof useVessels>,
   cats?: CatIdentity[]
 ) {
-  const vesselsInternal = useVessels();
-  const vessels = vesselsFromParent ?? vesselsInternal;
+  const vessels = useVesselsContext();
   const [w1Done, setW1Done] = useState(false);
   const [result, setResult] = useState<HydrationVisionResult | null>(null);
   const [w0Map, setW0Map] = useState<Record<string, StoredHydrationW0>>({});

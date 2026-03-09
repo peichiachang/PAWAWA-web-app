@@ -1,4 +1,4 @@
-import { ActivityIndicator, Modal, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
 import { AppIcon } from '../AppIcon';
 import { useHydration } from '../../hooks/useHydration';
 import { HYDRATION_W0_TTL_MS } from '../../constants';
@@ -15,9 +15,11 @@ interface Props {
   hydration: ReturnType<typeof useHydration>;
   cats: CatIdentity[];
   onClose: () => void;
+  /** 內嵌於紀錄模式：不包 Modal，只渲染內容 */
+  embedded?: boolean;
 }
 
-export function HydrationModal({ visible, hydration, cats, onClose }: Props) {
+export function HydrationModal({ visible, hydration, cats, onClose, embedded = false }: Props) {
   const {
     w0Done,
     w0Image,
@@ -82,10 +84,7 @@ export function HydrationModal({ visible, hydration, cats, onClose }: Props) {
     }
   }, [visible, inputMode, hydrationVessels, vessels.selectedVesselId]);
 
-  return (
-    <>
-      <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
-        {markingImage ? (
+  const content = markingImage ? (
           <WaterLevelMarker
             imageUri={markingImage.image.uri}
             onConfirm={confirmMarking}
@@ -112,12 +111,15 @@ export function HydrationModal({ visible, hydration, cats, onClose }: Props) {
             }}
           />
         ) : (
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
           <SafeAreaView style={styles.modalBackdrop}>
             <View style={styles.modalCard}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>飲水記錄</Text>
-                <Pressable onPress={onClose} hitSlop={12}><Text style={styles.closeText}>×</Text></Pressable>
-              </View>
+              {!embedded && (
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>飲水記錄</Text>
+                  <Pressable onPress={onClose} hitSlop={12}><Text style={styles.closeText}>×</Text></Pressable>
+                </View>
+              )}
               <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
                 {/* Mode toggle */}
                 <View style={[styles.choiceRow, { marginBottom: 20 }]}>
@@ -445,7 +447,14 @@ export function HydrationModal({ visible, hydration, cats, onClose }: Props) {
               </ScrollView>
             </View>
           </SafeAreaView>
-        )}
+          </KeyboardAvoidingView>
+        );
+
+  if (embedded) return <View style={{ flex: 1 }}>{content}</View>;
+  return (
+    <>
+      <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+        {content}
       </Modal>
     </>
   );

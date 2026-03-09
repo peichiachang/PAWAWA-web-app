@@ -33,19 +33,14 @@ import { getT0Map, setT0Map, getFeedingHistory, saveFeedingHistory } from '../st
 import { getMaxPossibleGrams, isIntakeOverLimit, getIntakeOverLimitMessage } from '../algorithms/feedingBounds';
 import { DRY_FEED_SEED } from '../constants/feedLibrarySeed';
 import type { CatIdentity } from '../types/domain';
-
-import { useVessels } from './useVessels';
-
-export type VesselsFromParent = ReturnType<typeof useVessels>;
+import { useVesselsContext } from '../contexts/VesselsContext';
 
 export function useFeeding(
   ai: AiRecognitionService,
   launchCamera: (title: string) => Promise<CapturedImage | null>,
-  vesselsFromParent?: VesselsFromParent,
   cats?: CatIdentity[]
 ) {
-  const vesselsInternal = useVessels();
-  const vessels = vesselsFromParent ?? vesselsInternal;
+  const vessels = useVesselsContext();
   const [t1Done, setT1Done] = useState(false);
   const [result, setResult] = useState<FeedingVisionResult | null>(null);
   const [nutritionResult, setNutritionResult] = useState<NutritionOCRResult | null>(null);

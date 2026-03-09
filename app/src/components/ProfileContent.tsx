@@ -64,25 +64,25 @@ export function ProfileContent({ cats, onOpenModal, onEditCat, onOpenVesselCalib
                         <Text style={{ fontSize: 13, color: palette.muted }}>{cats.length} 隻貓咪</Text>
                     </View>
 
-                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
                         {cats.map(cat => (
                             <AnimatedPressable
                                 key={cat.id}
                                 onPress={() => onEditCat?.(cat)}
-                                style={{ width: '48%', padding: 12, borderWidth: 1, borderColor: palette.border, alignItems: 'center', marginBottom: 8, backgroundColor: palette.surface, borderRadius: 8 }}
+                                style={{ width: '48%', minWidth: 120, padding: 12, borderWidth: 1, borderColor: palette.border, alignItems: 'center', backgroundColor: palette.surface, borderRadius: 8 }}
                             >
                                 <AppIcon name="pets" size={24} color={palette.text} style={{ marginBottom: 4 }} />
-                                <Text style={{ fontSize: 13, fontWeight: '700', color: palette.text }}>{cat.name}</Text>
-                                <Text style={{ fontSize: 11, color: palette.muted }}>{cat.currentWeightKg}kg • {cat.gender === 'male' ? '公' : '母'}</Text>
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: palette.text }} numberOfLines={1} ellipsizeMode="tail">{cat.name}</Text>
+                                <Text style={{ fontSize: 11, color: palette.muted }} numberOfLines={1}>{cat.currentWeightKg}kg • {cat.gender === 'male' ? '公' : '母'}</Text>
                             </AnimatedPressable>
                         ))}
                         {cats.length < 5 && (
                             <AnimatedPressable
                                 onPress={() => onOpenModal('addCat')}
-                                style={{ width: cats.length === 0 ? '100%' : '48%', padding: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: palette.border, alignItems: 'center', justifyContent: 'center', height: 80 }}
+                                style={{ width: cats.length === 0 ? '100%' : '48%', minWidth: 120, minHeight: 80, padding: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: palette.border, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' }}
                             >
                                 <Text style={{ fontSize: 24, color: palette.text }}>+</Text>
-                                <Text style={{ fontSize: 11, color: palette.muted }}>新增貓咪</Text>
+                                <Text style={{ fontSize: 11, color: palette.muted, writingDirection: 'ltr' }} numberOfLines={1}>新增貓咪</Text>
                             </AnimatedPressable>
                         )}
                     </View>
@@ -120,12 +120,24 @@ export function ProfileContent({ cats, onOpenModal, onEditCat, onOpenVesselCalib
                     </AnimatedPressable>
                     <AnimatedPressable
                         onPress={() => onOpenModal('feedLibrary')}
-                        style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderWidth: 2, borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surface }}
+                        style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderWidth: 2, borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surface, marginBottom: 8 }}
                     >
                         <AppIcon name="restaurant" size={24} color={palette.text} style={{ marginRight: 12 }} />
                         <View style={{ flex: 1 }}>
                             <Text style={{ fontSize: 15, fontWeight: '700', color: palette.text }}>飼料設定</Text>
                             <Text style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>儲存飼料成份熱量，記錄時帶入</Text>
+                        </View>
+                        <AppIcon name="chevron-right" size={20} color={palette.muted} />
+                    </AnimatedPressable>
+                    {/* 辨識測試：相機／上傳照片 → AI 分析（食物、飲水、排泄、血液報告），測試用入口 */}
+                    <AnimatedPressable
+                        onPress={() => onOpenModal('recognitionTest')}
+                        style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderWidth: 2, borderColor: palette.primary, borderRadius: 8, backgroundColor: palette.surface }}
+                    >
+                        <AppIcon name="camera-alt" size={24} color={palette.primary} style={{ marginRight: 12 }} />
+                        <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 15, fontWeight: '700', color: palette.text }}>辨識測試</Text>
+                            <Text style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>相機／上傳照片，測試食物、飲水、排泄、血液報告 AI 辨識</Text>
                         </View>
                         <AppIcon name="chevron-right" size={20} color={palette.muted} />
                     </AnimatedPressable>
@@ -135,28 +147,40 @@ export function ProfileContent({ cats, onOpenModal, onEditCat, onOpenVesselCalib
                 <Text style={styles.sectionTitle}>快捷功能</Text>
                 <View style={styles.actionGrid}>
                     <AnimatedPressable style={styles.actionBtn} onPress={() => onOpenModal('iap')}>
-                        <AppIcon name="star" size={24} color={palette.text} style={styles.actionIcon} />
-                        <Text style={styles.actionLabel}>訂閱方案</Text>
+                        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                            <AppIcon name="star" size={24} color="#1C2B25" style={{ marginBottom: 6 }} />
+                            <Text style={styles.actionLabel}>訂閱方案</Text>
+                        </View>
                     </AnimatedPressable>
                     <AnimatedPressable style={styles.actionBtn} onPress={() => onOpenModal('bloodHistory')}>
-                        <AppIcon name="history" size={24} color={palette.text} style={styles.actionIcon} />
-                        <Text style={styles.actionLabel}>血檢歷史</Text>
+                        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                            <AppIcon name="history" size={24} color="#1C2B25" style={{ marginBottom: 6 }} />
+                            <Text style={styles.actionLabel}>血檢歷史</Text>
+                        </View>
                     </AnimatedPressable>
                     <AnimatedPressable style={styles.actionBtn} onPress={() => Alert.alert('報告', '報告功能僅在個體檔案中匯出。')}>
-                        <AppIcon name="bar-chart" size={24} color={palette.text} style={styles.actionIcon} />
-                        <Text style={styles.actionLabel}>匯出報告</Text>
+                        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                            <AppIcon name="bar-chart" size={24} color="#1C2B25" style={{ marginBottom: 6 }} />
+                            <Text style={styles.actionLabel}>匯出報告</Text>
+                        </View>
                     </AnimatedPressable>
                     <AnimatedPressable style={styles.actionBtn} onPress={() => onOpenModal('backup')}>
-                        <AppIcon name="save" size={24} color={palette.text} style={styles.actionIcon} />
-                        <Text style={styles.actionLabel}>資料備份</Text>
+                        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                            <AppIcon name="save" size={24} color="#1C2B25" style={{ marginBottom: 6 }} />
+                            <Text style={styles.actionLabel}>資料備份</Text>
+                        </View>
                     </AnimatedPressable>
                     <AnimatedPressable style={styles.actionBtn} onPress={() => Alert.alert('通知', '功能開發中。')}>
-                        <AppIcon name="notifications" size={24} color={palette.text} style={styles.actionIcon} />
-                        <Text style={styles.actionLabel}>通知設定</Text>
+                        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                            <AppIcon name="notifications" size={24} color="#1C2B25" style={{ marginBottom: 6 }} />
+                            <Text style={styles.actionLabel}>通知設定</Text>
+                        </View>
                     </AnimatedPressable>
                     <AnimatedPressable style={styles.actionBtn} onPress={() => Alert.alert('關於', 'PAWAWA v1.6')}>
-                        <AppIcon name="info" size={24} color={palette.text} style={styles.actionIcon} />
-                        <Text style={styles.actionLabel}>關於</Text>
+                        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                            <AppIcon name="info" size={24} color="#1C2B25" style={{ marginBottom: 6 }} />
+                            <Text style={styles.actionLabel}>關於</Text>
+                        </View>
                     </AnimatedPressable>
                 </View>
 

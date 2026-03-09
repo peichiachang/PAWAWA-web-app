@@ -26,13 +26,18 @@ export const mockAiService: AiRecognitionService = {
     const seed = hashSeed(`${input.t0.imageRef || input.t0.uri || ''}:${input.t1.imageRef || input.t1.uri || ''}`);
     const miloGram = Math.round(seededRange(seed + 1, 35, 50));
     const lunaGram = Math.round(seededRange(seed + 7, 28, 46));
+    const totalGram = miloGram + lunaGram;
+    const consumedRatio = Number(seededRange(seed + 12, 0.5, 0.85).toFixed(2));
+    const t0EstimatedGram = consumedRatio > 0 ? Math.round(totalGram / consumedRatio) : undefined;
     return {
       bowlsDetected: 2,
       assignments: [
         { bowlId: 'A', tag: 'Milo', estimatedIntakeGram: miloGram },
         { bowlId: 'B', tag: 'Luna', estimatedIntakeGram: lunaGram },
       ],
-      totalGram: miloGram + lunaGram,
+      totalGram,
+      consumedRatio,
+      t0EstimatedGram,
       isBowlMatch: true,
       confidence: Number(seededRange(seed + 15, 0.65, 0.99).toFixed(2)),
     };

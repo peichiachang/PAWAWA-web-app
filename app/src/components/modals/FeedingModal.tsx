@@ -1,4 +1,4 @@
-import { ActivityIndicator, Alert, Modal, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
 import { useFeeding } from '../../hooks/useFeeding';
 import { FeedingPrecisionMode, FoodType, VesselCalibration, FoodSourceType, IntakeLevel, INTAKE_LEVEL_LABEL, INTAKE_LEVEL_RATIO, HOMEMADE_INGREDIENTS, CapturedImage, getCannedDisplayName, getFeedDisplayName } from '../../types/app';
 import { CatIdentity } from '../../types/domain';
@@ -35,9 +35,11 @@ interface Props {
   initialMode?: 'normal' | 'late_entry' | 'complete_t1';
   /** 待補填時要完成 T1 的食碗 ID（initialMode === 'complete_t1' 時使用） */
   initialVesselIdForT1?: string;
+  /** 內嵌於紀錄模式：不包 Modal，只渲染內容，由外層控制顯示 */
+  embedded?: boolean;
 }
 
-export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'normal', initialVesselIdForT1 }: Props) {
+export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'normal', initialVesselIdForT1, embedded = false }: Props) {
   const {
     t0Done,
     t0Image,
@@ -389,9 +391,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
     setSessionFoodSource('dry_once');
   }, [visible, initialMode, initialVesselIdForT1]);
 
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
-      {capturePhase ? (
+  const content = capturePhase ? (
         <CustomCamera
           title={
             capturePhase === 't0'
@@ -421,12 +421,15 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
           onCancel={() => setCapturePhase(null)}
         />
       ) : (
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
       <SafeAreaView style={styles.modalBackdrop}>
         <View style={styles.modalCard}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{initialMode === 'late_entry' ? '補填記錄' : '食物記錄'}</Text>
-            <Pressable onPress={() => { resetToBlankRecordScreen(); onClose(); }}><Text style={styles.closeText}>×</Text></Pressable>
-          </View>
+          {!embedded && (
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{initialMode === 'late_entry' ? '補填記錄' : '食物記錄'}</Text>
+              <Pressable onPress={() => { resetToBlankRecordScreen(); onClose(); }}><Text style={styles.closeText}>×</Text></Pressable>
+            </View>
+          )}
           <ScrollView style={styles.modalBody}>
             {initialMode === 'late_entry' ? (
               <>
@@ -1472,7 +1475,13 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
           </ScrollView>
         </View>
       </SafeAreaView>
-      )}
+      </KeyboardAvoidingView>
+      );
+
+  if (embedded) return <View style={{ flex: 1 }}>{content}</View>;
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+      {content}
     </Modal>
   );
 }
