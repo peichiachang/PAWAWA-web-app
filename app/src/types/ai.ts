@@ -31,6 +31,8 @@ export interface FeedingVisionResult {
   bowlsDetected: number;
   assignments: BowlDetection[];
   totalGram: number;
+  /** 家庭總攝取克數（與 totalGram 同義，供 reasonableness check 與顯示用） */
+  householdTotalGram?: number;
   consumedRatio?: number; // 0~1，程式端會再映射成離散 consumptionLevel
   /** 離散分級：幾乎全吃完 / 吃了一半以上 / 吃了不到一半 / 幾乎沒吃 */
   consumptionLevel?: ConsumptionLevel;

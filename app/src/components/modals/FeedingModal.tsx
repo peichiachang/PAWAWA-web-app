@@ -1112,10 +1112,13 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="smart-toy" size={18} color="#000" style={{ marginRight: 6 }} /><Text style={styles.aiResultTitle}>AI 分析結果</Text></View>
                     {(() => {
                       const kcalPerGram = nutritionResult?.kcalPerGram || 3.5;
-                      const kcal = calculateDailyKcalIntake(result.totalGram, kcalPerGram);
-                      const maxPossibleGrams = getMaxPossibleGrams(t0Image?.manualWeight, currentVessel?.volumeMl);
+                      const kcal = calculateDailyKcalIntake(result.householdTotalGram, kcalPerGram);
+                      const _density = sessionFoodType === 'wet' ? 0.95 : 0.45;
+                      const maxPossibleGrams =
+                        t0Image?.manualWeight ||
+                        (currentVessel?.volumeMl ? currentVessel.volumeMl * 0.8 * _density : 1000);
                       const confidence = result.confidence ?? 1;
-                      const shouldWarn = confidence < 0.7 || shouldWarnHighIntake(result.totalGram, maxPossibleGrams);
+                      const shouldWarn = confidence < 0.7 || shouldWarnHighIntake(result.householdTotalGram, maxPossibleGrams);
 
                       return (
                         <>
@@ -1137,7 +1140,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                               </Text>
                             )) : null}
                             <Text style={[styles.aiTag, styles.aiTagHighlight]}>
-                              AI 估算攝取：{result.totalGram}g
+                              AI 估算攝取：{result.householdTotalGram ?? result.totalGram}g
                             </Text>
                             <Text style={styles.aiTag}>
                               kcal/g：{kcalPerGram}

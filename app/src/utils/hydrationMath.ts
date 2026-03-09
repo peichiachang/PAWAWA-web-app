@@ -7,34 +7,29 @@ export interface HydrationMathParams {
     vessel?: VesselCalibration;
 }
 
-/** 蒸發計算選項：依水面積與時間時使用 */
-export interface EvaporationOptions {
-    /** 水面暴露面積 (cm²)，碗口面積或由輪廓推得；有值時改為 面積×時間×單位率 */
-    surfaceAreaCm2?: number;
-    /** 每 cm² 每小時蒸發率 (ml)，預設 0.02 */
-    rateMlPerCm2PerHour?: number;
-}
+/** ml evaporated per cm² of water surface per hour at ~25°C indoors */
+export const EVAP_RATE_ML_PER_CM2_PER_HOUR = 0.008;
 
 /**
  * 計算環境自然蒸發量
- * 基於時間差；可選依水面積×時間×率（較符合物理）。
+ * 若提供水面面積（surfaceAreaCm2），使用面積公式：hoursElapsed × surfaceAreaCm2 × EVAP_RATE
+ * 否則退回固定每小時蒸發率（rateMlPerHour）。
  * @param w0Timestamp 初始拍攝時間(ms)
  * @param w1Timestamp 結束拍攝時間(ms)
- * @param rateMlPerHour 每小時蒸發率 (預設 0.5)，僅在未提供 surfaceAreaCm2 時使用
- * @param options 可選：surfaceAreaCm2 時改為 蒸發量 = 時間(h) × 面積(cm²) × rateMlPerCm2PerHour
+ * @param rateMlPerHour 每小時蒸發率 (僅無面積資料時使用，預設 0.5)
+ * @param surfaceAreaCm2 水面面積 cm²（優先使用此參數）
  * @returns 蒸發量 (ml)
  */
 export function calculateEvaporationMl(
     w0Timestamp: number,
     w1Timestamp: number,
     rateMlPerHour: number = 0.5,
-    options?: EvaporationOptions
+    surfaceAreaCm2?: number
 ): number {
     if (w1Timestamp <= w0Timestamp) return 0;
     const hoursElapsed = (w1Timestamp - w0Timestamp) / (1000 * 60 * 60);
-    if (options?.surfaceAreaCm2 != null && options.surfaceAreaCm2 > 0) {
-        const rate = options.rateMlPerCm2PerHour ?? 0.02;
-        return hoursElapsed * options.surfaceAreaCm2 * rate;
+    if (surfaceAreaCm2 && surfaceAreaCm2 > 0) {
+        return hoursElapsed * surfaceAreaCm2 * EVAP_RATE_ML_PER_CM2_PER_HOUR;
     }
     return hoursElapsed * rateMlPerHour;
 }

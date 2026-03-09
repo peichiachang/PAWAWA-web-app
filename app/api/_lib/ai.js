@@ -106,49 +106,91 @@ function handleFeedingMock(body) {
 }
 
 async function handleFeedingGemini(body) {
+  const emptyBowlPart = buildInlineImagePart(body.emptyBowlBase64, body.emptyBowlMimeType || 'image/jpeg');
   const t0Part = buildInlineImagePart(body.t0ImageBase64, body.t0MimeType);
   const t1Part = buildInlineImagePart(body.t1ImageBase64, body.t1MimeType);
-  const imageParts = [t0Part, t1Part].filter(Boolean);
-  const t0RefGrams =
-    body.t0RefGrams != null && Number.isFinite(Number(body.t0RefGrams))
-      ? Math.round(Number(body.t0RefGrams))
-      : body.volumeMl != null && body.volumeMl > 0
-        ? Math.round(body.volumeMl * 0.8 * 0.45)
-        : null;
-  const refHint =
-    t0RefGrams != null && t0RefGrams > 0
-      ? `\nThe bowl when full holds approximately ${t0RefGrams} grams of dry food. Estimate how much was EATEN (0 to ${t0RefGrams}g). consumedGram and consumedRatio should be consistent: consumedRatio ≈ consumedGram / ${t0RefGrams}.\n`
-      : '';
+  const hasEmptyBowl = !!emptyBowlPart;
+
+  const vesselVolumeMl = normalizeNumber(body.vesselVolumeMl, 0);
+  const foodType = body.foodType === 'wet' ? 'wet' : 'dry';
+  const density = foodType === 'wet' ? 0.95 : 0.45;
+  const manualWeight = normalizeNumber(body.manualWeight, 0);
+  const t0RefGrams = manualWeight > 0 ? manualWeight : (vesselVolumeMl > 0 ? Math.round(vesselVolumeMl * 0.8 * density) : 0);
+
+  const calibrationNote = t0RefGrams > 0
+    ? `Bowl: ${vesselVolumeMl > 0 ? vesselVolumeMl + 'ml' : 'unknown volume'}, food: ${foodType} (~${density}g/ml). T0 reference weight: ~${t0RefGrams}g.`
+    : 'Bowl capacity unknown — estimate consumedRatio visually.';
+
+  const wetFoodSection = foodType === 'wet' ? `
+WET FOOD 3D RECOGNITION RULE:
+- Wet food forms a 3D mound, not a flat layer. Focus on highlights, shadows, and texture depth to estimate Y-axis thickness.
+- Do NOT rely purely on 2D horizontal surface area coverage — a thin smear can cover the whole bowl but contain almost no volume.
+- If T1 shows a widespread but extremely THIN film or smear of residue, treat remaining volume as extremely low (consumedRatio > 0.9).
+- For angled (≈45°) views, estimate mound thickness directly from the visible side profile of the food pile.
+- If food has been licked flat into a thin layer, treat remaining volume as ≤ 5% even if surface coverage appears large.` : '';
+
+  const imageRolesSection = hasEmptyBowl
+    ? `You receive THREE images in order:
+- [1] Empty bowl (0% food) — use as contour/texture reference and absolute fill baseline.
+  NOTE: Residual crumbs, food dust, dry smears, or small traces on the empty bowl are irrelevant — treat the empty bowl as 0% fill regardless of minor residues.
+- [2] T0 = bowl immediately after food was placed (full).
+- [3] T1 = bowl after the cat has eaten.
+Return "t0FillRatio" and "t1FillRatio" as absolute fill levels relative to the empty bowl, then consumedRatio = t0FillRatio - t1FillRatio.`
+    : `You receive TWO images in order:
+- [1] T0 = bowl immediately after food was placed (this is the 100% baseline for this meal).
+- [2] T1 = bowl after the cat has eaten.
+Return "consumedRatio" = fraction of T0 that was eaten.`;
+
   const prompt = `
 You are a cat feeding vision analyzer. Return JSON only.
-Compare T0 (full bowl) and T1 (after eating) food amount in the same bowl.
-Important: "consumedGram" = estimated amount EATEN (T0 minus T1), NOT the total amount in the bowl.
-${refHint}
+${calibrationNote}
+
+IMAGE ROLES:
+${imageRolesSection}
+${wetFoodSection}
+
+IMPORTANT RULES:
+- Bowl bottom decorations, patterns, or colored ornaments becoming visible in T1 simply indicate food level has dropped — they do NOT mean the bowl is empty. Estimate remaining food volume carefully.
+- Compare only the food volume, ignoring bowl color and decorative elements.
+
 Return:
-{
-  "consumedGram": number (grams eaten, 0 if almost none, about half of T0 if half eaten),
-  "consumedRatio": number (0-1, fraction eaten),
+${hasEmptyBowl ? `{
+  "t0FillRatio": number (0.0-1.0, T0 fill relative to empty bowl),
+  "t1FillRatio": number (0.0-1.0, T1 fill relative to empty bowl),
+  "consumedRatio": number (= t0FillRatio - t1FillRatio),
   "isBowlMatch": boolean,
   "mismatchReason": string,
   "confidence": number
-}
+}` : `{
+  "consumedRatio": number (0.0-1.0, fraction of T0 eaten),
+  "isBowlMatch": boolean,
+  "mismatchReason": string,
+  "confidence": number
+}`}
 `;
+
+  const imageParts = [emptyBowlPart, t0Part, t1Part].filter(Boolean);
   const raw = await callGeminiForJson(prompt, imageParts);
-  let grams = Math.max(0, Math.round(normalizeNumber(raw.consumedGram ?? raw.totalGram, 0)));
-  if (t0RefGrams != null && t0RefGrams > 0 && grams > t0RefGrams) {
-    grams = t0RefGrams;
+
+  let consumedRatio;
+  if (hasEmptyBowl && raw.t0FillRatio != null && raw.t1FillRatio != null) {
+    const t0Fill = Math.max(0, Math.min(1, normalizeNumber(raw.t0FillRatio, 0.8)));
+    const t1Fill = Math.max(0, Math.min(1, normalizeNumber(raw.t1FillRatio, 0)));
+    consumedRatio = Math.max(0, Math.min(1, t0Fill - t1Fill));
+  } else {
+    consumedRatio = Math.max(0, Math.min(1, normalizeNumber(raw.consumedRatio, 0.5)));
   }
-  let ratio = Number(Math.max(0, Math.min(1, normalizeNumber(raw.consumedRatio, 0.5))).toFixed(2));
-  if (t0RefGrams != null && t0RefGrams > 0) {
-    ratio = Number(Math.max(0, Math.min(1, grams / t0RefGrams)).toFixed(2));
-  }
-  const t0EstimatedGram = ratio > 0 ? Math.round(grams / ratio) : (t0RefGrams != null ? t0RefGrams : undefined);
+
+  // Compute grams using physics-based calibration when available
+  const grams = t0RefGrams > 0
+    ? Math.max(0, Math.round(consumedRatio * t0RefGrams))
+    : Math.max(0, Math.round(normalizeNumber(raw.consumedGram ?? raw.householdTotalGram, 0)));
   return {
     bowlsDetected: 1,
     assignments: [{ bowlId: 'A', tag: 'Household', estimatedIntakeGram: grams }],
     totalGram: grams,
-    consumedRatio: ratio,
-    t0EstimatedGram,
+    householdTotalGram: grams,
+    consumedRatio: Number(consumedRatio.toFixed(2)),
     isBowlMatch: normalizeBoolean(raw.isBowlMatch, true),
     mismatchReason: String(raw.mismatchReason || ''),
     confidence: Number(normalizeNumber(raw.confidence, 0.8).toFixed(2)),
@@ -197,16 +239,63 @@ function handleHydrationMock(body) {
   };
 }
 
+/** ml evaporated per cm² of water surface per hour (~25°C indoors) */
+const EVAP_RATE_ML_PER_CM2_PER_HOUR = 0.008;
+const EVAP_RATE_FLAT_ML_PER_HOUR = 0.5;
+
+function computeEvaporationMl(t0CapturedAt, t1CapturedAt, rimDiameterCm) {
+  const t0 = normalizeNumber(t0CapturedAt, 0);
+  const t1 = normalizeNumber(t1CapturedAt, 0);
+  if (t1 <= t0) return 0;
+  const hoursElapsed = (t1 - t0) / (1000 * 60 * 60);
+  const rim = normalizeNumber(rimDiameterCm, 0);
+  if (rim > 0) {
+    const surfaceAreaCm2 = Math.PI * (rim / 2) * (rim / 2);
+    return hoursElapsed * surfaceAreaCm2 * EVAP_RATE_ML_PER_CM2_PER_HOUR;
+  }
+  return hoursElapsed * EVAP_RATE_FLAT_ML_PER_HOUR;
+}
+
 async function handleHydrationGemini(body) {
   const t0Part = buildInlineImagePart(body.t0ImageBase64, body.t0MimeType);
   const t1Part = buildInlineImagePart(body.t1ImageBase64, body.t1MimeType);
-  const raw = await callGeminiForJson(
-    `Estimate water amount in T0/T1 images. Return JSON: waterT0Ml, waterT1Ml, isBowlMatch, mismatchReason, confidence.`,
-    [t0Part, t1Part].filter(Boolean)
-  );
+
+  const t0LevelNote = body.t0LevelYPct != null ? `\n- The user marked T0 water level at ${Math.round(normalizeNumber(body.t0LevelYPct, 0.5) * 100)}% from the top.` : '';
+  const t1LevelNote = body.t1LevelYPct != null ? `\n- The user marked T1 water level at ${Math.round(normalizeNumber(body.t1LevelYPct, 0.5) * 100)}% from the top.` : '';
+  const vesselNote = body.vesselVolumeMl ? `\nKnown vessel volume: ${normalizeNumber(body.vesselVolumeMl, 0)}ml.` : '';
+
+  const prompt = `
+Analyze two water-bowl images: T0 (initial) and T1 (later).
+Return valid JSON only (no markdown, no extra text).
+${t0LevelNote}${t1LevelNote}${vesselNote}
+If explicit user water-level marks are provided, use them as primary signal.
+
+## OPTICAL CUES FOR WATER (CRITICAL)
+- Do NOT confuse the bottom pattern/logo of the bowl with the water surface.
+- Focus heavily on the MENISCUS (the sharp light reflection ring where water meets the bowl wall).
+- Look for REFRACTION DISTORTION of text/patterns under the water surface to determine true depth.
+- Water causes visible CAUSTIC PATTERNS (bright rippling lines) on the bowl bottom — use these to confirm water presence.
+- Bowl bottom logos/decorations visible through water do NOT mean the bowl is empty; assess actual water depth.
+
+Hard constraints:
+- waterT0Ml >= 0
+- waterT1Ml >= 0
+- waterT1Ml <= waterT0Ml unless clear refill evidence
+- confidence between 0 and 1
+
+JSON schema:
+{
+  "waterT0Ml": number,
+  "waterT1Ml": number,
+  "isBowlMatch": boolean,
+  "mismatchReason": string | null,
+  "confidence": number
+}
+`;
+  const raw = await callGeminiForJson(prompt, [t0Part, t1Part].filter(Boolean));
   const waterT0Ml = Math.max(0, Math.round(normalizeNumber(raw.waterT0Ml, 0)));
-  const waterT1Ml = Math.max(0, Math.round(normalizeNumber(raw.waterT1Ml, 0)));
-  const envFactorMl = 12;
+  const waterT1Ml = Math.max(0, Math.min(waterT0Ml, Math.round(normalizeNumber(raw.waterT1Ml, 0))));
+  const envFactorMl = Math.round(computeEvaporationMl(body.t0CapturedAt, body.t1CapturedAt, body.rimDiameterCm));
   return {
     waterT0Ml,
     waterT1Ml,

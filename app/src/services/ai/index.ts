@@ -117,10 +117,12 @@ function createHttpAiService(baseUrl: string): AiRecognitionService {
         t1ImageRef: input.t1.imageRef || input.t1.uri || '',
         t1ImageBase64: input.t1.imageBase64 || null,
         t1MimeType: input.t1.mimeType || 'image/jpeg',
-        volumeMl: volumeMl ?? undefined,
-        t0RefGrams: t0RefGrams ?? undefined,
-      });
-    },
+        vesselVolumeMl: input.vessel?.volumeMl ?? null,
+        foodType: input.t0.foodType || input.vessel?.foodType || 'dry',
+        manualWeight: input.t0.manualWeight ?? null,
+        emptyBowlBase64: input.vessel?.topViewImageBase64 ?? null,
+        emptyBowlMimeType: 'image/jpeg',
+      }),
     extractNutritionLabel: (input) =>
       post('/ai/nutrition-ocr', mapImage(input)),
     analyzeHydrationImages: (input) =>
@@ -135,6 +137,8 @@ function createHttpAiService(baseUrl: string): AiRecognitionService {
         t1MimeType: input.t1.mimeType || 'image/jpeg',
         t1CapturedAt: input.t1.capturedAt || null,
         t1LevelYPct: input.t1.waterLevelPct ?? null,
+        vesselVolumeMl: input.vessel?.volumeMl ?? null,
+        rimDiameterCm: input.vessel?.rimDiameterCm ?? null,
       }),
     analyzeEliminationImage: (input) =>
       post('/ai/elimination', mapImage(input)),
