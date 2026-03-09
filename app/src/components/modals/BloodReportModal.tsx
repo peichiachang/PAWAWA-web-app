@@ -1,4 +1,5 @@
-import { ActivityIndicator, Modal, Pressable, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../AppIcon';
 import { useBloodReport } from '../../hooks/useBloodReport';
 import { CatIdentity } from '../../types/domain';

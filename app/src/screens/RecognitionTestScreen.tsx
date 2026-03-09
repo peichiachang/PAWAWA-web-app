@@ -9,8 +9,8 @@ import {
   Alert,
   StyleSheet,
   useWindowDimensions,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAiRecognitionService } from '../services/ai';
 import { pickFromCamera, pickFromLibrary } from '../utils/camera';
 import { interpretBloodReport } from '../services/bloodReport';

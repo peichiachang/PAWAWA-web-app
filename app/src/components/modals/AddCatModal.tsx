@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View, TextInput, Alert, Switch, SafeAreaView } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View, TextInput, Alert, Switch } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { styles } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
 import { ChronicCondition, CatIdentity, CatFormData, Gender } from '../../types/domain';

@@ -1,4 +1,5 @@
-import { Modal, Pressable, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedingOwnershipLog, HydrationOwnershipLog, INTAKE_LEVEL_LABEL } from '../../types/app';
 import { EliminationOwnershipLog } from '../../hooks/useElimination';
 import { CatIdentity, MedicationLog, SymptomLog } from '../../types/domain';

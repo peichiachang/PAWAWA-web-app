@@ -1,4 +1,5 @@
-import { Image, Modal, Pressable, SafeAreaView, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodReportRecord } from '../../types/bloodReport';
 import { styles } from '../../styles/common';
 import { AppIcon } from '../AppIcon';

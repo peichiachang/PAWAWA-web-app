@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActiveModal, Level, FeedingOwnershipLog, HydrationOwnershipLog, VesselCalibration, INTAKE_LEVEL_RATIO } from '../types/app';
 import { EliminationOwnershipLog } from '../hooks/useElimination';
@@ -617,12 +617,11 @@ export function HomeContent({
           <AppIcon name="restaurant" size={18} color="#000" style={{ marginRight: 6 }} />
           <Text style={styles.sectionTitle}>食物記錄</Text>
         </View>
-        <FlatList
-          data={recordLists.feedings}
-          keyExtractor={(l) => l.id}
-          scrollEnabled={false}
-          renderItem={({ item: l }) => (
-            <Pressable style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'feeding' })}>
+        {recordLists.feedings.length === 0 ? (
+          <Text style={{ fontSize: 13, color: palette.muted }}>尚無食物紀錄</Text>
+        ) : (
+          recordLists.feedings.map((l) => (
+            <Pressable key={l.id} style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'feeding' })}>
               <View style={styles.recordHeader}>
                 <View style={styles.recordHeaderIcon}>
                   <AppIcon name="restaurant" size={16} color="#000" />
@@ -633,9 +632,8 @@ export function HomeContent({
               <Text style={styles.recordData}>{l.note || '飼料'} - {l.totalGram}g</Text>
               <Text style={styles.recordDesc}>{Math.round(l.kcal ?? l.totalGram * 3)} kcal{l.note ? ` • ${l.note}` : ''}</Text>
             </Pressable>
-          )}
-          ListEmptyComponent={<Text style={{ fontSize: 13, color: palette.muted }}>尚無食物紀錄</Text>}
-        />
+          ))
+        )}
       </View>
 
       <View style={[styles.section, { maxWidth: 320, alignSelf: 'center', width: '100%' }]}>
@@ -643,12 +641,11 @@ export function HomeContent({
           <AppIcon name="opacity" size={18} color="#000" style={{ marginRight: 6 }} />
           <Text style={styles.sectionTitle}>飲水紀錄</Text>
         </View>
-        <FlatList
-          data={recordLists.hydrations}
-          keyExtractor={(l) => l.id}
-          scrollEnabled={false}
-          renderItem={({ item: l }) => (
-            <Pressable style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'hydration' })}>
+        {recordLists.hydrations.length === 0 ? (
+          <Text style={{ fontSize: 13, color: palette.muted }}>尚無飲水紀錄</Text>
+        ) : (
+          recordLists.hydrations.map((l) => (
+            <Pressable key={l.id} style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'hydration' })}>
               <View style={styles.recordHeader}>
                 <View style={styles.recordHeaderIcon}>
                   <AppIcon name="opacity" size={16} color="#000" />
@@ -659,9 +656,8 @@ export function HomeContent({
               <Text style={styles.recordData}>總計：{Math.round(l.actualWaterMl ?? l.totalMl)} ml</Text>
               <Text style={styles.recordDesc}>估算攝取</Text>
             </Pressable>
-          )}
-          ListEmptyComponent={<Text style={{ fontSize: 13, color: palette.muted }}>尚無飲水紀錄</Text>}
-        />
+          ))
+        )}
       </View>
 
       <View style={[styles.section, { maxWidth: 320, alignSelf: 'center', width: '100%' }]}>
@@ -669,12 +665,11 @@ export function HomeContent({
           <AppIcon name="sanitizer" size={18} color="#000" style={{ marginRight: 6 }} />
           <Text style={styles.sectionTitle}>排泄紀錄</Text>
         </View>
-        <FlatList
-          data={recordLists.eliminations}
-          keyExtractor={(l) => l.id}
-          scrollEnabled={false}
-          renderItem={({ item: l }) => (
-            <Pressable style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'elimination' })}>
+        {recordLists.eliminations.length === 0 ? (
+          <Text style={{ fontSize: 13, color: palette.muted }}>尚無排泄紀錄</Text>
+        ) : (
+          recordLists.eliminations.map((l) => (
+            <Pressable key={l.id} style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'elimination' })}>
               <View style={styles.recordHeader}>
                 <View style={styles.recordHeaderIcon}>
                   <AppIcon name="sanitizer" size={16} color="#000" />
@@ -685,9 +680,8 @@ export function HomeContent({
               <Text style={styles.recordData}>{l.shapeType || getBristolLabel(l.bristolType)}</Text>
               <Text style={styles.recordDesc}>{l.color} • {l.abnormal ? '異常' : '正常'}</Text>
             </Pressable>
-          )}
-          ListEmptyComponent={<Text style={{ fontSize: 13, color: palette.muted }}>尚無排泄紀錄</Text>}
-        />
+          ))
+        )}
       </View>
 
       <View style={[styles.section, { maxWidth: 320, alignSelf: 'center', width: '100%' }]}>
@@ -695,12 +689,11 @@ export function HomeContent({
           <AppIcon name="medication" size={18} color="#000" style={{ marginRight: 6 }} />
           <Text style={styles.sectionTitle}>用藥紀錄</Text>
         </View>
-        <FlatList
-          data={recordLists.medications}
-          keyExtractor={(l) => l.id}
-          scrollEnabled={false}
-          renderItem={({ item: l }) => (
-            <Pressable style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'medication' })}>
+        {recordLists.medications.length === 0 ? (
+          <Text style={{ fontSize: 13, color: palette.muted }}>尚無用藥紀錄</Text>
+        ) : (
+          recordLists.medications.map((l) => (
+            <Pressable key={l.id} style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'medication' })}>
               <View style={styles.recordHeader}>
                 <View style={styles.recordHeaderIcon}>
                   <AppIcon name="medication" size={16} color="#000" />
@@ -716,9 +709,8 @@ export function HomeContent({
                 </Text>
               )}
             </Pressable>
-          )}
-          ListEmptyComponent={<Text style={{ fontSize: 13, color: palette.muted }}>尚無用藥紀錄</Text>}
-        />
+          ))
+        )}
       </View>
 
       <View style={[styles.section, { maxWidth: 320, alignSelf: 'center', width: '100%' }]}>
@@ -726,12 +718,11 @@ export function HomeContent({
           <AppIcon name="healing" size={18} color="#000" style={{ marginRight: 6 }} />
           <Text style={styles.sectionTitle}>異常症狀紀錄</Text>
         </View>
-        <FlatList
-          data={recordLists.symptoms}
-          keyExtractor={(l) => l.id}
-          scrollEnabled={false}
-          renderItem={({ item: l }) => (
-            <Pressable style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'symptom' })}>
+        {recordLists.symptoms.length === 0 ? (
+          <Text style={{ fontSize: 13, color: palette.muted }}>尚無症狀紀錄</Text>
+        ) : (
+          recordLists.symptoms.map((l) => (
+            <Pressable key={l.id} style={[styles.recordItem, { borderLeftWidth: 3, borderLeftColor: '#000', padding: 12 }]} onPress={() => onRecordPress?.({ ...l, _type: 'symptom' })}>
               <View style={styles.recordHeader}>
                 <View style={styles.recordHeaderIcon}>
                   <AppIcon name="healing" size={16} color="#000" />
@@ -745,9 +736,8 @@ export function HomeContent({
                 {l.notes ? ` • ${l.notes}` : ''}
               </Text>
             </Pressable>
-          )}
-          ListEmptyComponent={<Text style={{ fontSize: 13, color: palette.muted }}>尚無症狀紀錄</Text>}
-        />
+          ))
+        )}
       </View>
     </>
   );

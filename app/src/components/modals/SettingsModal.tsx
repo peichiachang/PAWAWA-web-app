@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CatIdentity } from '../../types/domain';
 import { styles } from '../../styles/common';
 import { AppIcon } from '../AppIcon';

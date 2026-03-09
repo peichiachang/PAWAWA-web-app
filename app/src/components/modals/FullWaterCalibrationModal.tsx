@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, SafeAreaView, ScrollView, Text, View, Pressable, Alert } from 'react-native';
+import { Modal, ScrollView, Text, View, Pressable, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CustomCamera } from '../CustomCamera';
 import { WaterLevelMarker } from '../WaterLevelMarker';
 import { CapturedImage } from '../../types/app';

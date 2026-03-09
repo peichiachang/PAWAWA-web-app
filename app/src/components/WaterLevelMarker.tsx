@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Image, Text, Pressable, PanResponder, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Image, Text, Pressable, PanResponder, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 /** 標記結果：含百分比與像素 Y 座標（供純數學計算） */
 export type WaterLevelMarkResult = {

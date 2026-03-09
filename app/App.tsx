@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { Alert, SafeAreaView, ScrollView, View, Text, Platform, Modal } from 'react-native';
+import { Alert, ScrollView, View, Text, Platform, Modal } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { getAiRecognitionService } from './src/services/ai';
 import { calculateAdaptiveDailyWaterGoal, calculateDailyKcalGoal } from './src/utils/health';
 import { ActiveModal, BottomTab, Level } from './src/types/app';
@@ -283,8 +284,9 @@ function AppMain() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.appFrame}>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.appFrame}>
         {sharedVessels.loadErrorToast && (
           <View style={{ backgroundColor: palette.dangerBg, borderBottomWidth: 1, borderBottomColor: palette.border, paddingVertical: 8, paddingHorizontal: 16 }}>
             <Text style={{ fontSize: 12, color: palette.dangerText }}>{sharedVessels.loadErrorToast}</Text>
@@ -343,7 +345,7 @@ function AppMain() {
           </ScrollView>
         )}
         <BottomNav activeTab={bottomTab} onTabPress={onBottomTabPress} />
-      </View>
+        </View>
       <StatusBar style="dark" />
 
       {/* 調整：即使相機開啟也保留這些 Modal 在背景，由 GlobalCameraProvider 的相機視圖疊在最上層 */}
@@ -492,7 +494,8 @@ function AppMain() {
       <Modal visible={activeModal === 'recognitionTest'} animationType="slide" presentationStyle="pageSheet">
         <RecognitionTestScreen onClose={closeModal} />
       </Modal>
-    </SafeAreaView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 

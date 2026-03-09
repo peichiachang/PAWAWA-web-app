@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Pressable, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActiveModal } from '../../types/app';
 import { CatIdentity } from '../../types/domain';
 import { styles, palette } from '../../styles/common';

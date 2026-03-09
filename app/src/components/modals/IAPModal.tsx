@@ -1,4 +1,5 @@
-import { Modal, Pressable, ScrollView, Text, View, Alert, SafeAreaView } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { styles } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
 

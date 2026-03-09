@@ -1,4 +1,5 @@
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../AppIcon';
 import { useHydration } from '../../hooks/useHydration';
 import { HYDRATION_W0_TTL_MS } from '../../constants';
