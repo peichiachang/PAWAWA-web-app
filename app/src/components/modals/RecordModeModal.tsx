@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActiveModal } from '../../types/app';
 import { CatIdentity } from '../../types/domain';
 import { styles, palette } from '../../styles/common';
@@ -43,6 +43,7 @@ export function RecordModeModal({
   cats,
   initialTab = 'feeding',
 }: Props) {
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<RecordModeTab>(initialTab);
 
   useEffect(() => {
@@ -69,9 +70,9 @@ export function RecordModeModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
-      <SafeAreaView style={{ flex: 1, backgroundColor: palette.bg }}>
-        <View style={[styles.topNav, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-          <Text style={styles.appTitle}>新增紀錄</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: palette.bg }} edges={['left', 'right', 'bottom']}>
+        <View style={[styles.topNav, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16 + insets.top }]}>
+          <Text style={[styles.appTitle, { marginBottom: 0 }]}>新增紀錄</Text>
           <Pressable onPress={onClose} hitSlop={12} style={{ padding: 8 }}>
             <Text style={{ fontSize: 24, color: palette.text, fontWeight: '300' }}>×</Text>
           </Pressable>

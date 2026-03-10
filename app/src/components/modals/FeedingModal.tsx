@@ -1,7 +1,7 @@
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFeeding } from '../../hooks/useFeeding';
-import { FeedingPrecisionMode, FoodType, VesselCalibration, FoodSourceType, IntakeLevel, INTAKE_LEVEL_LABEL, INTAKE_LEVEL_RATIO, HOMEMADE_INGREDIENTS, CapturedImage, getCannedDisplayName, getFeedDisplayName } from '../../types/app';
+import { VesselCalibration, IntakeLevel, INTAKE_LEVEL_LABEL, INTAKE_LEVEL_RATIO, CapturedImage, getFeedDisplayName } from '../../types/app';
 import { CatIdentity } from '../../types/domain';
 import { styles, palette } from '../../styles/common';
 import { AppIcon } from '../AppIcon';
@@ -20,11 +20,10 @@ const CONSUMPTION_LEVEL_LABEL: Record<ConsumptionLevel, string> = {
   almost_none: '幾乎沒有動過',
 };
 
-const FOOD_SOURCE_LABEL: Record<FoodSourceType, string> = {
-  auto_feeder: '自動餵食器',
-  dry_once: '乾糧（一次給一天）',
-  canned: '罐頭',
-  homemade: '自煮',
+/** 食物紀錄僅兩種模式：乾糧（飼料）、濕食（罐頭） */
+const FEEDING_MODE_LABEL: Record<'dry_once' | 'canned', string> = {
+  dry_once: '乾糧（飼料）',
+  canned: '濕食（罐頭）',
 };
 
 interface Props {
@@ -74,8 +73,6 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
     feedLibrary,
     addFeedLibraryItem,
     setNutritionFromFeedLibraryItem,
-    precisionMode,
-    setPrecisionMode,
     vessels,
   } = feeding;
 
@@ -95,221 +92,23 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
     () => feedLibrary.filter(f => !f.fromSeed),
     [feedLibrary]
   );
-  /** 僅使用者已選擇儲存的罐頭（不顯示種子庫項目） */
-  const savedCanLibrary = useMemo(
-    () => canLibrary.filter(c => !c.fromSeed),
-    [canLibrary]
-  );
-
-  /** 自動餵食器流程：不需相機，單一表單合併今日克數、飼料、攝取程度、貓、儲存 */
-  const renderAutoFeederFlow = () => {
-    const autoFeederVessels = feedingVessels.filter(v => v.feedingContainerMode === 'auto_feeder');
-    const autoVessel = currentVessel?.feedingContainerMode === 'auto_feeder' ? currentVessel : autoFeederVessels[0] ?? null;
-    const dailyTotal = autoFeederDailyGram && parseFloat(autoFeederDailyGram) > 0
-      ? parseFloat(autoFeederDailyGram)
-      : (autoVessel ? (autoVessel.defaultPortionGrams ?? 0) * (autoVessel.dailyPortionCount ?? 1) : 0);
-    const dailyCount = autoVessel?.dailyPortionCount ?? 1;
-    const estimatedKcal = Math.round(dailyTotal * (nutritionResult?.kcalPerGram || 3.5));
-
-    return (
-      <>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-          <Text style={{ fontSize: 12, color: palette.muted }}>已選：{FOOD_SOURCE_LABEL.auto_feeder}</Text>
-          <Pressable onPress={() => { setSessionFoodSource(null); setAutoFeederT0Confirmed(false); }} style={{ marginLeft: 8 }}><Text style={{ fontSize: 12, color: palette.primary, fontWeight: '600' }}>變更</Text></Pressable>
-        </View>
-        <View style={[styles.infoBox, { marginBottom: 16 }]}>
-          <Text style={[styles.formLabel, { marginBottom: 8 }]}>今日設定（自動帶入，可修改）</Text>
-          <Text style={{ fontSize: 13, color: palette.text, marginBottom: 4 }}>飼料：{autoVessel?.name ?? '未命名自動餵食器'}</Text>
-          <Text style={{ fontSize: 13, color: palette.text, marginBottom: 4 }}>每日總克數：{dailyTotal > 0 ? `${dailyTotal}g／${dailyCount}次` : '—'}</Text>
-          <Text style={{ fontSize: 13, color: palette.muted }}>預估熱量：{dailyTotal > 0 ? `約 ${estimatedKcal} kcal` : '—'}</Text>
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>今日總克數 (g)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={dailyTotal > 0 ? String(dailyTotal) : '例：40'}
-            keyboardType="numeric"
-            value={autoFeederDailyGram}
-            onChangeText={setAutoFeederDailyGram}
-          />
-          <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>可沿用上方自動帶入值或手動輸入</Text>
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>選擇已存飼料（選填，用於熱量估算）</Text>
-          <Pressable
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surface }}
-            onPress={() => setAutoFeederFeedSelectOpen((v) => !v)}
-          >
-            <Text style={{ fontSize: 14, color: nutritionResult ? palette.text : palette.muted }} numberOfLines={1}>
-              {nutritionResult ? `${nutritionResult.rawText}（${nutritionResult.kcalPerGram} kcal/g）` : '請選擇一項'}
-            </Text>
-            <Text style={{ fontSize: 14, color: palette.muted }}>{autoFeederFeedSelectOpen ? '▲' : '▼'}</Text>
-          </Pressable>
-          {autoFeederFeedSelectOpen && (
-            <>
-              <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -280, zIndex: 1 }} onPress={() => setAutoFeederFeedSelectOpen(false)} />
-              <View style={{ minHeight: 48, maxHeight: 220, marginTop: 6, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.surface, borderRadius: 8, zIndex: 2, overflow: 'hidden' }}>
-                {savedFeedLibrary.length === 0 ? (
-                  <View style={{ paddingVertical: 16, paddingHorizontal: 14 }}>
-                    <Text style={{ fontSize: 12, color: palette.muted }}>尚無已儲存的飼料，請前往個人 → 飼料設定選擇平時餵的飼料</Text>
-                  </View>
-                ) : (
-                  <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
-                    {savedFeedLibrary.map((feed) => (
-                      <Pressable
-                        key={feed.id}
-                        style={{ paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: palette.border }}
-                        onPress={() => { setNutritionFromFeedLibraryItem(feed); setAutoFeederFeedSelectOpen(false); }}
-                      >
-                        <Text style={{ fontSize: 14, fontWeight: nutritionResult?.rawText === getFeedDisplayName(feed) ? '600' : '400', color: palette.text }} numberOfLines={2}>
-                          {getFeedDisplayName(feed)}（{feed.kcalPerGram} kcal/g）
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                )}
-              </View>
-            </>
-          )}
-          {nutritionResult != null && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
-              <Pressable onPress={clearNutrition} style={{ padding: 6, borderWidth: 1, borderRadius: 4, borderColor: '#dc2626' }}>
-                <Text style={{ fontSize: 11, color: '#dc2626' }}>清除已選飼料</Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>成分表 OCR（選填）</Text>
-          <Text style={{ fontSize: 11, color: palette.muted, marginBottom: 8 }}>只有點擊下方按鈕並「拍攝／上傳標籤照片」後才會進行 AI 辨識；僅選擇已存飼料不會觸發 OCR。</Text>
-          <Pressable style={styles.cameraUpload} onPress={() => setCapturePhase('nutrition')}>
-            <AppIcon name="receipt" size={28} color="#000" style={styles.cameraIcon} />
-            <Text style={styles.cameraText}>掃描成分表／飼料標籤</Text>
-          </Pressable>
-          {nutritionResult != null && nutritionImage != null && (
-            <View style={[styles.aiResult, { marginTop: 8 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                <AppIcon name="receipt" size={18} color="#000" style={{ marginRight: 6 }} />
-                <Text style={styles.aiResultTitle}>成分表 OCR 結果</Text>
-              </View>
-              <View style={styles.aiTags}>
-                <Text style={[styles.aiTag, styles.aiTagHighlight]}>熱量：{nutritionResult.kcalPerGram} kcal/g</Text>
-                <Text style={styles.aiTag}>蛋白：{nutritionResult.proteinPct}%</Text>
-                <Text style={styles.aiTag}>磷：{nutritionResult.phosphorusPct}%</Text>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                <Pressable onPress={() => setCapturePhase('nutrition')} style={{ padding: 6, borderWidth: 1, borderRadius: 4, borderColor: '#166534' }}>
-                  <Text style={{ fontSize: 11, color: '#166534' }}>重新拍攝</Text>
-                </Pressable>
-                <Pressable onPress={clearNutrition} style={{ padding: 6, borderWidth: 1, borderRadius: 4, borderColor: '#dc2626' }}>
-                  <Text style={{ fontSize: 11, color: '#dc2626' }}>刪除照片</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    addFeedLibraryItem({
-                      product_name: (nutritionResult.rawText?.trim()) || `營養標籤 ${new Date().toISOString().slice(0, 10)}`,
-                      display_name: (nutritionResult.rawText?.trim()) || `營養標籤 ${new Date().toISOString().slice(0, 10)}`,
-                      food_form: 'dry',
-                      is_prescription: 'no',
-                      kcalPerGram: nutritionResult.kcalPerGram,
-                    });
-                    Alert.alert('已加入飼料庫', '之後可在「選擇已存飼料」或個人 → 飼料設定中選用。');
-                  }}
-                  style={{ padding: 6, borderWidth: 1, borderRadius: 4, borderColor: '#2563eb' }}
-                >
-                  <Text style={{ fontSize: 11, color: '#2563eb' }}>存進飼料庫</Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-          {nutritionResult != null && nutritionImage == null && (
-            <View style={[styles.aiResult, { marginTop: 8, opacity: 0.9 }]}>
-              <Text style={styles.aiResultTitle}>目前熱量來源：已選飼料</Text>
-              <Text style={[styles.aiTag, styles.aiTagHighlight]}>熱量：{nutritionResult.kcalPerGram} kcal/g</Text>
-              <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>蛋白／磷未辨識（僅來自已選飼料）。若要由 AI 辨識標籤，請點上方「掃描成分表／飼料標籤」並拍照。</Text>
-              <Pressable onPress={clearNutrition} style={{ alignSelf: 'flex-start', padding: 6, borderWidth: 1, borderRadius: 4, borderColor: '#dc2626', marginTop: 6 }}>
-                <Text style={{ fontSize: 11, color: '#dc2626' }}>清除已選飼料</Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>攝取程度</Text>
-          {(['almost_none', 'some', 'half', 'most', 'all'] as IntakeLevel[]).map((lv) => (
-            <Pressable key={lv} style={[styles.choiceBtn, selectedIntakeLevel === lv && styles.choiceBtnActive, { marginBottom: 8 }]} onPress={() => setSelectedIntakeLevel(lv)}>
-              <Text style={[styles.choiceBtnText, selectedIntakeLevel === lv && styles.choiceBtnTextActive]}>{INTAKE_LEVEL_LABEL[lv]}</Text>
-            </Pressable>
-          ))}
-        </View>
-        {selectedIntakeLevel != null && dailyTotal > 0 && (
-          <Text style={{ fontSize: 11, color: palette.muted, marginBottom: 12 }}>
-            預估攝取：約 {Math.round(dailyTotal * INTAKE_LEVEL_RATIO[selectedIntakeLevel])}g／約 {Math.round(dailyTotal * INTAKE_LEVEL_RATIO[selectedIntakeLevel] * (nutritionResult?.kcalPerGram || 3.5))} kcal（僅供參考）
-          </Text>
-        )}
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>屬於哪隻貓？</Text>
-          <View style={[styles.choiceRow, { flexWrap: 'wrap', gap: 8 }]}>
-            <Pressable style={[styles.choiceBtn, intakeOnlyTagId === null && styles.choiceBtnActive]} onPress={() => setIntakeOnlyTagId(null)}>
-              <Text style={[styles.choiceBtnText, intakeOnlyTagId === null && styles.choiceBtnTextActive]}>家庭（共用）</Text>
-            </Pressable>
-            {cats.map(cat => (
-              <Pressable key={cat.id} style={[styles.choiceBtn, intakeOnlyTagId === cat.id && styles.choiceBtnActive]} onPress={() => setIntakeOnlyTagId(cat.id)}>
-                <Text style={[styles.choiceBtnText, intakeOnlyTagId === cat.id && styles.choiceBtnTextActive]}>{cat.name}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-        <Pressable
-          style={styles.primaryBtn}
-          onPress={() => {
-            const g = dailyTotal || parseFloat(autoFeederDailyGram);
-            if (!g || g <= 0) { Alert.alert('請輸入今日總克數', '請輸入或確認今日總克數（g）。'); return; }
-            if (!selectedIntakeLevel) { Alert.alert('請選擇攝取程度', '請選擇貓咪的進食程度。'); return; }
-            saveIntakeOnlyLog(g, selectedIntakeLevel, 'auto_feeder', intakeOnlyTagId, resetToBlankRecordScreen);
-          }}
-        >
-          <Text style={styles.primaryBtnText}>儲存記錄</Text>
-        </Pressable>
-      </>
-    );
-  };
-
   const [manualWeight, setManualWeight] = useState('');
   const [inputMode, setInputMode] = useState<'camera' | 'manual'>('camera');
   const [manualGrams, setManualGrams] = useState('');
   const [manualTagId, setManualTagId] = useState<string | null>(null);
   const [manualFoodType, setManualFoodType] = useState('');
   const [note, setNote] = useState('');
-  const [sessionFoodType, setSessionFoodType] = useState<FoodType>('dry');
   const [capturePhase, setCapturePhase] = useState<'t0' | 't1' | 'nutrition' | null>(null);
   const [manualBoundaryLevel, setManualBoundaryLevel] = useState<ConsumptionLevel | null>(null);
-  const [sessionFoodSource, setSessionFoodSource] = useState<FoodSourceType | null>(null);
-  /** 待補填進入時直接視為已選乾糧一次給一天，避免先顯示食物類型選擇 */
+  /** 乾糧（飼料）／濕食（罐頭），預設乾糧；一切換到食物紀錄即顯示紀錄表，不需再選類型 */
+  const [sessionFoodSource, setSessionFoodSource] = useState<'dry_once' | 'canned'>('dry_once');
   const effectiveSessionFoodSource = (initialMode === 'complete_t1' && initialVesselIdForT1) ? 'dry_once' as const : sessionFoodSource;
   const [selectedIntakeLevel, setSelectedIntakeLevel] = useState<IntakeLevel | null>(null);
-  const [autoFeederDailyGram, setAutoFeederDailyGram] = useState('');
   const [intakeOnlyTagId, setIntakeOnlyTagId] = useState<string | null>(null);
-  /** Spec v3：自動餵食器 T0 確認後才顯示 T1（收碗記錄） */
-  const [autoFeederT0Confirmed, setAutoFeederT0Confirmed] = useState(false);
-  /** Spec v3：罐頭 T0 儲存後才顯示 T1 */
-  const [cannedT0Saved, setCannedT0Saved] = useState(false);
-  const [cannedSelectedCanId, setCannedSelectedCanId] = useState<string | null>(null);
-  const [cannedGrams, setCannedGrams] = useState('');
-  /** Spec v3：自煮已選食材 id 列表 */
-  const [homemadeSelectedIds, setHomemadeSelectedIds] = useState<string[]>([]);
-  const [homemadeT0Saved, setHomemadeT0Saved] = useState(false);
-  const [addCanMode, setAddCanMode] = useState(false);
-  const [newCanName, setNewCanName] = useState('');
-  const [newCanGrams, setNewCanGrams] = useState('');
-  /** 罐頭 T1 收碗照（選填，目前僅供記錄不跑 AI） */
-  const [cannedT1Image, setCannedT1Image] = useState<CapturedImage | null>(null);
   /** 補填記錄：參考克數、記錄日期（今天/昨天/前天） */
   const [lateEntryGrams, setLateEntryGrams] = useState('');
   const [lateEntryDateOption, setLateEntryDateOption] = useState<'today' | 'yesterday' | '2days'>('today');
-  /** 自動餵食器流程：選擇已存飼料列表是否展開 */
   const [autoFeederFeedSelectOpen, setAutoFeederFeedSelectOpen] = useState(false);
-  /** 罐頭流程：選擇罐頭列表是否展開 */
-  const [cannedCanSelectOpen, setCannedCanSelectOpen] = useState(false);
 
   function resetToBlankRecordScreen() {
     feeding.openReset();
@@ -321,27 +120,16 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
     setManualFoodType('');
     setManualBoundaryLevel(null);
     setNote('');
-    setSessionFoodSource(null);
+    setSessionFoodSource('dry_once');
     setSelectedIntakeLevel(null);
-    setAutoFeederDailyGram('');
     setIntakeOnlyTagId(null);
-    setAutoFeederT0Confirmed(false);
-    setCannedT0Saved(false);
-    setCannedSelectedCanId(null);
-    setCannedGrams('');
-    setHomemadeSelectedIds([]);
-    setHomemadeT0Saved(false);
-    setAddCanMode(false);
-    setNewCanName('');
-    setNewCanGrams('');
-    setCannedT1Image(null);
     setLateEntryGrams('');
     setLateEntryDateOption('today');
     setAutoFeederFeedSelectOpen(false);
-    setCannedCanSelectOpen(false);
   }
 
-  const t0RefGramsForBoundary = t0Image?.manualWeight ?? currentVessel?.maxGramsWhenFull ?? (currentVessel?.volumeMl ? currentVessel.volumeMl * 0.8 * 0.45 : 500);
+  const wetDensity = sessionFoodSource === 'canned' ? 0.95 : 0.45;
+  const t0RefGramsForBoundary = t0Image?.manualWeight ?? currentVessel?.maxGramsWhenFull ?? (currentVessel?.volumeMl ? currentVessel.volumeMl * 0.8 * wetDensity : 500);
 
   const gramsByLevel = (level: ConsumptionLevel): number => {
     const map: Record<ConsumptionLevel, number> = {
@@ -363,20 +151,6 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
   useEffect(() => {
     setManualBoundaryLevel(null);
   }, [result?.consumedRatio, result?.totalGram, t1Image?.uri, visible]);
-
-  // 切換食碗時，同步食物類型（沿用食碗設定或預設乾飼料）
-  useEffect(() => {
-    setSessionFoodType((currentVessel?.foodType as FoodType) || 'dry');
-  }, [currentVessel?.id, currentVessel?.foodType]);
-
-  // Spec v3：選擇自動餵食器時，若目前選中的不是自動餵食器則自動選第一個
-  useEffect(() => {
-    if (sessionFoodSource !== 'auto_feeder') return;
-    const autoFeederVessels = feedingVessels.filter(v => v.feedingContainerMode === 'auto_feeder');
-    if (autoFeederVessels.length === 0) return;
-    const isCurrentAuto = currentVessel?.feedingContainerMode === 'auto_feeder';
-    if (!isCurrentAuto) selectVessel(autoFeederVessels[0].id);
-  }, [sessionFoodSource, feedingVessels, currentVessel?.feedingContainerMode]);
 
   // 可分辨貓咪時，若尚未選擇且有多隻貓，預設選第一隻
   useEffect(() => {
@@ -410,11 +184,10 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
           }
           onCapture={(image) => {
             if (capturePhase === 't0') {
-              const hasDefault = sessionFoodType === 'dry' && (currentVessel?.defaultPortionGrams ?? 0) > 0;
+              const hasDefault = (currentVessel?.defaultPortionGrams ?? 0) > 0;
               const t0Grams = hasDefault ? currentVessel!.defaultPortionGrams : (parseFloat(manualWeight) || undefined);
-              void submitT0Image(image, t0Grams);
-            } else if (capturePhase === 't1' && sessionFoodSource === 'canned') {
-              setCannedT1Image(image);
+              const foodType = sessionFoodSource === 'canned' ? 'wet' : 'dry';
+              void submitT0Image(image, t0Grams, foodType);
             } else if (capturePhase === 't1') void submitT1Image(image);
             else void submitNutritionImage(image);
             setCapturePhase(null);
@@ -552,326 +325,38 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                   <Text style={styles.primaryBtnText}>儲存記錄</Text>
                 </Pressable>
               </View>
-            ) : effectiveSessionFoodSource === null ? (
+            ) : (
               <>
-                <Text style={[styles.formLabel, { marginBottom: 8 }]}>食物類型</Text>
-                <View style={{ gap: 8 }}>
-                  {(['auto_feeder', 'dry_once', 'canned', 'homemade'] as FoodSourceType[]).map((src) => (
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                  {(['dry_once', 'canned'] as const).map((mode) => (
                     <Pressable
-                      key={src}
-                      style={{ paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surface }}
-                      onPress={() => setSessionFoodSource(src)}
+                      key={mode}
+                      style={[styles.choiceBtn, effectiveSessionFoodSource === mode && styles.choiceBtnActive, { flex: 1 }]}
+                      onPress={() => {
+                        if (mode !== effectiveSessionFoodSource) {
+                          feeding.openReset();
+                          setCapturePhase(null);
+                        }
+                        setSessionFoodSource(mode);
+                      }}
                     >
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: palette.text }}>
-                        {src === 'auto_feeder' && '🤖 '}
-                        {src === 'dry_once' && '🌾 '}
-                        {src === 'canned' && '🥫 '}
-                        {src === 'homemade' && '🍳 '}
-                        {FOOD_SOURCE_LABEL[src]}
-                      </Text>
-                      <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
-                        {src === 'auto_feeder' && '不需拍照，手動輸入克數與攝取程度'}
-                        {src === 'dry_once' && '放飯拍照 + 收碗拍照 + 攝取程度'}
-                        {src === 'canned' && '選罐頭 + 克數 + 收碗攝取程度'}
-                        {src === 'homemade' && '選食材 + 攝取程度'}
+                      <Text style={[styles.choiceBtnText, effectiveSessionFoodSource === mode && styles.choiceBtnTextActive]}>
+                        {FEEDING_MODE_LABEL[mode]}
                       </Text>
                     </Pressable>
                   ))}
                 </View>
-                <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: palette.border }}>
-                  <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 8 }}>找不到合適選項？</Text>
-                  <Pressable
-                    style={{ paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surfaceSoft }}
-                    onPress={() => setInputMode('manual')}
-                  >
-                    <Text style={{ fontSize: 13, color: palette.muted }}>✏️ 手動輸入</Text>
-                  </Pressable>
-                </View>
-              </>
-            ) : effectiveSessionFoodSource === 'auto_feeder' ? (
-              renderAutoFeederFlow()
-            ) : (
-              <>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                  <Text style={{ fontSize: 12, color: palette.muted }}>已選：{effectiveSessionFoodSource ? FOOD_SOURCE_LABEL[effectiveSessionFoodSource] : ''}</Text>
-                  <Pressable
-                    onPress={() => {
-                      setSessionFoodSource(null);
-                      setSelectedIntakeLevel(null);
-                      setAddCanMode(false);
-                      setCannedT0Saved(false);
-                      setCannedSelectedCanId(null);
-                      setCannedGrams('');
-                      setCannedCanSelectOpen(false);
-                    }}
-                    style={{ marginLeft: 8 }}
-                  >
-                    <Text style={{ fontSize: 12, color: palette.primary, fontWeight: '600' }}>變更</Text>
-                  </Pressable>
-                </View>
 
-                {effectiveSessionFoodSource === 'canned' && !cannedT0Saved && (
-                  <>
-                    <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>放飯記錄</Text>
-                      <Text style={styles.formLabel}>選擇罐頭</Text>
-                      {addCanMode ? (
-                        <View style={{ marginTop: 8, padding: 12, backgroundColor: palette.surfaceSoft, borderRadius: 8 }}>
-                          <TextInput style={styles.input} placeholder="罐頭名稱" value={newCanName} onChangeText={setNewCanName} />
-                          <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="克數（例：80）" keyboardType="numeric" value={newCanGrams} onChangeText={setNewCanGrams} />
-                          <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                            <Pressable style={[styles.primaryBtn, { flex: 1 }]} onPress={() => {
-                              const g = parseFloat(newCanGrams);
-                              if (!newCanName.trim()) { Alert.alert('請輸入罐頭名稱'); return; }
-                              if (!g || g <= 0) { Alert.alert('請輸入克數', '克數必須大於 0。'); return; }
-                              const id = addCanLibraryItem({ product_name: newCanName.trim(), display_name: newCanName.trim(), food_form: 'wet', is_prescription: 'no', defaultGrams: g });
-                              setCannedSelectedCanId(id);
-                              setCannedGrams(String(g));
-                              setAddCanMode(false);
-                              setCannedCanSelectOpen(false);
-                              setNewCanName('');
-                              setNewCanGrams('');
-                            }}>
-                              <Text style={styles.primaryBtnText}>加入並選取</Text>
-                            </Pressable>
-                            <Pressable
-                              style={[styles.choiceBtn, { flex: 1 }]}
-                              onPress={() => {
-                                setAddCanMode(false);
-                                setNewCanName('');
-                                setNewCanGrams('');
-                                if (canLibrary.length === 0) {
-                                  setSessionFoodSource(null);
-                                  setCannedSelectedCanId(null);
-                                  setCannedGrams('');
-                                }
-                              }}
-                            >
-                              <Text style={styles.choiceBtnText}>取消</Text>
-                            </Pressable>
-                          </View>
-                        </View>
-                      ) : (
-                        <>
-                          <Pressable
-                            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: palette.border, borderRadius: 8, backgroundColor: palette.surface, marginTop: 8 }}
-                            onPress={() => setCannedCanSelectOpen((v) => !v)}
-                          >
-                            <Text style={{ fontSize: 14, color: cannedSelectedCanId ? palette.text : palette.muted }} numberOfLines={1}>
-                              {cannedSelectedCanId
-                                ? (() => {
-                                    const can = canLibrary.find(c => c.id === cannedSelectedCanId);
-                                    return can ? `${getCannedDisplayName(can)}（${cannedGrams || (can.defaultGrams ?? 80)}g）` : '請選擇一項';
-                                  })()
-                                : '請選擇一項'}
-                            </Text>
-                            <Text style={{ fontSize: 14, color: palette.muted }}>{cannedCanSelectOpen ? '▲' : '▼'}</Text>
-                          </Pressable>
-                          {cannedCanSelectOpen && (
-                            <>
-                              <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -320, zIndex: 1 }} onPress={() => setCannedCanSelectOpen(false)} />
-                              <View style={{ minHeight: 48, maxHeight: 220, marginTop: 6, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.surface, borderRadius: 8, zIndex: 2, overflow: 'hidden' }}>
-                        {savedCanLibrary.length === 0 ? (
-                          <View style={{ paddingVertical: 16, paddingHorizontal: 14 }}>
-                            <Text style={{ fontSize: 12, color: palette.muted }}>尚無已儲存的罐頭，請前往個人 → 罐頭庫選擇平時餵的罐頭</Text>
-                          </View>
-                        ) : (
-                          <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
-                            {savedCanLibrary.map((can) => (
-                                      <Pressable
-                                        key={can.id}
-                                        style={{ paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: palette.border }}
-                                        onPress={() => { setCannedSelectedCanId(can.id); setCannedGrams(String(can.defaultGrams ?? 80)); setCannedCanSelectOpen(false); }}
-                                      >
-                                        <Text style={{ fontSize: 14, fontWeight: cannedSelectedCanId === can.id ? '600' : '400', color: palette.text }} numberOfLines={2}>
-                                          {getCannedDisplayName(can)}（{can.defaultGrams ?? 80}g）
-                                        </Text>
-                                      </Pressable>
-                                    ))}
-                                    <Pressable
-                                      style={{ paddingVertical: 12, paddingHorizontal: 14, borderStyle: 'dashed', borderTopWidth: 1, borderColor: palette.border }}
-                                      onPress={() => { setAddCanMode(true); setCannedCanSelectOpen(false); }}
-                                    >
-                                      <Text style={[styles.choiceBtnText, { color: palette.primary }]}>＋ 新增罐頭</Text>
-                                    </Pressable>
-                                  </ScrollView>
-                                )}
-                              </View>
-                            </>
-                          )}
-                          <View style={[styles.formGroup, { marginTop: 16 }]}>
-                            <Text style={styles.formLabel}>克數（自動帶入，可修改）</Text>
-                            <TextInput style={styles.input} keyboardType="numeric" value={cannedGrams} onChangeText={setCannedGrams} placeholder="例：80" />
-                          </View>
-                          <Pressable style={styles.primaryBtn} onPress={() => {
-                            const g = parseFloat(cannedGrams);
-                            if (!cannedSelectedCanId) { Alert.alert('請選擇罐頭', '請從清單選擇或新增一筆罐頭。'); return; }
-                            if (!g || g <= 0) { Alert.alert('請輸入克數', '克數必須大於 0。'); return; }
-                            setCannedT0Saved(true);
-                          }}>
-                            <Text style={styles.primaryBtnText}>儲存 T0</Text>
-                          </Pressable>
-                        </>
-                      )}
-                    </View>
-                  </>
-                )}
-
-                {effectiveSessionFoodSource === 'canned' && cannedT0Saved && (
-                  <>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                      <Text style={{ fontSize: 12, color: palette.muted }}>收碗記錄（T1）</Text>
-                      <Pressable onPress={() => { setCannedT0Saved(false); setSelectedIntakeLevel(null); setCannedT1Image(null); }} style={{ marginLeft: 8 }}><Text style={{ fontSize: 12, color: palette.primary, fontWeight: '600' }}>重設 T0</Text></Pressable>
-                    </View>
-                    <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>收碗照（選填）</Text>
-                      {cannedT1Image ? (
-                        <View style={{ padding: 12, backgroundColor: palette.surfaceSoft, borderWidth: 1, borderColor: palette.primary, borderRadius: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <AppIcon name="check-circle" size={18} color={palette.primary} style={{ marginRight: 6 }} />
-                            <Text style={{ fontSize: 12, fontWeight: '600', color: palette.text }}>已拍攝收碗照</Text>
-                          </View>
-                          <Pressable onPress={() => setCapturePhase('t1')} style={{ padding: 6, backgroundColor: palette.primary, borderRadius: 6 }}>
-                            <Text style={{ fontSize: 11, color: palette.onPrimary, fontWeight: '600' }}>重新拍攝</Text>
-                          </Pressable>
-                        </View>
-                      ) : (
-                        <Pressable style={[styles.cameraUpload, { marginTop: 4 }]} onPress={() => setCapturePhase('t1')}>
-                          <AppIcon name="camera-alt" size={28} color="#000" style={styles.cameraIcon} />
-                          <Text style={styles.cameraText}>拍攝剩餘狀態（選填）</Text>
-                        </Pressable>
-                      )}
-                    </View>
-                    <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>攝取程度</Text>
-                      {(['almost_none', 'some', 'half', 'most', 'all'] as IntakeLevel[]).map((lv) => (
-                        <Pressable key={lv} style={[styles.choiceBtn, selectedIntakeLevel === lv && styles.choiceBtnActive, { marginBottom: 8 }]} onPress={() => setSelectedIntakeLevel(lv)}>
-                          <Text style={[styles.choiceBtnText, selectedIntakeLevel === lv && styles.choiceBtnTextActive]}>{INTAKE_LEVEL_LABEL[lv]}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                    {selectedIntakeLevel != null && cannedGrams && parseFloat(cannedGrams) > 0 && (() => {
-                      const grams = parseFloat(cannedGrams);
-                      const selectedCan = canLibrary.find(c => c.id === cannedSelectedCanId);
-                      const kcalPer100 = selectedCan?.kcalPer100 ?? 120;
-                      const estGram = Math.round(grams * INTAKE_LEVEL_RATIO[selectedIntakeLevel]);
-                      const estKcal = Math.round((estGram * kcalPer100) / 100);
-                      return (
-                        <Text style={{ fontSize: 11, color: palette.muted, marginBottom: 12 }}>
-                          預估攝取：約 {estKcal} kcal（僅供參考）
-                        </Text>
-                      );
-                    })()}
-                    <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>屬於哪隻貓？</Text>
-                      <View style={[styles.choiceRow, { flexWrap: 'wrap', gap: 8 }]}>
-                        <Pressable style={[styles.choiceBtn, intakeOnlyTagId === null && styles.choiceBtnActive]} onPress={() => setIntakeOnlyTagId(null)}>
-                          <Text style={[styles.choiceBtnText, intakeOnlyTagId === null && styles.choiceBtnTextActive]}>家庭（共用）</Text>
-                        </Pressable>
-                        {cats.map(cat => (
-                          <Pressable key={cat.id} style={[styles.choiceBtn, intakeOnlyTagId === cat.id && styles.choiceBtnActive]} onPress={() => setIntakeOnlyTagId(cat.id)}>
-                            <Text style={[styles.choiceBtnText, intakeOnlyTagId === cat.id && styles.choiceBtnTextActive]}>{cat.name}</Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    </View>
-                    <Pressable style={styles.primaryBtn} onPress={() => {
-                      if (!cannedSelectedCanId) return;
-                      const g = parseFloat(cannedGrams);
-                      if (!g || g <= 0) { Alert.alert('請輸入克數'); return; }
-                      if (!selectedIntakeLevel) { Alert.alert('請選擇攝取程度'); return; }
-                      const selectedCan = canLibrary.find(c => c.id === cannedSelectedCanId);
-                      saveCannedLog(cannedSelectedCanId, g, selectedIntakeLevel, intakeOnlyTagId, resetToBlankRecordScreen, selectedCan?.kcalPer100);
-                    }}>
-                      <Text style={styles.primaryBtnText}>儲存記錄</Text>
-                    </Pressable>
-                  </>
-                )}
-
-                {effectiveSessionFoodSource === 'homemade' && !homemadeT0Saved && (
-                  <>
-                    <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>放飯記錄</Text>
-                      <Text style={styles.formLabel}>選擇食材</Text>
-                      <View style={{ marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                        {HOMEMADE_INGREDIENTS.map((ing) => {
-                          const active = homemadeSelectedIds.includes(ing.id);
-                          return (
-                            <Pressable
-                              key={ing.id}
-                              style={[styles.choiceBtn, active && styles.choiceBtnActive]}
-                              onPress={() => setHomemadeSelectedIds(prev => active ? prev.filter(x => x !== ing.id) : [...prev, ing.id])}
-                            >
-                              <Text style={[styles.choiceBtnText, active && styles.choiceBtnTextActive]}>{ing.label}</Text>
-                            </Pressable>
-                          );
-                        })}
-                      </View>
-                      {homemadeSelectedIds.length > 0 && (() => {
-                        const selected = HOMEMADE_INGREDIENTS.filter(i => homemadeSelectedIds.includes(i.id));
-                        const minK = selected.reduce((s, i) => s + i.minKcal, 0);
-                        const maxK = selected.reduce((s, i) => s + i.maxKcal, 0);
-                        return (
-                          <Text style={{ fontSize: 11, color: palette.muted, marginTop: 12 }}>
-                            熱量參考：約 {minK}～{maxK} kcal（僅供參考）
-                          </Text>
-                        );
-                      })()}
-                      <Pressable style={[styles.primaryBtn, { marginTop: 16 }]} onPress={() => {
-                        if (homemadeSelectedIds.length === 0) { Alert.alert('請至少選擇一項食材'); return; }
-                        setHomemadeT0Saved(true);
-                      }}>
-                        <Text style={styles.primaryBtnText}>儲存 T0</Text>
-                      </Pressable>
-                    </View>
-                  </>
-                )}
-
-                {effectiveSessionFoodSource === 'homemade' && homemadeT0Saved && (
-                  <>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                      <Text style={{ fontSize: 12, color: palette.muted }}>收碗記錄（T1）</Text>
-                      <Pressable onPress={() => { setHomemadeT0Saved(false); setSelectedIntakeLevel(null); }} style={{ marginLeft: 8 }}><Text style={{ fontSize: 12, color: palette.primary, fontWeight: '600' }}>重設 T0</Text></Pressable>
-                    </View>
-                    <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>攝取程度</Text>
-                      {(['almost_none', 'some', 'half', 'most', 'all'] as IntakeLevel[]).map((lv) => (
-                        <Pressable key={lv} style={[styles.choiceBtn, selectedIntakeLevel === lv && styles.choiceBtnActive, { marginBottom: 8 }]} onPress={() => setSelectedIntakeLevel(lv)}>
-                          <Text style={[styles.choiceBtnText, selectedIntakeLevel === lv && styles.choiceBtnTextActive]}>{INTAKE_LEVEL_LABEL[lv]}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                    <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>屬於哪隻貓？</Text>
-                      <View style={[styles.choiceRow, { flexWrap: 'wrap', gap: 8 }]}>
-                        <Pressable style={[styles.choiceBtn, intakeOnlyTagId === null && styles.choiceBtnActive]} onPress={() => setIntakeOnlyTagId(null)}>
-                          <Text style={[styles.choiceBtnText, intakeOnlyTagId === null && styles.choiceBtnTextActive]}>家庭（共用）</Text>
-                        </Pressable>
-                        {cats.map(cat => (
-                          <Pressable key={cat.id} style={[styles.choiceBtn, intakeOnlyTagId === cat.id && styles.choiceBtnActive]} onPress={() => setIntakeOnlyTagId(cat.id)}>
-                            <Text style={[styles.choiceBtnText, intakeOnlyTagId === cat.id && styles.choiceBtnTextActive]}>{cat.name}</Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    </View>
-                    <Pressable style={styles.primaryBtn} onPress={() => {
-                      if (!selectedIntakeLevel) { Alert.alert('請選擇攝取程度'); return; }
-                      const ingredientLabels = HOMEMADE_INGREDIENTS.filter(i => homemadeSelectedIds.includes(i.id)).map(i => i.label);
-                      saveIntakeOnlyLog(100, selectedIntakeLevel, 'homemade', intakeOnlyTagId, resetToBlankRecordScreen, undefined, ingredientLabels);
-                    }}>
-                      <Text style={styles.primaryBtnText}>儲存記錄</Text>
-                    </Pressable>
-                  </>
-                )}
-
-                {effectiveSessionFoodSource === 'dry_once' && (() => {
-                  /** 乾糧一次給一天流程（T0/T1 拍照 + 營養選填 + 儲存），從主 JSX 抽出 */
-                  const renderDryOnceFlow = () => (
+                {(effectiveSessionFoodSource === 'dry_once' || effectiveSessionFoodSource === 'canned') && (() => {
+                  const isWetFlow = effectiveSessionFoodSource === 'canned';
+                  /** 乾糧／濕食共用：T0/T1 拍照 + 營養選填（乾糧）+ 儲存 */
+                  const renderT0T1Flow = () => (
                 <>
                 <View style={styles.infoBox}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}><AppIcon name="home" size={18} color="#000" style={{ marginRight: 6 }} /><Text style={styles.infoTitle}>N-Bowl 拍照記錄</Text></View>
                   <Text style={{ fontSize: 12 }}>① 拍 T0（裝滿）→ ② 拍 T1（收碗）→ AI 會自動計算消耗量</Text>
-                  <Text style={{ fontSize: 12, marginTop: 4 }}>③ 可再拍成分表，帶入標籤熱量（下方熱量會自動更新）</Text>
+                  {!isWetFlow && <Text style={{ fontSize: 12, marginTop: 4 }}>③ 可再拍成分表，帶入標籤熱量（下方熱量會自動更新）</Text>}
+                  {isWetFlow && <Text style={{ fontSize: 12, marginTop: 4, fontStyle: 'italic' }}>濕食建議從斜上方約 45° 拍攝，可減少體積誤差</Text>}
                 </View>
                 {analyzingPhase === 't1' && (
                   <View style={{ padding: 12, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#3b82f6', borderRadius: 8, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
@@ -879,29 +364,6 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                     <Text style={{ fontSize: 14, fontWeight: '600', color: palette.infoText }}>AI 分析中… 正在計算消耗量</Text>
                   </View>
                 )}
-
-                <View style={styles.formGroup}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <Text style={styles.formLabel}>模式選擇</Text>
-                  </View>
-                  <View style={styles.choiceRow}>
-                    {(['standard', 'precise'] as FeedingPrecisionMode[]).map((m) => (
-                      <Pressable
-                        key={m}
-                        style={[styles.choiceBtn, precisionMode === m && styles.choiceBtnActive]}
-                        onPress={() => setPrecisionMode(m)}
-                      >
-                        <Text style={[styles.choiceBtnText, precisionMode === m && styles.choiceBtnTextActive]}>
-                          {m === 'standard' ? '一般' : '精確'}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                  <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
-                    {precisionMode === 'standard' && '影像估算 (誤差±20%)'}
-                    {precisionMode === 'precise' && 'T0 測重 + T1 影像 (誤差±8%)'}
-                  </Text>
-                </View>
 
                 <View style={styles.formGroup}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -961,32 +423,6 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>食物類型</Text>
-                  <View style={styles.choiceRow}>
-                    <Pressable
-                      style={[styles.choiceBtn, sessionFoodType === 'dry' && styles.choiceBtnActive]}
-                      onPress={() => setSessionFoodType('dry')}
-                    >
-                      <Text style={[styles.choiceBtnText, sessionFoodType === 'dry' && styles.choiceBtnTextActive]}>乾飼料</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.choiceBtn, sessionFoodType === 'wet' && styles.choiceBtnActive]}
-                      onPress={() => setSessionFoodType('wet')}
-                    >
-                      <Text style={[styles.choiceBtnText, sessionFoodType === 'wet' && styles.choiceBtnTextActive]}>罐頭濕食</Text>
-                    </Pressable>
-                  </View>
-                  <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>
-                    {sessionFoodType === 'dry' ? '份量通常固定，可設預設值沿用' : '每次給量可能不同（半罐、1/4 罐等），可選填克數'}
-                  </Text>
-                  {sessionFoodType === 'wet' && (
-                    <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4, fontStyle: 'italic' }}>
-                      濕食建議從斜上方約 45° 拍攝，可減少體積誤差。
-                    </Text>
-                  )}
-                </View>
-
-                <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>① 放飯記錄（T0）</Text>
                   <Pressable
                     style={[styles.cameraUpload, !selectedVesselId && { opacity: 0.5 }]}
@@ -1015,17 +451,16 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                     <Text style={{ fontSize: 11, color: palette.muted, marginTop: 4 }}>拍攝後即儲存 T0</Text>
                   </Pressable>
                   {(() => {
-                    const isWetFood = sessionFoodType === 'wet';
-                    const hasDefaultPortion = sessionFoodType === 'dry' && (currentVessel?.defaultPortionGrams ?? 0) > 0;
+                    const hasDefaultPortion = (currentVessel?.defaultPortionGrams ?? 0) > 0;
                     return (
                       <View style={{ marginTop: 12 }}>
                         <Text style={{ fontSize: 11, color: palette.muted, marginBottom: 4 }}>輸入克數（選填，可提高準確度）</Text>
-                        {hasDefaultPortion && (
+                        {hasDefaultPortion && !isWetFlow && (
                           <Text style={{ fontSize: 11, color: '#166534', marginBottom: 4 }}>預設：{currentVessel?.defaultPortionGrams}g</Text>
                         )}
                         <TextInput
                           style={[styles.input, { height: 36 }]}
-                          placeholder={isWetFood ? '例：85（半罐）' : '例：50'}
+                          placeholder={isWetFlow ? '例：85（半罐）' : '例：50'}
                           keyboardType="numeric"
                           value={manualWeight}
                           onChangeText={setManualWeight}
@@ -1113,7 +548,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                     {(() => {
                       const kcalPerGram = nutritionResult?.kcalPerGram || 3.5;
                       const kcal = calculateDailyKcalIntake(result.householdTotalGram, kcalPerGram);
-                      const _density = sessionFoodType === 'wet' ? 0.95 : 0.45;
+                      const _density = isWetFlow ? 0.95 : 0.45;
                       const maxPossibleGrams =
                         t0Image?.manualWeight ||
                         (currentVessel?.volumeMl ? currentVessel.volumeMl * 0.8 * _density : 1000);
@@ -1470,7 +905,7 @@ export function FeedingModal({ visible, feeding, cats, onClose, initialMode = 'n
                 </Pressable>
                 </>
                   );
-                  return renderDryOnceFlow();
+                  return renderT0T1Flow();
                 })()}
               </>
             )}

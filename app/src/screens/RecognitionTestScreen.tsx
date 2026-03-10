@@ -24,6 +24,7 @@ import type {
 } from '../types/ai';
 import type { BloodMarkerInterpretation } from '../types/bloodReport';
 import { palette } from '../styles/common';
+import { WaterLevelMarker } from '../components/WaterLevelMarker';
 
 type TestTab = 'feeding' | 'hydration' | 'elimination' | 'blood';
 
@@ -81,9 +82,11 @@ export function RecognitionTestScreen({ onClose }: { onClose: () => void }) {
   const [feedingT1, setFeedingT1] = useState<CapturedImage | null>(null);
   const [feedingResult, setFeedingResult] = useState<FeedingVisionResult | null>(null);
 
-  // 飲水：T0, T1
+  // 飲水：T0, T1 + 水位標記結果（與 HydrationModal 相同三線標記）
   const [hydrationT0, setHydrationT0] = useState<CapturedImage | null>(null);
   const [hydrationT1, setHydrationT1] = useState<CapturedImage | null>(null);
+  const [hydrationW0Pct, setHydrationW0Pct] = useState<number | null>(null);
+  const [hydrationW1Pct, setHydrationW1Pct] = useState<number | null>(null);
   const [hydrationResult, setHydrationResult] = useState<HydrationVisionResult | null>(null);
 
   // 排泄：單張
@@ -144,14 +147,18 @@ export function RecognitionTestScreen({ onClose }: { onClose: () => void }) {
       Alert.alert('請先拍攝或上傳', '飲水紀錄需要 W0（初始）與 W1（之後）兩張照片。');
       return;
     }
+    if (hydrationW0Pct == null || hydrationW1Pct == null) {
+      Alert.alert('請先完成標記', '請分別為 W0、W1 完成三線水位標記（頂線、底線、水位線）後再分析。');
+      return;
+    }
     setError(null);
     setHydrationResult(null);
     setAnalyzing(true);
     try {
       const vessel = selectedHydrationVessel ?? undefined;
       const result = await ai.analyzeHydrationImages({
-        t0: imageToInput(hydrationT0),
-        t1: imageToInput(hydrationT1),
+        t0: { ...imageToInput(hydrationT0), waterLevelPct: hydrationW0Pct },
+        t1: { ...imageToInput(hydrationT1), waterLevelPct: hydrationW1Pct },
         vessel,
       });
       setHydrationResult(result);
@@ -362,7 +369,33 @@ export function RecognitionTestScreen({ onClose }: { onClose: () => void }) {
   }
 
   function renderHydrationTab() {
-    const canAnalyze = hydrationT0 && hydrationT1 && !analyzing;
+    const subtitleW0 = '請拖曳三條線分別對齊：\n• 頂線：水位觀察窗的上緣\n• 底線：水位觀察窗的下緣\n• 水位線：目前的水面位置\n（開始記錄前的水位）';
+    const subtitleW1 = '請拖曳三條線分別對齊：\n• 頂線：水位觀察窗的上緣\n• 底線：水位觀察窗的下緣\n• 水位線：目前的水面位置\n（記錄結束時的水位）';
+
+    if (hydrationT0 && hydrationW0Pct === null) {
+      return (
+        <WaterLevelMarker
+          imageUri={hydrationT0.uri}
+          title="標記目前水量"
+          subtitle={subtitleW0}
+          onConfirm={(r) => setHydrationW0Pct(r.waterLevelPct)}
+          onCancel={() => { setHydrationT0(null); }}
+        />
+      );
+    }
+    if (hydrationT0 && hydrationW0Pct !== null && hydrationT1 && hydrationW1Pct === null) {
+      return (
+        <WaterLevelMarker
+          imageUri={hydrationT1.uri}
+          title="標記剩餘水量"
+          subtitle={subtitleW1}
+          onConfirm={(r) => setHydrationW1Pct(r.waterLevelPct)}
+          onCancel={() => { setHydrationT1(null); }}
+        />
+      );
+    }
+
+    const canAnalyze = hydrationT0 && hydrationT1 && hydrationW0Pct != null && hydrationW1Pct != null && !analyzing;
     return (
       <ScrollView style={styles.tabContent}>
         {renderVesselSelector('測試用水碗', hydrationVessels, testHydrationVesselId, setTestHydrationVesselId)}
@@ -372,10 +405,11 @@ export function RecognitionTestScreen({ onClose }: { onClose: () => void }) {
             'W0（初始水量）',
             async () => {
               const img = await pickImage('library');
-              if (img) setHydrationT0(img);
+              if (img) { setHydrationT0(img); setHydrationW0Pct(null); }
             },
             () => {
               setHydrationT0(null);
+              setHydrationW0Pct(null);
               setHydrationResult(null);
             }
           )}
@@ -384,22 +418,29 @@ export function RecognitionTestScreen({ onClose }: { onClose: () => void }) {
             'W1（之後）',
             async () => {
               const img = await pickImage('library');
-              if (img) setHydrationT1(img);
+              if (img) { setHydrationT1(img); setHydrationW1Pct(null); }
             },
             () => {
               setHydrationT1(null);
+              setHydrationW1Pct(null);
               setHydrationResult(null);
             }
           )}
         </View>
         <View style={styles.cameraRow}>
-          <Pressable style={styles.secondaryBtn} onPress={async () => { const img = await pickImage('camera'); if (img) setHydrationT0(img); }}>
+          <Pressable style={styles.secondaryBtn} onPress={async () => { const img = await pickImage('camera'); if (img) { setHydrationT0(img); setHydrationW0Pct(null); } }}>
             <Text style={styles.secondaryBtnText}>W0 拍照</Text>
           </Pressable>
-          <Pressable style={styles.secondaryBtn} onPress={async () => { const img = await pickImage('camera'); if (img) setHydrationT1(img); }}>
+          <Pressable style={styles.secondaryBtn} onPress={async () => { const img = await pickImage('camera'); if (img) { setHydrationT1(img); setHydrationW1Pct(null); } }}>
             <Text style={styles.secondaryBtnText}>W1 拍照</Text>
           </Pressable>
         </View>
+        {hydrationT0 && hydrationW0Pct == null && (
+          <Text style={[styles.vesselHint, { marginBottom: 8 }]}>請先為 W0 完成三線標記（頂線／底線／水位線）</Text>
+        )}
+        {hydrationT0 && hydrationW0Pct != null && hydrationT1 && hydrationW1Pct == null && (
+          <Text style={[styles.vesselHint, { marginBottom: 8 }]}>請為 W1 完成三線標記</Text>
+        )}
         <Pressable style={[styles.analyzeBtn, !canAnalyze && styles.analyzeBtnDisabled]} onPress={runHydrationAnalysis} disabled={!canAnalyze}>
           <Text style={styles.analyzeBtnText}>開始分析</Text>
         </Pressable>
